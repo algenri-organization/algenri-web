@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   },
   description:
     "Sites, inteligência artificial, automações, vídeos e sistemas para empresas que querem evoluir no digital.",
+  icons: {
+    icon: "/algenri-mark.svg",
+    shortcut: "/algenri-mark.svg",
+    apple: "/algenri-mark.svg",
+  },
   openGraph: {
     title: "ALGENRI — Soluções Digitais, IA e Automação",
     description:
@@ -30,6 +35,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
+        <div className="neural-identity-field" aria-hidden />
         <SiteHeader />
         {children}
         <SiteFooter />

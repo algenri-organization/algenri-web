@@ -77,7 +77,7 @@ export default function Home() {
           </div>
 
           <Reveal delay={0.14}>
-            <div className="hero-visual glass relative min-h-[540px] overflow-hidden rounded-[36px] border-cyan-300/10">
+            <div className="hero-visual glass relative min-h-[560px] overflow-hidden rounded-[36px] border-cyan-300/10">
               <motion.img
                 src="/hero-intelligence.svg"
                 alt="Representação artística de inteligência, conexão e evolução digital"
@@ -94,8 +94,8 @@ export default function Home() {
               </div>
 
               <motion.div
-                className="absolute right-5 top-[24%] rounded-2xl border border-white/10 bg-[#07111f]/62 p-4 backdrop-blur-xl sm:right-7"
-                animate={reduceMotion ? undefined : { y: [0, -7, 0] }}
+                className="absolute right-5 top-[22%] max-w-[190px] rounded-2xl border border-white/10 bg-[#07111f]/72 p-3.5 backdrop-blur-xl sm:right-7 sm:max-w-[210px] sm:p-4"
+                animate={reduceMotion ? undefined : { y: [0, -6, 0] }}
                 transition={{ duration: 5.2, repeat: Infinity, ease: "easeInOut" }}
               >
                 <Bot className="h-5 w-5 text-cyan-200" />
@@ -104,8 +104,8 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                className="absolute bottom-28 left-5 rounded-2xl border border-white/10 bg-[#07111f]/62 p-4 backdrop-blur-xl sm:left-7"
-                animate={reduceMotion ? undefined : { y: [0, 7, 0] }}
+                className="absolute left-5 top-[51%] hidden max-w-[190px] rounded-2xl border border-white/10 bg-[#07111f]/72 p-3.5 backdrop-blur-xl sm:left-7 sm:block sm:max-w-[210px] sm:p-4"
+                animate={reduceMotion ? undefined : { y: [0, 6, 0] }}
                 transition={{ duration: 6.4, repeat: Infinity, ease: "easeInOut" }}
               >
                 <Workflow className="h-5 w-5 text-violet-200" />
@@ -113,11 +113,11 @@ export default function Home() {
                 <p className="mt-1 text-sm font-medium">Menos tarefa. Mais evolução.</p>
               </motion.div>
 
-              <div className="absolute inset-x-5 bottom-5 rounded-[24px] border border-white/10 bg-[#07111f]/68 p-5 backdrop-blur-2xl sm:inset-x-7 sm:bottom-7">
+              <div className="absolute inset-x-5 bottom-5 rounded-[24px] border border-white/10 bg-[#07111f]/78 p-4 backdrop-blur-2xl sm:inset-x-7 sm:bottom-7 sm:p-5">
                 <div className="flex items-end justify-between gap-5">
                   <div>
                     <p className="text-xs uppercase tracking-[.18em] text-white/38">ALGENRI</p>
-                    <p className="mt-2 max-w-sm text-xl font-semibold tracking-[-.025em] sm:text-2xl">Tecnologia que impulsiona o seu amanhã.</p>
+                    <p className="mt-2 max-w-sm text-lg font-semibold tracking-[-.025em] sm:text-2xl">Tecnologia que impulsiona o seu amanhã.</p>
                   </div>
                   <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/15 bg-white/[0.04] sm:flex">
                     <img src="/algenri-mark.svg" alt="" aria-hidden className="h-10 w-10" />

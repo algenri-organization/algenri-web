@@ -3,7 +3,14 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, Gauge, RotateCcw, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
-const questions = [
+type Dimension = "Presença digital" | "Atendimento" | "Automação" | "Tecnologia";
+type DiagnosticQuestion = {
+  dimension: Dimension;
+  question: string;
+  reverse?: boolean;
+};
+
+const questions: DiagnosticQuestion[] = [
   { dimension: "Presença digital", question: "Sua empresa possui um site profissional, atualizado e adaptado para celular?" },
   { dimension: "Presença digital", question: "Sua empresa aparece de forma organizada no Google, mapas e buscas locais?" },
   { dimension: "Atendimento", question: "Os contatos recebidos têm resposta rápida e acompanhamento até a decisão?" },
@@ -12,7 +19,7 @@ const questions = [
   { dimension: "Automação", question: "Ferramentas e canais importantes trocam informações automaticamente entre si?" },
   { dimension: "Tecnologia", question: "Os principais processos da empresa estão organizados em ferramentas confiáveis, e não apenas em planilhas ou mensagens?" },
   { dimension: "Tecnologia", question: "A empresa já utiliza IA ou tecnologia para apoiar atendimento, produtividade, conteúdo ou decisões?" },
-] as const;
+];
 
 const options = [
   { label: "Não", value: 1 },
@@ -20,7 +27,7 @@ const options = [
   { label: "Sim", value: 3 },
 ];
 
-const dimensionOrder = ["Presença digital", "Atendimento", "Automação", "Tecnologia"];
+const dimensionOrder: Dimension[] = ["Presença digital", "Atendimento", "Automação", "Tecnologia"];
 
 function getLevel(score: number) {
   if (score < 45) return { title: "Base digital a estruturar", text: "Existem oportunidades importantes de organização e profissionalização antes de avançar para soluções mais complexas." };
@@ -39,12 +46,16 @@ export function DigitalDiagnostic() {
 
   const scores = useMemo(() => {
     return dimensionOrder.map((dimension) => {
-      const related = questions.map((question, index) => ({ question, answer: answers[index] })).filter(({ question }) => question.dimension === dimension);
+      const related = questions
+        .map((question, index) => ({ question, answer: answers[index] }))
+        .filter(({ question }) => question.dimension === dimension);
+
       const normalized = related.reduce((sum, { question, answer }) => {
         if (!answer) return sum;
         const effective = question.reverse ? 4 - answer : answer;
         return sum + effective;
       }, 0);
+
       const max = related.length * 3;
       return { dimension, score: Math.round((normalized / max) * 100) };
     });

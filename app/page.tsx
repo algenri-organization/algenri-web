@@ -4,23 +4,45 @@ import {
   ArrowRight,
   Bot,
   Braces,
+  Cpu,
   Film,
   Globe2,
+  Monitor,
   Sparkles,
   WandSparkles,
   Workflow,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
-const solutions = [
-  [Globe2, "Sites & E-commerce", "Presença digital profissional, rápida e preparada para converter."],
-  [Bot, "IA para negócios", "Atendimento, agentes e aplicações inteligentes conectadas à rotina da empresa."],
-  [Workflow, "Automação", "Fluxos que reduzem tarefas manuais e integram atendimento, vendas e operação."],
-  [Braces, "Sistemas sob medida", "Portais, dashboards e aplicações para processos que já pedem uma solução própria."],
-  [Film, "Creative AI", "Vídeos, avatares, imagens e conteúdo com IA para comunicação e marketing."],
+const solutionCards = [
+  {
+    icon: Monitor,
+    title: "Websites e presença digital",
+    text: "Sites institucionais e páginas de alta conversão para fortalecer sua marca e gerar oportunidades.",
+  },
+  {
+    icon: Bot,
+    title: "Inteligência artificial",
+    text: "IA aplicada ao seu negócio para automatizar tarefas, analisar dados e apoiar decisões estratégicas.",
+  },
+  {
+    icon: Workflow,
+    title: "Automações inteligentes",
+    text: "Processos mais simples, rápidos e eficientes, com automações sob medida para a sua rotina.",
+  },
+  {
+    icon: Braces,
+    title: "Sistemas personalizados",
+    text: "Plataformas desenvolvidas para a realidade da sua empresa, com foco em resultados e evolução.",
+  },
 ];
 
-const capabilities = ["Websites profissionais", "Inteligência artificial", "Automações inteligentes", "Sistemas personalizados"];
+const capabilities = [
+  { icon: Monitor, label: "Websites profissionais" },
+  { icon: Cpu, label: "Inteligência artificial" },
+  { icon: Workflow, label: "Automações inteligentes" },
+  { icon: Braces, label: "Sistemas personalizados" },
+];
 
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const reduceMotion = useReducedMotion();
@@ -41,100 +63,112 @@ export default function Home() {
 
   return (
     <main className="page-shell min-h-screen overflow-hidden">
-      <section className="relative border-b border-white/[0.06]">
-        <div className="hero-grid pointer-events-none absolute inset-0 opacity-55" />
-        <div className="pointer-events-none absolute left-[10%] top-0 h-64 w-64 rounded-full bg-blue-500/18 blur-3xl" />
-        <div className="pointer-events-none absolute right-[8%] top-10 h-72 w-72 rounded-full bg-violet-500/16 blur-3xl" />
+      <section className="relative isolate overflow-hidden border-b border-white/[0.06]">
+        <div className="absolute inset-0 bg-[#06111f]" />
+        <div className="hero-grid pointer-events-none absolute inset-0 opacity-30" />
+        <motion.img
+          src="/hero-intelligence.svg"
+          alt="Representação artística de inteligência, conexão e evolução digital"
+          className="pointer-events-none absolute right-[-7%] top-[-2%] hidden h-[96%] w-[72%] object-contain object-right-top lg:block"
+          initial={reduceMotion ? false : { opacity: 0, scale: 1.02 }}
+          animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.015, 1] }}
+          transition={{ opacity: { duration: .8 }, scale: { duration: 16, repeat: Infinity, ease: "easeInOut" } }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#06111f_0%,#06111f_39%,rgba(6,17,31,.88)_49%,rgba(6,17,31,.25)_67%,rgba(6,17,31,.08)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#06111f] via-[#06111f]/65 to-transparent" />
 
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-6 pb-14 pt-10 lg:grid-cols-[1.02fr_.98fr] lg:items-center lg:px-8 lg:pb-16 lg:pt-14">
-          <div className="flex flex-col justify-center">
-            <Reveal>
-              <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/[0.05] px-4 py-2 text-sm text-white/72 backdrop-blur-xl">
-                <Sparkles className="h-4 w-4 text-cyan-200" /> Soluções digitais, IA e automação
-              </div>
-              <h1 className="max-w-4xl text-5xl font-semibold leading-[1.01] tracking-[-0.055em] sm:text-6xl lg:text-[4.65rem]">
-                Sua empresa mais <span className="gradient-text">digital, inteligente e eficiente.</span>
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/62">
-                A ALGENRI transforma necessidades reais em presença digital, automação, inteligência artificial e software — com soluções simples de usar e prontas para evoluir.
-              </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a href="/diagnostico" className="button-primary">Solicitar diagnóstico <ArrowRight className="h-4 w-4" /></a>
-                <a href="/solucoes" className="button-secondary">Conhecer soluções</a>
-              </div>
-            </Reveal>
-          </div>
+        <div className="relative mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8 lg:pb-10 lg:pt-16">
+          <div className="grid min-h-[560px] items-center lg:grid-cols-[.92fr_1.08fr]">
+            <div className="relative z-10 max-w-2xl pb-16 pt-6 lg:pb-24 lg:pt-10">
+              <Reveal>
+                <div className="mb-6 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[.30em] text-cyan-300 sm:text-xs">
+                  <span>Tecnologia que impulsiona o seu amanhã</span>
+                  <span className="hidden h-px w-16 bg-cyan-300/70 sm:block" />
+                </div>
 
-          <Reveal delay={0.12}>
-            <div className="glass relative min-h-[500px] overflow-hidden rounded-[34px] border-cyan-300/10 sm:min-h-[540px]">
+                <h1 className="max-w-2xl text-5xl font-semibold leading-[.96] tracking-[-0.06em] sm:text-6xl lg:text-[5rem]">
+                  Da ideia<br />ao <span className="gradient-text">próximo nível.</span>
+                </h1>
+
+                <p className="mt-7 max-w-xl text-lg leading-8 text-white/68">
+                  Soluções digitais, inteligência artificial, automações e sistemas personalizados para transformar o seu negócio em resultados reais.
+                </p>
+
+                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                  <a href="/diagnostico" className="button-primary px-6 py-3.5">Solicitar diagnóstico <ArrowRight className="h-4 w-4" /></a>
+                  <a href="/solucoes" className="button-secondary px-6 py-3.5">Conhecer soluções</a>
+                </div>
+              </Reveal>
+            </div>
+
+            <div className="relative min-h-[420px] lg:min-h-[560px]">
               <motion.img
                 src="/hero-intelligence.svg"
-                alt="Representação artística de inteligência, conexão e evolução digital"
-                className="absolute inset-0 h-full w-full object-cover object-center"
-                initial={reduceMotion ? false : { opacity: 0, scale: 1.025 }}
-                animate={reduceMotion ? undefined : { opacity: 1, scale: [1.005, 1.025, 1.005] }}
-                transition={{ opacity: { duration: .75 }, scale: { duration: 14, repeat: Infinity, ease: "easeInOut" } }}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 h-full w-full object-contain object-center lg:hidden"
+                initial={reduceMotion ? false : { opacity: 0, scale: 1.02 }}
+                animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.015, 1] }}
+                transition={{ opacity: { duration: .8 }, scale: { duration: 16, repeat: Infinity, ease: "easeInOut" } }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#07111f]/90 via-transparent to-[#07111f]/10" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#07111f]/18 via-transparent to-transparent" />
-
-              <div className="absolute left-6 top-6 rounded-full border border-cyan-300/15 bg-[#07111f]/64 px-3 py-1.5 text-[11px] uppercase tracking-[.18em] text-cyan-100/80 backdrop-blur-xl">
-                Inteligência conectada ao negócio
+              <div className="absolute inset-0 bg-gradient-to-t from-[#06111f] via-transparent to-transparent lg:hidden" />
+              <div className="absolute right-1 top-8 hidden max-w-[150px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/55 xl:block">
+                Pessoas<br />Ideias<br />Tecnologia<br />Evolução
+                <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
-
-              <div className="absolute inset-x-6 bottom-6 rounded-[24px] border border-white/10 bg-[#07111f]/76 p-5 backdrop-blur-2xl sm:p-6">
-                <div className="flex items-end justify-between gap-6">
-                  <div>
-                    <p className="text-xs uppercase tracking-[.18em] text-white/38">ALGENRI</p>
-                    <p className="mt-2 max-w-md text-2xl font-semibold tracking-[-.03em] sm:text-3xl">Tecnologia que impulsiona o seu amanhã.</p>
-                    <p className="mt-3 text-sm text-white/48">Pessoas · Ideias · Tecnologia · Evolução</p>
-                  </div>
-                  <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/15 bg-white/[0.04] sm:flex">
-                    <img src="/algenri-mark.svg" alt="" aria-hidden className="h-11 w-11" />
-                  </div>
-                </div>
+              <div className="absolute bottom-14 right-1 hidden max-w-[160px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/48 xl:block">
+                Soluções para pessoas e empresas que querem ir além.
+                <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
             </div>
-          </Reveal>
-        </div>
+          </div>
 
-        <div className="relative mx-auto max-w-7xl px-6 pb-10 lg:px-8 lg:pb-12">
-          <div className="grid overflow-hidden rounded-[24px] border border-white/[0.08] bg-white/[0.025] sm:grid-cols-2 lg:grid-cols-4">
-            {capabilities.map((item, index) => (
-              <div key={item} className={`px-5 py-4 text-sm text-white/58 ${index > 0 ? "border-t border-white/[0.07] sm:border-t-0 sm:border-l" : ""} ${index > 1 ? "sm:border-t lg:border-t-0" : ""}`}>
-                <span className="mr-2 text-cyan-200/70">0{index + 1}</span>{item}
-              </div>
-            ))}
+          <div className="relative z-20 -mt-10 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/88 shadow-[0_24px_80px_rgba(0,0,0,.35)] backdrop-blur-2xl lg:-mt-14">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+              {capabilities.map(({ icon: Icon, label }, index) => (
+                <div key={label} className={`flex min-h-[92px] items-center gap-4 px-6 py-5 ${index ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""} ${index === 2 ? "sm:border-l-0 sm:border-t lg:border-l lg:border-t-0" : ""}`}>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300/18 bg-cyan-300/[0.04]">
+                    <Icon className="h-6 w-6 text-cyan-300" />
+                  </div>
+                  <span className="text-sm font-medium leading-5 text-white/78">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-28">
-        <Reveal>
-          <span className="eyebrow">Soluções</span>
-          <h2 className="section-title mt-4">Não vendemos apenas um site. Construímos a próxima etapa digital do negócio.</h2>
-          <p className="section-copy mt-6">Podemos começar pequeno e evoluir conforme a necessidade: presença digital, conteúdo, automação, inteligência artificial e sistemas próprios.</p>
-        </Reveal>
-        <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {solutions.map(([Icon, title, text], index) => (
-            <Reveal key={title as string} delay={index * .05}>
-              <motion.article whileHover={reduceMotion ? undefined : { y: -6 }} className="glass h-full rounded-[28px] p-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8"><Icon className="h-5 w-5 text-sky-200" /></div>
-                <h3 className="mt-7 text-2xl font-semibold">{title as string}</h3>
-                <p className="mt-3 leading-7 text-white/58">{text as string}</p>
+      <section className="relative mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-28">
+        <div className="grid gap-10 lg:grid-cols-[1fr_.52fr] lg:items-end">
+          <Reveal>
+            <span className="eyebrow">Como podemos impulsionar o seu negócio</span>
+            <h2 className="mt-4 max-w-4xl text-4xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-5xl">
+              <span className="text-cyan-300">Soluções completas</span> para cada etapa da sua evolução
+            </h2>
+          </Reveal>
+          <Reveal delay={.08}>
+            <p className="max-w-md text-base leading-7 text-white/55">
+              Unimos estratégia, design, tecnologia e inteligência artificial para desenvolver soluções que geram eficiência, crescimento e novas oportunidades.
+            </p>
+          </Reveal>
+        </div>
+
+        <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {solutionCards.map(({ icon: Icon, title, text }, index) => (
+            <Reveal key={title} delay={index * .05}>
+              <motion.article whileHover={reduceMotion ? undefined : { y: -6 }} className="group glass-soft relative h-full overflow-hidden rounded-[24px] p-6">
+                <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-blue-500/12 blur-3xl transition group-hover:bg-cyan-400/14" />
+                <Icon className="relative h-7 w-7 text-cyan-300" />
+                <h3 className="relative mt-7 text-xl font-semibold tracking-[-.02em]">{title}</h3>
+                <p className="relative mt-3 text-sm leading-6 text-white/58">{text}</p>
+                <a href="/solucoes" className="relative mt-7 inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-white">Saiba mais <ArrowRight className="h-4 w-4" /></a>
               </motion.article>
             </Reveal>
           ))}
-          <Reveal delay={.25}>
-            <a href="/solucoes" className="glass-soft flex h-full min-h-60 flex-col justify-between rounded-[28px] p-6 transition hover:bg-white/[0.07]">
-              <Sparkles className="h-5 w-5 text-violet-200" />
-              <div><p className="text-sm uppercase tracking-[.16em] text-white/35">Explore</p><h3 className="mt-3 text-2xl font-semibold">Veja todas as soluções <ArrowRight className="ml-1 inline h-5 w-5" /></h3></div>
-            </a>
-          </Reveal>
         </div>
       </section>
 
-      <section className="border-y border-white/8 bg-white/[0.025]">
+      <section className="border-y border-white/[0.06] bg-white/[0.02]">
         <div className="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-28">
           <Reveal><span className="eyebrow">Modelo ALGENRI</span><h2 className="section-title mt-4">Diagnosticar. Criar. Evoluir.</h2></Reveal>
           <div className="mt-12 grid gap-5 lg:grid-cols-3">

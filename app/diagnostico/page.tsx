@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { DigitalDiagnostic } from "@/components/digital-diagnostic";
+import { Bot, Globe2, LaptopMinimalCheck, Workflow } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Diagnóstico Digital",
@@ -6,71 +8,47 @@ export const metadata: Metadata = {
 };
 
 const sections = [
-  ["Presença digital", "Seu site, Google, redes, reputação e clareza da proposta comercial."],
-  ["Atendimento", "Como os contatos chegam, são respondidos e acompanhados até a decisão."],
-  ["Automação", "Tarefas manuais, retrabalho, integrações e oportunidades de ganho de eficiência."],
-  ["Tecnologia", "Ferramentas, planilhas, sistemas e processos que poderiam ser melhor estruturados."],
+  { icon: Globe2, title: "Presença digital", text: "Site, Google, reputação e clareza da presença online." },
+  { icon: Bot, title: "Atendimento", text: "Velocidade de resposta, organização dos contatos e acompanhamento." },
+  { icon: Workflow, title: "Automação", text: "Tarefas manuais, retrabalho, integrações e ganho de eficiência." },
+  { icon: LaptopMinimalCheck, title: "Tecnologia", text: "Ferramentas, sistemas, IA e estrutura digital da operação." },
 ];
 
 export default function DiagnosticoPage() {
   return (
-    <main className="page-shell min-h-screen">
-      <section className="page-hero mx-auto max-w-7xl">
-        <span className="eyebrow">Diagnóstico Digital ALGENRI</span>
-        <h1 className="section-title mt-5">Tecnologia começa com uma boa pergunta: o que realmente precisa melhorar?</h1>
-        <p className="section-copy mt-7">O diagnóstico será o ponto de entrada para entendermos a empresa antes de recomendar qualquer solução. Nesta primeira versão, o formulário organiza as informações essenciais para uma análise inicial.</p>
+    <main className="page-shell min-h-screen overflow-hidden">
+      <section className="relative mx-auto max-w-7xl px-6 pb-14 pt-28 lg:px-8 lg:pt-36">
+        <div className="pointer-events-none absolute left-[-100px] top-10 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="relative max-w-5xl">
+          <span className="eyebrow">Diagnóstico Digital ALGENRI</span>
+          <h1 className="mt-5 text-5xl font-semibold leading-[1.01] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
+            Descubra onde a tecnologia pode gerar <span className="gradient-text">mais resultado agora.</span>
+          </h1>
+          <p className="mt-7 max-w-3xl text-lg leading-8 text-white/60">
+            Em poucos minutos, avaliamos quatro dimensões essenciais da operação digital. O resultado mostra a maturidade atual e ajuda a organizar prioridades antes de qualquer proposta comercial.
+          </p>
+        </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-6 pb-28 lg:grid-cols-[.8fr_1.2fr] lg:px-8">
-        <aside className="space-y-4">
-          {sections.map(([title, text], index) => (
-            <div key={title} className="glass-soft rounded-[24px] p-5">
-              <span className="text-xs text-white/32">0{index + 1}</span>
-              <h2 className="mt-3 font-semibold">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-white/52">{text}</p>
-            </div>
-          ))}
-        </aside>
+      <section className="mx-auto max-w-7xl px-6 pb-28 lg:px-8">
+        <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {sections.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.title} className="glass-soft rounded-[24px] p-5">
+                <div className="flex items-center justify-between"><Icon className="h-5 w-5 text-cyan-200" /><span className="text-xs text-white/25">0{index + 1}</span></div>
+                <h2 className="mt-5 font-semibold">{item.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-white/50">{item.text}</p>
+              </div>
+            );
+          })}
+        </div>
 
-        <form className="glass rounded-[30px] p-6 sm:p-8" action="mailto:contato@algenri.com.br" method="post" encType="text/plain">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block text-sm text-white/62">Nome
-              <input name="nome" required className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40" placeholder="Seu nome" />
-            </label>
-            <label className="block text-sm text-white/62">Empresa
-              <input name="empresa" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40" placeholder="Nome da empresa" />
-            </label>
-            <label className="block text-sm text-white/62">E-mail
-              <input type="email" name="email" required className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40" placeholder="voce@empresa.com.br" />
-            </label>
-            <label className="block text-sm text-white/62">WhatsApp
-              <input name="whatsapp" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40" placeholder="(00) 00000-0000" />
-            </label>
-          </div>
+        <DigitalDiagnostic />
 
-          <label className="mt-5 block text-sm text-white/62">Qual é o principal desafio digital hoje?
-            <select name="desafio" className="mt-2 w-full rounded-2xl border border-white/10 bg-[#0b1728] px-4 py-3 text-white outline-none transition focus:border-cyan-300/40">
-              <option>Preciso criar ou melhorar meu site</option>
-              <option>Quero automatizar atendimento ou processos</option>
-              <option>Quero aplicar IA no negócio</option>
-              <option>Preciso de um sistema próprio</option>
-              <option>Quero melhorar marketing, conteúdo ou reputação</option>
-              <option>Ainda não sei por onde começar</option>
-            </select>
-          </label>
-
-          <label className="mt-5 block text-sm text-white/62">Conte um pouco sobre o cenário atual
-            <textarea name="cenario" rows={6} className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40" placeholder="Quais ferramentas vocês usam hoje? Onde existe retrabalho? O que gostariam de melhorar?" />
-          </label>
-
-          <label className="mt-5 flex items-start gap-3 text-xs leading-5 text-white/42">
-            <input type="checkbox" required className="mt-1" />
-            <span>Autorizo o uso destas informações exclusivamente para contato e elaboração do diagnóstico solicitado.</span>
-          </label>
-
-          <button type="submit" className="button-primary mt-7 w-full">Enviar informações para análise</button>
-          <p className="mt-4 text-center text-xs leading-5 text-white/32">Esta é a versão inicial do fluxo. Na próxima evolução, o diagnóstico será processado diretamente pela plataforma ALGENRI e integrado ao CRM.</p>
-        </form>
+        <div className="mx-auto mt-8 max-w-3xl text-center text-xs leading-5 text-white/30">
+          O diagnóstico oferece uma leitura inicial e não substitui uma análise técnica detalhada. Nenhuma informação é enviada nesta etapa interativa.
+        </div>
       </section>
     </main>
   );

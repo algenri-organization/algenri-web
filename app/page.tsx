@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  Bot,
-  Braces,
-  Cpu,
-  Film,
-  Globe2,
-  Monitor,
-  Sparkles,
-  WandSparkles,
-  Workflow,
-} from "lucide-react";
+import { ArrowRight, Bot, Braces, Cpu, Monitor, WandSparkles, Workflow } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 const solutionCards = [
@@ -19,21 +8,25 @@ const solutionCards = [
     icon: Monitor,
     title: "Websites e presença digital",
     text: "Sites institucionais e páginas de alta conversão para fortalecer sua marca e gerar oportunidades.",
+    image: "/solution-web.webp",
   },
   {
     icon: Bot,
     title: "Inteligência artificial",
     text: "IA aplicada ao seu negócio para automatizar tarefas, analisar dados e apoiar decisões estratégicas.",
+    image: "/solution-ai.webp",
   },
   {
     icon: Workflow,
     title: "Automações inteligentes",
     text: "Processos mais simples, rápidos e eficientes, com automações sob medida para a sua rotina.",
+    image: "/solution-automation.webp",
   },
   {
     icon: Braces,
     title: "Sistemas personalizados",
     text: "Plataformas desenvolvidas para a realidade da sua empresa, com foco em resultados e evolução.",
+    image: "/solution-systems.webp",
   },
 ];
 
@@ -48,10 +41,10 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   const reduceMotion = useReducedMotion();
   return (
     <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 20 }}
       whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.58, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.56, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>
@@ -63,34 +56,34 @@ export default function Home() {
 
   return (
     <main className="page-shell min-h-screen overflow-hidden">
-      <section className="relative isolate overflow-hidden border-b border-white/[0.06]">
-        <div className="absolute inset-0 bg-[#06111f]" />
-        <div className="hero-grid pointer-events-none absolute inset-0 opacity-30" />
-        <motion.img
-          src="/hero-intelligence.svg"
-          alt="Representação artística de inteligência, conexão e evolução digital"
-          className="pointer-events-none absolute right-[-7%] top-[-2%] hidden h-[96%] w-[72%] object-contain object-right-top lg:block"
-          initial={reduceMotion ? false : { opacity: 0, scale: 1.02 }}
-          animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.015, 1] }}
-          transition={{ opacity: { duration: .8 }, scale: { duration: 16, repeat: Infinity, ease: "easeInOut" } }}
+      <section className="relative isolate overflow-hidden border-b border-white/[0.06] bg-[#040c17]">
+        <motion.div
+          aria-hidden
+          className="absolute inset-0 bg-cover bg-center lg:bg-[center_top]"
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg,rgba(4,12,23,.98)_0%,rgba(4,12,23,.94)_30%,rgba(4,12,23,.62)_48%,rgba(4,12,23,.12)_72%,rgba(4,12,23,.05)_100%), url('/hero-art.webp'), url('/hero-intelligence.svg')",
+          }}
+          initial={reduceMotion ? false : { opacity: 0, scale: 1.015 }}
+          animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.012, 1] }}
+          transition={{ opacity: { duration: .8 }, scale: { duration: 18, repeat: Infinity, ease: "easeInOut" } }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#06111f_0%,#06111f_39%,rgba(6,17,31,.88)_49%,rgba(6,17,31,.25)_67%,rgba(6,17,31,.08)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#06111f] via-[#06111f]/65 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#040c17] via-[#040c17]/60 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8 lg:pb-10 lg:pt-16">
-          <div className="grid min-h-[560px] items-center lg:grid-cols-[.92fr_1.08fr]">
-            <div className="relative z-10 max-w-2xl pb-16 pt-6 lg:pb-24 lg:pt-10">
+        <div className="relative mx-auto max-w-7xl px-6 pb-8 pt-14 lg:px-8 lg:pb-10 lg:pt-20">
+          <div className="grid min-h-[620px] items-center lg:grid-cols-[.92fr_1.08fr]">
+            <div className="relative z-10 max-w-2xl pb-20 pt-10 lg:pb-28 lg:pt-8">
               <Reveal>
                 <div className="mb-6 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[.30em] text-cyan-300 sm:text-xs">
                   <span>Tecnologia que impulsiona o seu amanhã</span>
                   <span className="hidden h-px w-16 bg-cyan-300/70 sm:block" />
                 </div>
 
-                <h1 className="max-w-2xl text-5xl font-semibold leading-[.96] tracking-[-0.06em] sm:text-6xl lg:text-[5rem]">
+                <h1 className="max-w-2xl text-5xl font-semibold leading-[.95] tracking-[-0.06em] sm:text-6xl lg:text-[5.2rem]">
                   Da ideia<br />ao <span className="gradient-text">próximo nível.</span>
                 </h1>
 
-                <p className="mt-7 max-w-xl text-lg leading-8 text-white/68">
+                <p className="mt-7 max-w-xl text-lg leading-8 text-white/72">
                   Soluções digitais, inteligência artificial, automações e sistemas personalizados para transformar o seu negócio em resultados reais.
                 </p>
 
@@ -101,36 +94,26 @@ export default function Home() {
               </Reveal>
             </div>
 
-            <div className="relative min-h-[420px] lg:min-h-[560px]">
-              <motion.img
-                src="/hero-intelligence.svg"
-                alt=""
-                aria-hidden
-                className="absolute inset-0 h-full w-full object-contain object-center lg:hidden"
-                initial={reduceMotion ? false : { opacity: 0, scale: 1.02 }}
-                animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.015, 1] }}
-                transition={{ opacity: { duration: .8 }, scale: { duration: 16, repeat: Infinity, ease: "easeInOut" } }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#06111f] via-transparent to-transparent lg:hidden" />
-              <div className="absolute right-1 top-8 hidden max-w-[150px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/55 xl:block">
+            <div className="relative min-h-[420px] lg:min-h-[620px]">
+              <div className="absolute right-1 top-10 hidden max-w-[150px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/58 xl:block">
                 Pessoas<br />Ideias<br />Tecnologia<br />Evolução
                 <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
-              <div className="absolute bottom-14 right-1 hidden max-w-[160px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/48 xl:block">
+              <div className="absolute bottom-20 right-1 hidden max-w-[165px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/50 xl:block">
                 Soluções para pessoas e empresas que querem ir além.
                 <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
             </div>
           </div>
 
-          <div className="relative z-20 -mt-10 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/88 shadow-[0_24px_80px_rgba(0,0,0,.35)] backdrop-blur-2xl lg:-mt-14">
+          <div className="relative z-20 -mt-12 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/90 shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl lg:-mt-16">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4">
               {capabilities.map(({ icon: Icon, label }, index) => (
                 <div key={label} className={`flex min-h-[92px] items-center gap-4 px-6 py-5 ${index ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""} ${index === 2 ? "sm:border-l-0 sm:border-t lg:border-l lg:border-t-0" : ""}`}>
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300/18 bg-cyan-300/[0.04]">
                     <Icon className="h-6 w-6 text-cyan-300" />
                   </div>
-                  <span className="text-sm font-medium leading-5 text-white/78">{label}</span>
+                  <span className="text-sm font-medium leading-5 text-white/82">{label}</span>
                 </div>
               ))}
             </div>
@@ -147,21 +130,35 @@ export default function Home() {
             </h2>
           </Reveal>
           <Reveal delay={.08}>
-            <p className="max-w-md text-base leading-7 text-white/55">
+            <p className="max-w-md text-base leading-7 text-white/58">
               Unimos estratégia, design, tecnologia e inteligência artificial para desenvolver soluções que geram eficiência, crescimento e novas oportunidades.
             </p>
           </Reveal>
         </div>
 
         <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {solutionCards.map(({ icon: Icon, title, text }, index) => (
+          {solutionCards.map(({ icon: Icon, title, text, image }, index) => (
             <Reveal key={title} delay={index * .05}>
-              <motion.article whileHover={reduceMotion ? undefined : { y: -6 }} className="group glass-soft relative h-full overflow-hidden rounded-[24px] p-6">
-                <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-blue-500/12 blur-3xl transition group-hover:bg-cyan-400/14" />
-                <Icon className="relative h-7 w-7 text-cyan-300" />
-                <h3 className="relative mt-7 text-xl font-semibold tracking-[-.02em]">{title}</h3>
-                <p className="relative mt-3 text-sm leading-6 text-white/58">{text}</p>
-                <a href="/solucoes" className="relative mt-7 inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-white">Saiba mais <ArrowRight className="h-4 w-4" /></a>
+              <motion.article
+                whileHover={reduceMotion ? undefined : { y: -6 }}
+                className="group relative min-h-[360px] overflow-hidden rounded-[24px] border border-white/10 bg-[#07111f] shadow-[0_20px_60px_rgba(0,0,0,.18)]"
+              >
+                <div
+                  aria-hidden
+                  className="absolute inset-0 scale-[1.02] bg-cover bg-center transition duration-700 group-hover:scale-[1.07]"
+                  style={{ backgroundImage: `url('${image}')` }}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,12,23,.30)_0%,rgba(4,12,23,.58)_42%,rgba(4,12,23,.96)_78%,#040c17_100%)]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#040c17]/30 via-transparent to-transparent" />
+
+                <div className="relative flex h-full min-h-[360px] flex-col justify-end p-6">
+                  <div className="mb-auto flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-[#06111f]/70 backdrop-blur-xl">
+                    <Icon className="h-6 w-6 text-cyan-300" />
+                  </div>
+                  <h3 className="text-xl font-semibold tracking-[-.02em]">{title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-white/66">{text}</p>
+                  <a href="/solucoes" className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-white">Saiba mais <ArrowRight className="h-4 w-4" /></a>
+                </div>
               </motion.article>
             </Reveal>
           ))}

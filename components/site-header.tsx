@@ -17,10 +17,12 @@ export function SiteHeader() {
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#07111f]/72 backdrop-blur-2xl">
       <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-6 lg:px-8">
         <a href="/" className="group flex items-center gap-3" aria-label="ALGENRI - página inicial">
-          <span className="brand-mark" aria-hidden>AG</span>
+          <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-white/[0.04] shadow-[0_0_32px_rgba(0,229,255,.10)]">
+            <img src="/algenri-mark.svg" alt="" aria-hidden className="h-full w-full object-cover" />
+          </span>
           <span>
             <span className="block text-sm font-semibold tracking-[0.20em]">ALGENRI</span>
-            <span className="hidden text-[10px] uppercase tracking-[0.16em] text-white/35 sm:block">Digital · AI · Automation</span>
+            <span className="hidden text-[10px] uppercase tracking-[0.16em] text-white/35 sm:block">Soluções Digitais & IA</span>
           </span>
         </a>
 

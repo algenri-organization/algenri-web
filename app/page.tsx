@@ -55,22 +55,22 @@ export default function Home() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main className="min-h-screen overflow-hidden pt-[72px]">
+    <main className="min-h-screen overflow-hidden">
       <section className="relative isolate overflow-hidden border-b border-white/[0.06] bg-[#040c17]">
         <motion.img
           src="/hero-art.webp.jpeg"
           alt="Representação artística de inteligência, conexão e evolução digital"
-          className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-[70%] object-cover object-[68%_center] lg:block"
+          className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-[64%_center] lg:block"
           initial={reduceMotion ? false : { opacity: 0, scale: 1.015 }}
           animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.012, 1] }}
           transition={{ opacity: { duration: .8 }, scale: { duration: 18, repeat: Infinity, ease: "easeInOut" } }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#040c17_0%,#040c17_31%,rgba(4,12,23,.88)_43%,rgba(4,12,23,.34)_59%,rgba(4,12,23,.08)_78%,rgba(4,12,23,.02)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#040c17] via-[#040c17]/35 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#040c17_0%,#040c17_30%,rgba(4,12,23,.90)_41%,rgba(4,12,23,.34)_58%,rgba(4,12,23,.06)_78%,rgba(4,12,23,.02)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#040c17] via-[#040c17]/25 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-6 pb-8 lg:px-8 lg:pb-10">
-          <div className="grid min-h-[540px] items-center lg:grid-cols-[.9fr_1.1fr]">
-            <div className="relative z-10 max-w-2xl py-10 lg:py-12">
+        <div className="relative mx-auto max-w-7xl px-6 pb-6 pt-[92px] lg:px-8 lg:pb-8 lg:pt-[100px]">
+          <div className="grid min-h-[480px] items-center lg:grid-cols-[.9fr_1.1fr]">
+            <div className="relative z-10 max-w-2xl py-5 lg:py-6">
               <Reveal>
                 <div className="mb-5 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[.30em] text-cyan-300 sm:text-xs">
                   <span>Tecnologia que impulsiona o seu amanhã</span>
@@ -92,7 +92,7 @@ export default function Home() {
               </Reveal>
             </div>
 
-            <div className="relative min-h-[360px] lg:min-h-[540px]">
+            <div className="relative min-h-[330px] lg:min-h-[480px]">
               <motion.img
                 src="/hero-art.webp.jpeg"
                 alt=""
@@ -107,17 +107,17 @@ export default function Home() {
                 Pessoas<br />Ideias<br />Tecnologia<br />Evolução
                 <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
-              <div className="absolute bottom-16 right-1 hidden max-w-[165px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/50 xl:block">
+              <div className="absolute bottom-12 right-1 hidden max-w-[165px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/50 xl:block">
                 Soluções para pessoas e empresas que querem ir além.
                 <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
             </div>
           </div>
 
-          <div className="relative z-20 -mt-10 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/90 shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl lg:-mt-12">
+          <div className="relative z-20 -mt-7 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/90 shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl lg:-mt-9">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4">
               {capabilities.map(({ icon: Icon, label }, index) => (
-                <div key={label} className={`flex min-h-[92px] items-center gap-4 px-6 py-5 ${index ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""} ${index === 2 ? "sm:border-l-0 sm:border-t lg:border-l lg:border-t-0" : ""}`}>
+                <div key={label} className={`flex min-h-[84px] items-center gap-4 px-6 py-4 ${index ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""} ${index === 2 ? "sm:border-l-0 sm:border-t lg:border-l lg:border-t-0" : ""}`}>
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300/18 bg-cyan-300/[0.04]">
                     <Icon className="h-6 w-6 text-cyan-300" />
                   </div>

@@ -8,25 +8,25 @@ const solutionCards = [
     icon: Monitor,
     title: "Websites e presença digital",
     text: "Sites institucionais e páginas de alta conversão para fortalecer sua marca e gerar oportunidades.",
-    image: "/solution-web.webp",
+    image: "/solution-web.webp.jpeg",
   },
   {
     icon: Bot,
     title: "Inteligência artificial",
     text: "IA aplicada ao seu negócio para automatizar tarefas, analisar dados e apoiar decisões estratégicas.",
-    image: "/solution-ai.webp",
+    image: "/solution-ai.webp.jpeg",
   },
   {
     icon: Workflow,
     title: "Automações inteligentes",
     text: "Processos mais simples, rápidos e eficientes, com automações sob medida para a sua rotina.",
-    image: "/solution-automation.webp",
+    image: "/solution-automation.webp.jpeg",
   },
   {
     icon: Braces,
     title: "Sistemas personalizados",
     text: "Plataformas desenvolvidas para a realidade da sua empresa, com foco em resultados e evolução.",
-    image: "/solution-systems.webp",
+    image: "/solution-systems.webp.jpeg",
   },
 ];
 
@@ -62,7 +62,7 @@ export default function Home() {
           className="absolute inset-0 bg-cover bg-center lg:bg-[center_top]"
           style={{
             backgroundImage:
-              "linear-gradient(90deg,rgba(4,12,23,.98)_0%,rgba(4,12,23,.94)_30%,rgba(4,12,23,.62)_48%,rgba(4,12,23,.12)_72%,rgba(4,12,23,.05)_100%), url('/hero-art.webp'), url('/hero-intelligence.svg')",
+              "linear-gradient(90deg,rgba(4,12,23,.98)_0%,rgba(4,12,23,.94)_30%,rgba(4,12,23,.62)_48%,rgba(4,12,23,.12)_72%,rgba(4,12,23,.05)_100%), url('/hero-art.webp.jpeg'), url('/hero-intelligence.svg')",
           }}
           initial={reduceMotion ? false : { opacity: 0, scale: 1.015 }}
           animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.012, 1] }}

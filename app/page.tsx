@@ -55,58 +55,66 @@ export default function Home() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main className="page-shell min-h-screen overflow-hidden">
+    <main className="min-h-screen overflow-hidden pt-[72px]">
       <section className="relative isolate overflow-hidden border-b border-white/[0.06] bg-[#040c17]">
-        <motion.div
-          aria-hidden
-          className="absolute inset-0 bg-cover bg-center lg:bg-[center_top]"
-          style={{
-            backgroundImage:
-              "linear-gradient(90deg,rgba(4,12,23,.98)_0%,rgba(4,12,23,.94)_30%,rgba(4,12,23,.62)_48%,rgba(4,12,23,.12)_72%,rgba(4,12,23,.05)_100%), url('/hero-art.webp.jpeg'), url('/hero-intelligence.svg')",
-          }}
+        <motion.img
+          src="/hero-art.webp.jpeg"
+          alt="Representação artística de inteligência, conexão e evolução digital"
+          className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-[70%] object-cover object-[68%_center] lg:block"
           initial={reduceMotion ? false : { opacity: 0, scale: 1.015 }}
           animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.012, 1] }}
           transition={{ opacity: { duration: .8 }, scale: { duration: 18, repeat: Infinity, ease: "easeInOut" } }}
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#040c17] via-[#040c17]/60 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#040c17_0%,#040c17_31%,rgba(4,12,23,.88)_43%,rgba(4,12,23,.34)_59%,rgba(4,12,23,.08)_78%,rgba(4,12,23,.02)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#040c17] via-[#040c17]/35 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-6 pb-8 pt-14 lg:px-8 lg:pb-10 lg:pt-20">
-          <div className="grid min-h-[620px] items-center lg:grid-cols-[.92fr_1.08fr]">
-            <div className="relative z-10 max-w-2xl pb-20 pt-10 lg:pb-28 lg:pt-8">
+        <div className="relative mx-auto max-w-7xl px-6 pb-8 lg:px-8 lg:pb-10">
+          <div className="grid min-h-[540px] items-center lg:grid-cols-[.9fr_1.1fr]">
+            <div className="relative z-10 max-w-2xl py-10 lg:py-12">
               <Reveal>
-                <div className="mb-6 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[.30em] text-cyan-300 sm:text-xs">
+                <div className="mb-5 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[.30em] text-cyan-300 sm:text-xs">
                   <span>Tecnologia que impulsiona o seu amanhã</span>
                   <span className="hidden h-px w-16 bg-cyan-300/70 sm:block" />
                 </div>
 
-                <h1 className="max-w-2xl text-5xl font-semibold leading-[.95] tracking-[-0.06em] sm:text-6xl lg:text-[5.2rem]">
+                <h1 className="max-w-2xl text-5xl font-semibold leading-[.95] tracking-[-0.06em] sm:text-6xl lg:text-[5.15rem]">
                   Da ideia<br />ao <span className="gradient-text">próximo nível.</span>
                 </h1>
 
-                <p className="mt-7 max-w-xl text-lg leading-8 text-white/72">
+                <p className="mt-6 max-w-xl text-lg leading-8 text-white/72">
                   Soluções digitais, inteligência artificial, automações e sistemas personalizados para transformar o seu negócio em resultados reais.
                 </p>
 
-                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <a href="/diagnostico" className="button-primary px-6 py-3.5">Solicitar diagnóstico <ArrowRight className="h-4 w-4" /></a>
                   <a href="/solucoes" className="button-secondary px-6 py-3.5">Conhecer soluções</a>
                 </div>
               </Reveal>
             </div>
 
-            <div className="relative min-h-[420px] lg:min-h-[620px]">
-              <div className="absolute right-1 top-10 hidden max-w-[150px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/58 xl:block">
+            <div className="relative min-h-[360px] lg:min-h-[540px]">
+              <motion.img
+                src="/hero-art.webp.jpeg"
+                alt=""
+                aria-hidden
+                className="absolute inset-0 h-full w-full object-cover object-[72%_center] lg:hidden"
+                initial={reduceMotion ? false : { opacity: 0, scale: 1.01 }}
+                animate={reduceMotion ? undefined : { opacity: 1, scale: [1, 1.01, 1] }}
+                transition={{ opacity: { duration: .7 }, scale: { duration: 18, repeat: Infinity, ease: "easeInOut" } }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#040c17] via-[#040c17]/10 to-transparent lg:hidden" />
+              <div className="absolute right-1 top-8 hidden max-w-[150px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/58 xl:block">
                 Pessoas<br />Ideias<br />Tecnologia<br />Evolução
                 <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
-              <div className="absolute bottom-20 right-1 hidden max-w-[165px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/50 xl:block">
+              <div className="absolute bottom-16 right-1 hidden max-w-[165px] text-[11px] uppercase leading-6 tracking-[.20em] text-white/50 xl:block">
                 Soluções para pessoas e empresas que querem ir além.
                 <div className="mt-5 h-px w-9 bg-cyan-300" />
               </div>
             </div>
           </div>
 
-          <div className="relative z-20 -mt-12 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/90 shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl lg:-mt-16">
+          <div className="relative z-20 -mt-10 overflow-hidden rounded-[24px] border border-cyan-300/20 bg-[#0a1b31]/90 shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl lg:-mt-12">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4">
               {capabilities.map(({ icon: Icon, label }, index) => (
                 <div key={label} className={`flex min-h-[92px] items-center gap-4 px-6 py-5 ${index ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""} ${index === 2 ? "sm:border-l-0 sm:border-t lg:border-l lg:border-t-0" : ""}`}>

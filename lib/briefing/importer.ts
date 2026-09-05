@@ -80,17 +80,31 @@ function slugify(value: string) {
     .slice(0, 48);
 }
 
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function stripNumbering(value: string) {
   const match = value.match(numberedPattern);
   return match ? match[2].trim() : value.trim();
 }
 
+function isBenignMammothMessage(message: { type: string; message: string }) {
+  const normalized = normalizeText(message.message);
+  return normalized.includes("unrecognised paragraph style") && normalized.includes("title");
+}
+
+function isContextOnlySection(title: string) {
+  const normalized = normalizeText(title);
+  return normalized === "informacoes ja identificadas" || normalized === "dados ja identificados";
+}
+
 function inferQuestionType(label: string): QuestionType {
-  const normalized = label
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
+  const normalized = normalizeText(label);
 
   if (normalized.includes("ticket medio") || normalized.includes("valor aproximado")) {
     return "currency";
@@ -129,10 +143,12 @@ export async function importBriefingDocx(
 ): Promise<BriefingImportResult> {
   const converted = await mammoth.convertToHtml({ buffer });
   const blocks = htmlToBlocks(converted.value);
-  const warnings: ImportWarning[] = converted.messages.map((message) => ({
-    code: "mammoth_message",
-    message: `${message.type}: ${message.message}`,
-  }));
+  const warnings: ImportWarning[] = converted.messages
+    .filter((message) => !isBenignMammothMessage(message))
+    .map((message) => ({
+      code: "mammoth_message",
+      message: `${message.type}: ${message.message}`,
+    }));
 
   const sections: BriefingSection[] = [];
   let currentSection: BriefingSection | null = null;
@@ -150,10 +166,10 @@ export async function importBriefingDocx(
         order: index,
       }));
       sections.push(currentSection);
-    } else {
+    } else if (!isContextOnlySection(currentSection.title)) {
       warnings.push({
         code: "empty_section",
-        message: `Seção ignorada por não conter perguntas: ${currentSection.title}`,
+        message: `A seção “${currentSection.title}” não contém perguntas e não foi incluída no questionário.`,
       });
     }
 

@@ -2,6 +2,7 @@
 
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { BrandLogo } from "./brand-logo";
 
 const navigation = [
   { href: "/solucoes", label: "Soluções" },
@@ -16,14 +17,8 @@ export function SiteHeader() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-[#06111f]/88 backdrop-blur-2xl">
       <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-6 lg:px-8">
-        <a href="/" className="group flex items-center gap-3" aria-label="ALGENRI - página inicial">
-          <span className="relative flex h-11 w-11 items-center justify-center">
-            <img src="/algenri-mark.svg" alt="" aria-hidden className="h-11 w-11 drop-shadow-[0_0_18px_rgba(0,229,255,.18)]" />
-          </span>
-          <span>
-            <span className="block text-[15px] font-semibold tracking-[0.22em] text-white">ALGENRI</span>
-            <span className="hidden text-[9px] uppercase tracking-[0.22em] text-white/38 sm:block">Soluções Digitais & IA</span>
-          </span>
+        <a href="/" className="group flex items-center" aria-label="ALGENRI - página inicial">
+          <BrandLogo className="h-auto w-[188px] sm:w-[204px]" priority />
         </a>
 
         <nav className="hidden items-center gap-8 text-sm text-white/64 md:flex" aria-label="Navegação principal">

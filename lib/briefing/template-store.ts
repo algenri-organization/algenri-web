@@ -13,6 +13,22 @@ function safeFileName(value: string) {
     .slice(0, 120) || "briefing.docx";
 }
 
+function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)).filter((item) => item !== undefined) as T;
+  }
+
+  if (value && typeof value === "object" && !(value instanceof Date) && !Buffer.isBuffer(value)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, stripUndefinedDeep(item)]),
+    ) as T;
+  }
+
+  return value;
+}
+
 export async function persistImportedBriefingTemplate(input: {
   importResult: BriefingImportResult;
   originalFile: Buffer;
@@ -74,7 +90,7 @@ export async function persistImportedBriefingTemplate(input: {
   };
 
   try {
-    await templateRef.set(record);
+    await templateRef.set(stripUndefinedDeep(record));
   } catch (error) {
     if (archivedFile) {
       await archivedFile.delete({ ignoreNotFound: true }).catch(() => undefined);
@@ -116,6 +132,6 @@ export async function updateBriefingTemplate(input: {
     updatedAt: new Date().toISOString(),
   };
 
-  await ref.set({ ...updated, updatedBy: input.updatedBy }, { merge: true });
+  await ref.set(stripUndefinedDeep({ ...updated, updatedBy: input.updatedBy }), { merge: true });
   return updated;
 }

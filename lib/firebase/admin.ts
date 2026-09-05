@@ -1,9 +1,12 @@
+import { writeFile } from "node:fs/promises";
 import { getVercelOidcToken } from "@vercel/oidc";
-import { getApps, initializeApp, type App, type Credential, type GoogleOAuthAccessToken } from "firebase-admin/app";
+import { applicationDefault, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { ExternalAccountClient } from "google-auth-library";
+
+const ADC_PATH = "/tmp/algenri-google-wif.json";
+const OIDC_TOKEN_PATH = "/tmp/algenri-vercel-oidc-token";
 
 function requiredEnv(name: string) {
   const value = process.env[name];
@@ -11,63 +14,62 @@ function requiredEnv(name: string) {
   return value;
 }
 
-function createWorkloadIdentityCredential(): Credential {
+async function prepareWorkloadIdentityAdc() {
   const projectNumber = requiredEnv("GCP_PROJECT_NUMBER");
   const serviceAccountEmail = requiredEnv("GCP_SERVICE_ACCOUNT_EMAIL");
   const poolId = requiredEnv("GCP_WORKLOAD_IDENTITY_POOL_ID");
   const providerId = requiredEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID");
+  const oidcToken = await getVercelOidcToken();
 
-  return {
-    async getAccessToken(): Promise<GoogleOAuthAccessToken> {
-      const authClient = ExternalAccountClient.fromJSON({
-        type: "external_account",
-        audience: `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/providers/${providerId}`,
-        subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
-        token_url: "https://sts.googleapis.com/v1/token",
-        service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccountEmail}:generateAccessToken`,
-        subject_token_supplier: {
-          getSubjectToken: getVercelOidcToken,
-        },
-      });
+  if (!oidcToken) {
+    throw new Error("Vercel OIDC token is not available.");
+  }
 
-      if (!authClient) {
-        throw new Error("Unable to initialize Google external account client.");
-      }
-
-      const token = await authClient.getAccessToken();
-      if (!token.token) {
-        throw new Error("Google Workload Identity Federation did not return an access token.");
-      }
-
-      return {
-        access_token: token.token,
-        expires_in: 3300,
-      };
+  const externalAccountConfig = {
+    type: "external_account",
+    audience: `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/providers/${providerId}`,
+    subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    token_url: "https://sts.googleapis.com/v1/token",
+    service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccountEmail}:generateAccessToken`,
+    credential_source: {
+      file: OIDC_TOKEN_PATH,
     },
   };
+
+  await Promise.all([
+    writeFile(OIDC_TOKEN_PATH, oidcToken, { encoding: "utf8", mode: 0o600 }),
+    writeFile(ADC_PATH, JSON.stringify(externalAccountConfig), { encoding: "utf8", mode: 0o600 }),
+  ]);
+
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = ADC_PATH;
 }
 
-function getAdminApp(): App {
+async function getAdminApp(): Promise<App> {
+  // Refresh the short-lived subject token on every server request. The Google
+  // auth client may cache access tokens, but when it needs a new one it reads
+  // the current Vercel OIDC token from OIDC_TOKEN_PATH.
+  await prepareWorkloadIdentityAdc();
+
   const existing = getApps()[0];
   if (existing) return existing;
 
   const projectId = requiredEnv("GCP_PROJECT_ID");
 
   return initializeApp({
-    credential: createWorkloadIdentityCredential(),
+    credential: applicationDefault(),
     projectId,
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 }
 
-export function getAdminAuth() {
-  return getAuth(getAdminApp());
+export async function getAdminAuth() {
+  return getAuth(await getAdminApp());
 }
 
-export function getAdminDb() {
-  return getFirestore(getAdminApp());
+export async function getAdminDb() {
+  return getFirestore(await getAdminApp());
 }
 
-export function getAdminStorage() {
-  return getStorage(getAdminApp());
+export async function getAdminStorage() {
+  return getStorage(await getAdminApp());
 }

@@ -35,6 +35,50 @@ function importErrorMessage(error?: string) {
   }
 }
 
+function cleanFileBaseName(fileName: string) {
+  return fileName
+    .replace(/\.docx$/i, "")
+    .replace(/^ALGENRI[_\s-]*/i, "")
+    .replace(/[_\s-]*v\d+(?:\.\d+)?[_\s-]*(?:consolidado|final)?$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function inferModelName(fileName: string) {
+  const base = cleanFileBaseName(fileName);
+  if (/\bOTIUM\b/i.test(base)) return "Briefing OTIUM";
+
+  const simplified = base
+    .replace(/\bbriefing\b/gi, "")
+    .replace(/\bdiagnostico\b/gi, "")
+    .replace(/\binicial\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return simplified ? `Briefing ${simplified}` : "Novo modelo de briefing";
+}
+
+function inferProjectType(fileName: string) {
+  const normalized = cleanFileBaseName(fileName).toLowerCase();
+
+  if (/otium|e-?commerce|loja|shop|varejo/.test(normalized)) return "Site completo com ecommerce";
+  if (/site|website|institucional/.test(normalized)) return "Site institucional";
+  if (/automacao|automation/.test(normalized)) return "Automação";
+  if (/sistema|saas|software/.test(normalized)) return "Sistema personalizado";
+  return "Projeto digital";
+}
+
+function autofillInput(input: HTMLInputElement | null, value: string) {
+  if (!input) return;
+  if (input.value.trim() && input.dataset.autoFilled !== "true") return;
+
+  input.value = value;
+  input.dataset.autoFilled = "true";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 export default function BriefingImportUx() {
   const [fileName, setFileName] = useState("");
   const [feedback, setFeedback] = useState<Feedback>({ kind: "idle", text: "" });
@@ -42,6 +86,22 @@ export default function BriefingImportUx() {
   useEffect(() => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"][name="file"]');
     if (!input) return;
+
+    const form = input.closest("form");
+    const nameInput = form?.querySelector<HTMLInputElement>('input[name="name"]') ?? null;
+    const projectTypeInput = form?.querySelector<HTMLInputElement>('input[name="projectType"]') ?? null;
+
+    const markManual = (target: HTMLInputElement | null) => {
+      if (!target) return () => undefined;
+      const handler = () => {
+        target.dataset.autoFilled = "false";
+      };
+      target.addEventListener("keydown", handler);
+      return () => target.removeEventListener("keydown", handler);
+    };
+
+    const cleanupName = markManual(nameInput);
+    const cleanupProjectType = markManual(projectTypeInput);
 
     const handleChange = () => {
       const file = input.files?.[0];
@@ -51,11 +111,23 @@ export default function BriefingImportUx() {
 
       const label = input.closest("label");
       const text = label?.querySelector("span");
-      if (text) text.textContent = name || "Selecionar arquivo .docx";
+      if (text) {
+        text.textContent = name || "Selecionar arquivo .docx";
+        if (name) text.setAttribute("title", name);
+      }
+
+      if (file) {
+        autofillInput(nameInput, inferModelName(file.name));
+        autofillInput(projectTypeInput, inferProjectType(file.name));
+      }
     };
 
     input.addEventListener("change", handleChange);
-    return () => input.removeEventListener("change", handleChange);
+    return () => {
+      input.removeEventListener("change", handleChange);
+      cleanupName();
+      cleanupProjectType();
+    };
   }, []);
 
   useEffect(() => {
@@ -118,7 +190,7 @@ export default function BriefingImportUx() {
         <div className="min-w-0">
           {fileName && <p className="truncate font-medium text-slate-100">{fileName}</p>}
           <p className={`mt-1 leading-5 ${feedback.kind === "error" ? "text-rose-200" : feedback.kind === "success" ? "text-emerald-200" : "text-slate-400"}`}>
-            {feedback.text || "Arquivo selecionado. Clique em Importar modelo para continuar."}
+            {feedback.text || "Arquivo selecionado. Nome e tipo de projeto foram sugeridos automaticamente; revise se necessário e clique em Importar modelo."}
           </p>
         </div>
       </div>

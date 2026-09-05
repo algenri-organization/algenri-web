@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public briefing writes are intentionally denied. They must go through
+    // Next.js server endpoints using Firebase Admin after token validation.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

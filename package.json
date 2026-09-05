@@ -9,11 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "firebase": "^12.1.0",
+    "firebase-admin": "^13.4.0",
     "lucide-react": "^0.468.0",
+    "mammoth": "^1.10.0",
     "motion": "^12.23.12",
     "next": "^15.5.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",

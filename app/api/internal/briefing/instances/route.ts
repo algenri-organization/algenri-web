@@ -1,8 +1,37 @@
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
-import { createBriefingInstance } from "@/lib/briefing/instance-store";
+import { createBriefingInstance, listBriefingInstances } from "@/lib/briefing/instance-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  try {
+    await requireAlgenriInternalUser(request);
+    const instances = await listBriefingInstances();
+    return Response.json({
+      ok: true,
+      instances: instances.map((instance) => ({
+        id: instance.id,
+        clientName: instance.clientName,
+        projectName: instance.projectName,
+        slug: instance.slug,
+        status: instance.status,
+        progress: instance.progress,
+        createdAt: instance.createdAt,
+        startedAt: instance.startedAt,
+        lastSavedAt: instance.lastSavedAt,
+        completedAt: instance.completedAt,
+        templateName: instance.templateSnapshot.name,
+        templateVersion: instance.templateVersion,
+      })),
+    });
+  } catch (error) {
+    const authResponse = internalAuthResponse(error);
+    if (authResponse) return authResponse;
+    console.error("Briefing instance list failed", error);
+    return Response.json({ ok: false, error: "briefing_instance_list_failed" }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {

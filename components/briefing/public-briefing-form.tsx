@@ -52,6 +52,15 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
   const progress = briefing?.progress ?? 0;
   const requiredMissing = useMemo(() => visibleQuestions.filter((q) => q.required && (answers[q.id] === undefined || answers[q.id] === null || answers[q.id] === "" || (Array.isArray(answers[q.id]) && (answers[q.id] as unknown[]).length === 0))), [visibleQuestions, answers]);
 
+  function goToSection(index: number) {
+    setCurrentSection(index);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById("briefing-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+
   async function save() {
     setSaving(true); setMessage("");
     try {
@@ -64,7 +73,14 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
     finally { setSaving(false); }
   }
 
-  async function next() { await save(); if (requiredMissing.length) { setMessage("Preencha as perguntas obrigatórias desta etapa antes de avançar."); return; } setCurrentSection((value) => Math.min(value + 1, sections.length - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  async function next() {
+    await save();
+    if (requiredMissing.length) {
+      setMessage("Preencha as perguntas obrigatórias desta etapa antes de avançar.");
+      return;
+    }
+    goToSection(Math.min(currentSection + 1, sections.length - 1));
+  }
 
   async function complete() {
     await save();
@@ -81,11 +97,11 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
   return <main className="min-h-screen bg-[#040c17] text-white">
     <header className="border-b border-white/10 bg-[#06111f]/95 px-6 py-5"><div className="mx-auto max-w-5xl"><p className="text-xs font-semibold tracking-[0.25em] text-cyan-300">ALGENRI CLIENT FLOW</p><div className="mt-2 flex flex-col justify-between gap-2 md:flex-row md:items-end"><div><h1 className="text-2xl font-semibold">{briefing.projectName}</h1><p className="mt-1 text-sm text-slate-400">{briefing.clientName}</p></div><p className="text-sm text-slate-400">{progress}% concluído</p></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-cyan-300 transition-all" style={{ width: `${progress}%` }} /></div></div></header>
     <div className="mx-auto grid max-w-5xl gap-6 px-6 py-8 lg:grid-cols-[220px_1fr]">
-      <aside className="space-y-2">{sections.map((item, index) => <button key={item.id} onClick={() => setCurrentSection(index)} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${index === currentSection ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-100" : "border-white/5 bg-white/[0.025] text-slate-400"}`}><span className="mr-2 text-xs">{index + 1}.</span>{item.title}</button>)}</aside>
-      <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 md:p-8"><p className="text-xs text-cyan-300">Etapa {currentSection + 1} de {sections.length}</p><h2 className="mt-2 text-2xl font-semibold">{section.title}</h2>{section.description && <p className="mt-2 text-sm leading-6 text-slate-400">{section.description}</p>}
+      <aside className="space-y-2">{sections.map((item, index) => <button key={item.id} onClick={() => goToSection(index)} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${index === currentSection ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-100" : "border-white/5 bg-white/[0.025] text-slate-400"}`}><span className="mr-2 text-xs">{index + 1}.</span>{item.title}</button>)}</aside>
+      <section id="briefing-section" className="scroll-mt-6 rounded-3xl border border-white/10 bg-white/[0.025] p-6 md:p-8"><p className="text-xs text-cyan-300">Etapa {currentSection + 1} de {sections.length}</p><h2 className="mt-2 text-2xl font-semibold">{section.title}</h2>{section.description && <p className="mt-2 text-sm leading-6 text-slate-400">{section.description}</p>}
         <div className="mt-8 space-y-7">{visibleQuestions.map((question) => <label key={question.id} className="block"><span className="text-sm font-medium text-slate-100">{question.label}{question.required && <span className="ml-1 text-cyan-300">*</span>}</span>{question.helperText && question.type !== "consent" && <p className="mt-1 text-xs leading-5 text-slate-500">{question.helperText}</p>}<QuestionField question={question} value={answers[question.id]} disabled={locked} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} /></label>)}</div>
         {message && <p className="mt-6 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] px-4 py-3 text-sm text-cyan-100">{message}</p>}
-        <div className="mt-8 flex flex-wrap justify-between gap-3"><button disabled={currentSection === 0} onClick={() => setCurrentSection((value) => Math.max(0, value - 1))} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-30">Anterior</button><div className="flex gap-2"><button disabled={saving || locked} onClick={save} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50">{saving ? "Salvando…" : "Salvar e continuar depois"}</button>{currentSection < sections.length - 1 ? <button disabled={saving || locked} onClick={next} className="rounded-xl bg-cyan-300 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50">Próxima etapa</button> : <button disabled={saving || locked} onClick={complete} className="rounded-xl bg-cyan-300 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50">Concluir briefing</button>}</div></div>
+        <div className="mt-8 flex flex-wrap justify-between gap-3"><button disabled={currentSection === 0} onClick={() => goToSection(Math.max(0, currentSection - 1))} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-30">Anterior</button><div className="flex gap-2"><button disabled={saving || locked} onClick={save} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50">{saving ? "Salvando…" : "Salvar e continuar depois"}</button>{currentSection < sections.length - 1 ? <button disabled={saving || locked} onClick={next} className="rounded-xl bg-cyan-300 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50">Próxima etapa</button> : <button disabled={saving || locked} onClick={complete} className="rounded-xl bg-cyan-300 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50">Concluir briefing</button>}</div></div>
       </section>
     </div>
   </main>;

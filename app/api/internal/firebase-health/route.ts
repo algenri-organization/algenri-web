@@ -73,7 +73,8 @@ export async function GET() {
       );
     }
 
-    const snapshot = await getAdminDb().collection("_system").doc("health").get();
+    const db = await getAdminDb();
+    const snapshot = await db.collection("_system").doc("health").get();
 
     return Response.json({
       ok: true,

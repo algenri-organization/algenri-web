@@ -37,6 +37,30 @@ button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 ::selection { background: rgba(0, 229, 255, .28); }
 
+/* Brand fallback: any legacy mark still present is rendered as the approved full lockup. */
+footer img[src="/algenri-mark.svg"] {
+  content: url('/algenri-logo.webp');
+  width: 210px !important;
+  max-width: min(210px, 66vw) !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+footer *:has(> img[src="/algenri-mark.svg"]) {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+footer *:has(> img[src="/algenri-mark.svg"]) + * {
+  display: none !important;
+}
+
 .neural-identity-field {
   position: fixed;
   inset: 0;
@@ -145,6 +169,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
     background-size: 1150px auto;
     background-position: 62% 60px;
     opacity: .42;
+  }
+
+  footer img[src="/algenri-mark.svg"] {
+    width: 175px !important;
   }
 }
 

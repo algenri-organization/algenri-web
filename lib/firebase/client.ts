@@ -1,7 +1,7 @@
-import { getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,7 +12,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
-export const firebaseAuth = getAuth(firebaseApp);
-export const firebaseDb = getFirestore(firebaseApp);
-export const firebaseStorage = getStorage(firebaseApp);
+const isBrowser = typeof window !== "undefined";
+
+export const firebaseApp: FirebaseApp = isBrowser
+  ? (getApps()[0] ?? initializeApp(firebaseConfig))
+  : (undefined as unknown as FirebaseApp);
+
+export const firebaseAuth: Auth = isBrowser
+  ? getAuth(firebaseApp)
+  : (undefined as unknown as Auth);
+
+export const firebaseDb: Firestore = isBrowser
+  ? getFirestore(firebaseApp)
+  : (undefined as unknown as Firestore);
+
+export const firebaseStorage: FirebaseStorage = isBrowser
+  ? getStorage(firebaseApp)
+  : (undefined as unknown as FirebaseStorage);

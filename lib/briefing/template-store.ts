@@ -1,6 +1,6 @@
 import { getAdminDb, getAdminStorage } from "@/lib/firebase/admin";
 import type { BriefingImportResult } from "@/lib/briefing/importer";
-import type { BriefingTemplateRecord } from "@/lib/briefing/types";
+import type { BriefingTemplateRecord, BriefingTemplateSnapshot, TemplateStatus } from "@/lib/briefing/types";
 
 const TEMPLATE_COLLECTION = "briefing_templates";
 
@@ -67,4 +67,39 @@ export async function persistImportedBriefingTemplate(input: {
   }
 
   return record;
+}
+
+export async function listBriefingTemplates(limit = 50): Promise<BriefingTemplateRecord[]> {
+  const db = await getAdminDb();
+  const snapshot = await db.collection(TEMPLATE_COLLECTION).orderBy("updatedAt", "desc").limit(limit).get();
+  return snapshot.docs.map((doc) => doc.data() as BriefingTemplateRecord);
+}
+
+export async function getBriefingTemplate(id: string): Promise<BriefingTemplateRecord | null> {
+  const db = await getAdminDb();
+  const snapshot = await db.collection(TEMPLATE_COLLECTION).doc(id).get();
+  return snapshot.exists ? (snapshot.data() as BriefingTemplateRecord) : null;
+}
+
+export async function updateBriefingTemplate(input: {
+  id: string;
+  snapshot: BriefingTemplateSnapshot;
+  status: TemplateStatus;
+  updatedBy: string;
+}): Promise<BriefingTemplateRecord | null> {
+  const db = await getAdminDb();
+  const ref = db.collection(TEMPLATE_COLLECTION).doc(input.id);
+  const current = await ref.get();
+  if (!current.exists) return null;
+
+  const currentData = current.data() as BriefingTemplateRecord;
+  const updated: BriefingTemplateRecord = {
+    ...currentData,
+    ...input.snapshot,
+    status: input.status,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await ref.set({ ...updated, updatedBy: input.updatedBy }, { merge: true });
+  return updated;
 }

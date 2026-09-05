@@ -1,11 +1,11 @@
-import { adminDb } from "@/lib/firebase/admin";
+import { getAdminDb } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const snapshot = await adminDb.collection("_system").doc("health").get();
+    const snapshot = await getAdminDb().collection("_system").doc("health").get();
 
     return Response.json({
       ok: true,

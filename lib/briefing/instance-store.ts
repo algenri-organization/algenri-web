@@ -1,5 +1,5 @@
 import { getAdminDb } from "@/lib/firebase/admin";
-import { calculateBriefingProgress } from "@/lib/briefing/progress";
+import { calculateBriefingProgress, hasMissingRequiredBriefingAnswers } from "@/lib/briefing/progress";
 import { createBriefingToken, verifyBriefingToken } from "@/lib/briefing/tokens";
 import { getBriefingTemplate } from "@/lib/briefing/template-store";
 import type { BriefingStatus, BriefingTemplateSnapshot } from "@/lib/briefing/types";
@@ -136,13 +136,15 @@ export async function completePublicBriefing(slug: string, token: string) {
   const authorized = await getAuthorizedPublicBriefing(slug, token);
   if (!authorized) return null;
 
-  const progress = calculateBriefingProgress(authorized.instance.templateSnapshot.sections, authorized.answers);
-  if (progress < 100) throw new Error("required_answers_missing");
+  if (hasMissingRequiredBriefingAnswers(authorized.instance.templateSnapshot.sections, authorized.answers)) {
+    throw new Error("required_answers_missing");
+  }
 
   const db = await getAdminDb();
   const now = new Date().toISOString();
+  const progress = calculateBriefingProgress(authorized.instance.templateSnapshot.sections, authorized.answers);
   await db.collection(INSTANCE_COLLECTION).doc(authorized.instance.id).set({
-    progress: 100,
+    progress,
     status: "completed",
     completedAt: now,
     lastSavedAt: now,

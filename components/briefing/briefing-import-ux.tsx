@@ -28,6 +28,10 @@ function importErrorMessage(error?: string) {
       return "O arquivo selecionado ultrapassa o tamanho permitido.";
     case "no_questions_detected":
       return "O DOCX foi lido, mas nenhuma pergunta estruturada foi encontrada.";
+    case "docx_parse_failed":
+      return "O arquivo foi recebido, mas não pôde ser interpretado como um briefing estruturado. Verifique o DOCX e tente novamente.";
+    case "template_persist_failed":
+      return "O questionário foi lido, mas não foi possível salvar o novo modelo. Tente novamente.";
     case "briefing_import_failed":
       return "O servidor não conseguiu concluir a importação. Tente novamente.";
     default:
@@ -155,7 +159,9 @@ export default function BriefingImportUx() {
           const detail = sections !== null && questions !== null
             ? ` ${sections} seções e ${questions} perguntas identificadas.`
             : "";
-          setFeedback({ kind: "success", text: `Modelo importado com sucesso.${detail}` });
+          const archived = payload.sourceArchived !== false;
+          const archiveDetail = archived ? "" : " O modelo foi salvo, mas o DOCX original não pôde ser arquivado; isso não impede o uso do briefing.";
+          setFeedback({ kind: "success", text: `Modelo importado com sucesso.${detail}${archiveDetail}` });
         } else {
           setFeedback({
             kind: "error",

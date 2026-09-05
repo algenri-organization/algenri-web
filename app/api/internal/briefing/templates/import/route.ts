@@ -34,12 +34,18 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const importResult = await importBriefingDocx(buffer, {
-      name: textField(formData, "name"),
-      projectType: textField(formData, "projectType"),
-      version: textField(formData, "version", "1.0"),
-      privacyNoticeVersion: textField(formData, "privacyNoticeVersion", "1.0"),
-    });
+    let importResult;
+    try {
+      importResult = await importBriefingDocx(buffer, {
+        name: textField(formData, "name"),
+        projectType: textField(formData, "projectType"),
+        version: textField(formData, "version", "1.0"),
+        privacyNoticeVersion: textField(formData, "privacyNoticeVersion", "1.0"),
+      });
+    } catch (error) {
+      console.error("Briefing DOCX parsing failed", error);
+      return Response.json({ ok: false, error: "docx_parse_failed" }, { status: 422 });
+    }
 
     if (importResult.source.questionCount === 0) {
       return Response.json({
@@ -49,13 +55,19 @@ export async function POST(request: Request) {
       }, { status: 422 });
     }
 
-    const record = await persistImportedBriefingTemplate({
-      importResult,
-      originalFile: buffer,
-      originalFileName: file.name,
-      mimeType: file.type || DOCX_MIME,
-      createdBy: user.email,
-    });
+    let record;
+    try {
+      record = await persistImportedBriefingTemplate({
+        importResult,
+        originalFile: buffer,
+        originalFileName: file.name,
+        mimeType: file.type || DOCX_MIME,
+        createdBy: user.email,
+      });
+    } catch (error) {
+      console.error("Briefing template persistence failed", error);
+      return Response.json({ ok: false, error: "template_persist_failed" }, { status: 500 });
+    }
 
     return Response.json({
       ok: true,
@@ -65,7 +77,8 @@ export async function POST(request: Request) {
       version: record.version,
       sectionCount: importResult.source.sectionCount,
       questionCount: importResult.source.questionCount,
-      warnings: importResult.warnings,
+      warnings: record.source.warnings,
+      sourceArchived: Boolean(record.source.storagePath),
     }, { status: 201 });
   } catch (error) {
     const authResponse = internalAuthResponse(error);

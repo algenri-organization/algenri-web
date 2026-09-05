@@ -1,3 +1,4 @@
+import BriefingImportUx from "@/components/briefing/briefing-import-ux";
 import BriefingTemplateAdmin from "@/components/briefing/briefing-template-admin";
 
 export const metadata = {
@@ -6,5 +7,10 @@ export const metadata = {
 };
 
 export default function BriefingModelsPage() {
-  return <BriefingTemplateAdmin />;
+  return (
+    <>
+      <BriefingTemplateAdmin />
+      <BriefingImportUx />
+    </>
+  );
 }

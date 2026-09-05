@@ -21,25 +21,36 @@ export async function persistImportedBriefingTemplate(input: {
   createdBy: string;
 }): Promise<BriefingTemplateRecord> {
   const db = await getAdminDb();
-  const storage = await getAdminStorage();
   const templateRef = db.collection(TEMPLATE_COLLECTION).doc();
   const now = new Date().toISOString();
   const sourceName = safeFileName(input.originalFileName);
-  const storagePath = `briefing-templates/${templateRef.id}/source/${Date.now()}-${sourceName}`;
-  const bucket = storage.bucket();
-  const file = bucket.file(storagePath);
+  const plannedStoragePath = `briefing-templates/${templateRef.id}/source/${Date.now()}-${sourceName}`;
 
-  await file.save(input.originalFile, {
-    resumable: false,
-    metadata: {
-      contentType: input.mimeType,
-      cacheControl: "private, no-store, max-age=0",
+  let archivedStoragePath = "";
+  let archivedFile: ReturnType<ReturnType<Awaited<ReturnType<typeof getAdminStorage>>["bucket"]>["file"]> | null = null;
+  let storageWarning: string | null = null;
+
+  try {
+    const storage = await getAdminStorage();
+    const bucket = storage.bucket();
+    const file = bucket.file(plannedStoragePath);
+    await file.save(input.originalFile, {
+      resumable: false,
       metadata: {
-        templateId: templateRef.id,
-        uploadedBy: input.createdBy,
+        contentType: input.mimeType,
+        cacheControl: "private, no-store, max-age=0",
+        metadata: {
+          templateId: templateRef.id,
+          uploadedBy: input.createdBy,
+        },
       },
-    },
-  });
+    });
+    archivedStoragePath = plannedStoragePath;
+    archivedFile = file;
+  } catch (error) {
+    storageWarning = "O modelo foi importado, mas o arquivo DOCX original não pôde ser arquivado no Storage.";
+    console.error("Briefing source archive upload failed", error);
+  }
 
   const record: BriefingTemplateRecord = {
     id: templateRef.id,
@@ -49,10 +60,13 @@ export async function persistImportedBriefingTemplate(input: {
       originalFileName: input.originalFileName,
       mimeType: input.mimeType,
       sizeBytes: input.originalFile.byteLength,
-      storagePath,
+      storagePath: archivedStoragePath,
       parser: input.importResult.source.parser,
       importedAt: now,
-      warnings: input.importResult.warnings.map((warning) => warning.message),
+      warnings: [
+        ...input.importResult.warnings.map((warning) => warning.message),
+        ...(storageWarning ? [storageWarning] : []),
+      ],
     },
     createdBy: input.createdBy,
     createdAt: now,
@@ -62,7 +76,9 @@ export async function persistImportedBriefingTemplate(input: {
   try {
     await templateRef.set(record);
   } catch (error) {
-    await file.delete({ ignoreNotFound: true }).catch(() => undefined);
+    if (archivedFile) {
+      await archivedFile.delete({ ignoreNotFound: true }).catch(() => undefined);
+    }
     throw error;
   }
 

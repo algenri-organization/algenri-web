@@ -18,16 +18,19 @@ export default function ContactLeadForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState("");
+  const [whatsappUnavailable, setWhatsappUnavailable] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
 
-    const popup = window.open("", "_blank");
+    const popup = window.open("about:blank", "_blank");
     const form = event.currentTarget;
     const data = new FormData(form);
 
     setBusy(true);
+    setDone(false);
+    setWhatsappUnavailable(false);
     setMessage("");
 
     try {
@@ -48,14 +51,19 @@ export default function ContactLeadForm() {
       if (!response.ok) throw new Error("Não foi possível registrar seu contato agora.");
 
       setDone(true);
-      setMessage("Contato registrado. Agora você pode continuar a conversa pelo WhatsApp.");
       form.reset();
 
       if (payload.whatsappUrl) {
-        if (popup) popup.location.href = payload.whatsappUrl;
-        else window.open(payload.whatsappUrl, "_blank", "noopener,noreferrer");
-      } else if (popup) {
-        popup.close();
+        setMessage("Contato registrado. Abrindo o WhatsApp para continuar a conversa.");
+        if (popup) {
+          popup.location.replace(payload.whatsappUrl);
+        } else {
+          window.location.assign(payload.whatsappUrl);
+        }
+      } else {
+        if (popup) popup.close();
+        setWhatsappUnavailable(true);
+        setMessage("Contato registrado com sucesso. O canal de WhatsApp da ALGENRI ainda precisa ser configurado; seu interesse já ficou salvo para atendimento.");
       }
     } catch (error) {
       if (popup) popup.close();
@@ -97,7 +105,7 @@ export default function ContactLeadForm() {
         {busy ? "Registrando…" : "Registrar e continuar no WhatsApp"}
       </button>
 
-      {message && <p className={`mt-4 text-sm ${done ? "text-emerald-200" : "text-amber-200"}`}>{message}</p>}
+      {message && <p className={`mt-4 text-sm ${whatsappUnavailable ? "text-amber-200" : done ? "text-emerald-200" : "text-amber-200"}`}>{message}</p>}
     </form>
   );
 }

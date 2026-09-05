@@ -14,12 +14,14 @@ export function SiteFooter() {
             <a href="/solucoes" className="hover:text-white">Soluções</a>
             <a href="/planos" className="hover:text-white">Planos</a>
             <a href="/diagnostico" className="hover:text-white">Diagnóstico</a>
+            <a href="/interno" className="hover:text-white">Área interna</a>
           </div>
         </div>
         <div>
           <p className="font-medium text-white/75">Contato</p>
           <div className="mt-3 flex flex-col gap-2">
             <a href="mailto:contato@algenri.com.br" className="hover:text-white">contato@algenri.com.br</a>
+            <a href="/contato" className="hover:text-white">Fale com um especialista</a>
             <span>algenri.com.br</span>
           </div>
         </div>

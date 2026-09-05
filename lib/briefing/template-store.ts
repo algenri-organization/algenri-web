@@ -27,7 +27,7 @@ export async function persistImportedBriefingTemplate(input: {
   const plannedStoragePath = `briefing-templates/${templateRef.id}/source/${Date.now()}-${sourceName}`;
 
   let archivedStoragePath = "";
-  let archivedFile: ReturnType<ReturnType<Awaited<ReturnType<typeof getAdminStorage>>["bucket"]>["file"]> | null = null;
+  let archivedFile: { delete: (options?: { ignoreNotFound?: boolean }) => Promise<unknown> } | null = null;
   let storageWarning: string | null = null;
 
   try {

@@ -83,6 +83,20 @@ export async function resetBriefingInstance(id: string) {
   return { ok: true, resetAt: now };
 }
 
+export async function regenerateBriefingAccessToken(id: string) {
+  const db = await getAdminDb();
+  const instanceRef = db.collection(INSTANCE_COLLECTION).doc(id);
+  const instanceDoc = await instanceRef.get();
+  if (!instanceDoc.exists) return null;
+
+  const instance = instanceDoc.data() as BriefingInstanceRecord;
+  const { token, hash } = createBriefingToken();
+  const generatedAt = new Date().toISOString();
+  await instanceRef.set({ accessTokenHash: hash, accessTokenRotatedAt: generatedAt }, { merge: true });
+
+  return { ok: true, slug: instance.slug, token, generatedAt };
+}
+
 export async function getBriefingInstanceBySlug(slug: string) {
   const db = await getAdminDb();
   const snapshot = await db.collection(INSTANCE_COLLECTION).where("slug", "==", normalizeSlug(slug)).limit(1).get();

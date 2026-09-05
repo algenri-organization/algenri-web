@@ -1,5 +1,5 @@
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
-import { getInternalBriefingInstance, resetBriefingInstance } from "@/lib/briefing/instance-store";
+import { getInternalBriefingInstance, regenerateBriefingAccessToken, resetBriefingInstance } from "@/lib/briefing/instance-store";
 import { refreshBriefingInstanceTemplate } from "@/lib/briefing/instance-refresh";
 
 export const runtime = "nodejs";
@@ -36,6 +36,21 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     if (authResponse) return authResponse;
     console.error("Briefing instance detail failed", error);
     return Response.json({ ok: false, error: "briefing_instance_detail_failed" }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    await requireAlgenriInternalUser(request);
+    const { id } = await context.params;
+    const result = await regenerateBriefingAccessToken(id);
+    if (!result) return Response.json({ ok: false, error: "briefing_not_found" }, { status: 404 });
+    return Response.json(result, { status: 201 });
+  } catch (error) {
+    const authResponse = internalAuthResponse(error);
+    if (authResponse) return authResponse;
+    console.error("Briefing access link generation failed", error);
+    return Response.json({ ok: false, error: "briefing_access_link_failed" }, { status: 500 });
   }
 }
 

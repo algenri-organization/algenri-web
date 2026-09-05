@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BriefingTemplateSnapshot, BriefingQuestion } from "@/lib/briefing/types";
+import { isBriefingQuestionVisible } from "@/lib/briefing/progress";
 
 type BriefingPayload = {
   clientName: string;
@@ -46,9 +47,10 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
 
   const sections = briefing?.template.sections ?? [];
   const section = sections[currentSection];
+  const visibleQuestions = useMemo(() => section?.questions.filter((question) => isBriefingQuestionVisible(question, answers)) ?? [], [section, answers]);
   const locked = briefing?.status === "completed" || briefing?.status === "archived";
   const progress = briefing?.progress ?? 0;
-  const requiredMissing = useMemo(() => section?.questions.filter((q) => q.required && (answers[q.id] === undefined || answers[q.id] === null || answers[q.id] === "" || (Array.isArray(answers[q.id]) && (answers[q.id] as unknown[]).length === 0))) ?? [], [section, answers]);
+  const requiredMissing = useMemo(() => visibleQuestions.filter((q) => q.required && (answers[q.id] === undefined || answers[q.id] === null || answers[q.id] === "" || (Array.isArray(answers[q.id]) && (answers[q.id] as unknown[]).length === 0))), [visibleQuestions, answers]);
 
   async function save() {
     setSaving(true); setMessage("");
@@ -81,7 +83,7 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
     <div className="mx-auto grid max-w-5xl gap-6 px-6 py-8 lg:grid-cols-[220px_1fr]">
       <aside className="space-y-2">{sections.map((item, index) => <button key={item.id} onClick={() => setCurrentSection(index)} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${index === currentSection ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-100" : "border-white/5 bg-white/[0.025] text-slate-400"}`}><span className="mr-2 text-xs">{index + 1}.</span>{item.title}</button>)}</aside>
       <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 md:p-8"><p className="text-xs text-cyan-300">Etapa {currentSection + 1} de {sections.length}</p><h2 className="mt-2 text-2xl font-semibold">{section.title}</h2>{section.description && <p className="mt-2 text-sm leading-6 text-slate-400">{section.description}</p>}
-        <div className="mt-8 space-y-7">{section.questions.map((question) => <label key={question.id} className="block"><span className="text-sm font-medium text-slate-100">{question.label}{question.required && <span className="ml-1 text-cyan-300">*</span>}</span>{question.helperText && question.type !== "consent" && <p className="mt-1 text-xs leading-5 text-slate-500">{question.helperText}</p>}<QuestionField question={question} value={answers[question.id]} disabled={locked} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} /></label>)}</div>
+        <div className="mt-8 space-y-7">{visibleQuestions.map((question) => <label key={question.id} className="block"><span className="text-sm font-medium text-slate-100">{question.label}{question.required && <span className="ml-1 text-cyan-300">*</span>}</span>{question.helperText && question.type !== "consent" && <p className="mt-1 text-xs leading-5 text-slate-500">{question.helperText}</p>}<QuestionField question={question} value={answers[question.id]} disabled={locked} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} /></label>)}</div>
         {message && <p className="mt-6 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] px-4 py-3 text-sm text-cyan-100">{message}</p>}
         <div className="mt-8 flex flex-wrap justify-between gap-3"><button disabled={currentSection === 0} onClick={() => setCurrentSection((value) => Math.max(0, value - 1))} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-30">Anterior</button><div className="flex gap-2"><button disabled={saving || locked} onClick={save} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50">{saving ? "Salvando…" : "Salvar e continuar depois"}</button>{currentSection < sections.length - 1 ? <button disabled={saving || locked} onClick={next} className="rounded-xl bg-cyan-300 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50">Próxima etapa</button> : <button disabled={saving || locked} onClick={complete} className="rounded-xl bg-cyan-300 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50">Concluir briefing</button>}</div></div>
       </section>

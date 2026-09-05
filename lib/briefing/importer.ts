@@ -118,6 +118,10 @@ function inferQuestionType(label: string): QuestionType {
     return "email";
   }
 
+  if (/\b(telefone|celular|whatsapp)\b/.test(normalized) && /^(qual|informe|digite)/.test(normalized)) {
+    return "phone";
+  }
+
   if (/\b(data|quando)\b/.test(normalized) && /^(qual|informe)/.test(normalized)) {
     return "date";
   }
@@ -127,6 +131,25 @@ function inferQuestionType(label: string): QuestionType {
   }
 
   return "long_text";
+}
+
+function inferFollowUpType(parentLabel: string, followUpLabel: string): QuestionType {
+  const parent = normalizeText(parentLabel);
+  const followUp = normalizeText(followUpLabel);
+  if (/\b(whatsapp|telefone|celular)\b/.test(parent) && /\bnumero\b/.test(followUp)) return "phone";
+  return inferQuestionType(followUpLabel);
+}
+
+function splitConditionalCompoundQuestion(label: string) {
+  const firstQuestionMark = label.indexOf("?");
+  if (firstQuestionMark < 0 || firstQuestionMark === label.length - 1) return null;
+
+  const parentLabel = label.slice(0, firstQuestionMark + 1).trim();
+  const followUpLabel = label.slice(firstQuestionMark + 1).trim();
+  if (!followUpLabel || !followUpLabel.includes("?")) return null;
+  if (inferQuestionType(parentLabel) !== "yes_no") return null;
+
+  return { parentLabel, followUpLabel };
 }
 
 function makeSectionId(order: number, title: string) {
@@ -160,9 +183,18 @@ export async function importBriefingDocx(
     if (currentSection.questions.length > 0) {
       currentSection.order = sections.length;
       currentSection.id = makeSectionId(currentSection.order + 1, currentSection.title);
+
+      const idMap = new Map<string, string>();
+      currentSection.questions.forEach((question, index) => {
+        idMap.set(question.id, makeQuestionId(currentSection!.order + 1, index + 1, question.label));
+      });
+
       currentSection.questions = currentSection.questions.map((question, index) => ({
         ...question,
-        id: makeQuestionId(currentSection!.order + 1, index + 1, question.label),
+        id: idMap.get(question.id)!,
+        condition: question.condition
+          ? { ...question.condition, fieldId: idMap.get(question.condition.fieldId) ?? question.condition.fieldId }
+          : undefined,
         order: index,
       }));
       sections.push(currentSection);
@@ -194,8 +226,34 @@ export async function importBriefingDocx(
     const numbered = block.text.match(numberedPattern);
     if (numbered) {
       const label = numbered[2].trim();
+      const split = splitConditionalCompoundQuestion(label);
+
+      if (split) {
+        const parentId = `pending-${currentSection.questions.length}`;
+        const parent: BriefingQuestion = {
+          id: parentId,
+          label: split.parentLabel,
+          type: "yes_no",
+          required: false,
+          order: currentSection.questions.length,
+        };
+        currentSection.questions.push(parent);
+
+        const child: BriefingQuestion = {
+          id: `pending-${currentSection.questions.length}`,
+          label: split.followUpLabel,
+          type: inferFollowUpType(split.parentLabel, split.followUpLabel),
+          required: false,
+          order: currentSection.questions.length,
+          condition: { fieldId: parentId, operator: "equals", value: true },
+        };
+        currentSection.questions.push(child);
+        currentQuestion = child;
+        continue;
+      }
+
       currentQuestion = {
-        id: "pending",
+        id: `pending-${currentSection.questions.length}`,
         label,
         type: inferQuestionType(label),
         required: false,

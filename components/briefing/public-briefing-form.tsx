@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BriefingTemplateSnapshot, BriefingQuestion } from "@/lib/briefing/types";
-import { isBriefingQuestionVisible } from "@/lib/briefing/progress";
+import { isBriefingQuestionAnswered, isBriefingQuestionVisible } from "@/lib/briefing/progress";
 
 type BriefingPayload = {
   clientName: string;
@@ -48,9 +48,11 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
   const sections = briefing?.template.sections ?? [];
   const section = sections[currentSection];
   const visibleQuestions = useMemo(() => section?.questions.filter((question) => isBriefingQuestionVisible(question, answers)) ?? [], [section, answers]);
+  const allVisibleQuestions = useMemo(() => sections.flatMap((item) => item.questions).filter((question) => isBriefingQuestionVisible(question, answers)), [sections, answers]);
+  const unansweredVisible = useMemo(() => allVisibleQuestions.filter((question) => !isBriefingQuestionAnswered(question, answers[question.id])), [allVisibleQuestions, answers]);
   const locked = briefing?.status === "completed" || briefing?.status === "archived";
   const progress = briefing?.progress ?? 0;
-  const requiredMissing = useMemo(() => visibleQuestions.filter((q) => q.required && (answers[q.id] === undefined || answers[q.id] === null || answers[q.id] === "" || (Array.isArray(answers[q.id]) && (answers[q.id] as unknown[]).length === 0))), [visibleQuestions, answers]);
+  const requiredMissing = useMemo(() => visibleQuestions.filter((q) => q.required && !isBriefingQuestionAnswered(q, answers[q.id])), [visibleQuestions, answers]);
 
   function goToSection(index: number) {
     setCurrentSection(index);
@@ -69,12 +71,16 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
       if (!response.ok) throw new Error("Não foi possível salvar agora.");
       setBriefing((current) => current ? { ...current, progress: payload.progress, status: payload.status, lastSavedAt: payload.lastSavedAt } : current);
       setMessage("Respostas salvas com sucesso.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Falha ao salvar."); }
-    finally { setSaving(false); }
+      return true;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao salvar.");
+      return false;
+    } finally { setSaving(false); }
   }
 
   async function next() {
-    await save();
+    const saved = await save();
+    if (!saved) return;
     if (requiredMissing.length) {
       setMessage("Preencha as perguntas obrigatórias desta etapa antes de avançar.");
       return;
@@ -83,11 +89,23 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
   }
 
   async function complete() {
-    await save();
+    const saved = await save();
+    if (!saved) return;
+
+    if (unansweredVisible.length > 0) {
+      const confirmed = window.confirm(
+        `Existem ${unansweredVisible.length} pergunta${unansweredVisible.length === 1 ? "" : "s"} sem resposta. As perguntas opcionais podem ser deixadas em branco. Deseja concluir e enviar o briefing mesmo assim?`,
+      );
+      if (!confirmed) {
+        setMessage("Conclusão cancelada. Revise as perguntas antes de enviar.");
+        return;
+      }
+    }
+
     const response = await fetch(`/api/briefing/${encodeURIComponent(slug)}`, { method: "POST", headers: { "x-briefing-token": token } });
     const payload = await response.json();
     if (!response.ok) { setMessage(payload.error === "required_answers_missing" ? "Ainda existem perguntas obrigatórias sem resposta." : "Não foi possível concluir o briefing."); return; }
-    setBriefing((current) => current ? { ...current, status: "completed", progress: 100 } : current);
+    setBriefing((current) => current ? { ...current, status: "completed", progress: payload.progress ?? current.progress } : current);
     setMessage("Briefing concluído e enviado à ALGENRI. Obrigado!");
   }
 
@@ -95,7 +113,7 @@ export default function PublicBriefingForm({ slug, token }: { slug: string; toke
   if (!briefing || !section) return <main className="min-h-screen bg-[#040c17] grid place-items-center px-6 text-center text-white"><p>{message || "Briefing indisponível."}</p></main>;
 
   return <main className="min-h-screen bg-[#040c17] text-white">
-    <header className="border-b border-white/10 bg-[#06111f]/95 px-6 py-5"><div className="mx-auto max-w-5xl"><p className="text-xs font-semibold tracking-[0.25em] text-cyan-300">ALGENRI CLIENT FLOW</p><div className="mt-2 flex flex-col justify-between gap-2 md:flex-row md:items-end"><div><h1 className="text-2xl font-semibold">{briefing.projectName}</h1><p className="mt-1 text-sm text-slate-400">{briefing.clientName}</p></div><p className="text-sm text-slate-400">{progress}% concluído</p></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-cyan-300 transition-all" style={{ width: `${progress}%` }} /></div></div></header>
+    <header className="border-b border-white/10 bg-[#06111f]/95 px-6 py-5"><div className="mx-auto max-w-5xl"><p className="text-xs font-semibold tracking-[0.25em] text-cyan-300">ALGENRI CLIENT FLOW</p><div className="mt-2 flex flex-col justify-between gap-2 md:flex-row md:items-end"><div><h1 className="text-2xl font-semibold">{briefing.projectName}</h1><p className="mt-1 text-sm text-slate-400">{briefing.clientName}</p></div><p className="text-sm text-slate-400">{progress}% respondido</p></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-cyan-300 transition-all" style={{ width: `${progress}%` }} /></div></div></header>
     <div className="mx-auto grid max-w-5xl gap-6 px-6 py-8 lg:grid-cols-[220px_1fr]">
       <aside className="space-y-2">{sections.map((item, index) => <button key={item.id} onClick={() => goToSection(index)} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${index === currentSection ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-100" : "border-white/5 bg-white/[0.025] text-slate-400"}`}><span className="mr-2 text-xs">{index + 1}.</span>{item.title}</button>)}</aside>
       <section id="briefing-section" className="scroll-mt-6 rounded-3xl border border-white/10 bg-white/[0.025] p-6 md:p-8"><p className="text-xs text-cyan-300">Etapa {currentSection + 1} de {sections.length}</p><h2 className="mt-2 text-2xl font-semibold">{section.title}</h2>{section.description && <p className="mt-2 text-sm leading-6 text-slate-400">{section.description}</p>}

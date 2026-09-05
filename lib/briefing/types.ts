@@ -67,6 +67,25 @@ export type BriefingTemplateSnapshot = {
   sections: BriefingSection[];
 };
 
+export type BriefingTemplateSource = {
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+  parser: "mammoth";
+  importedAt: string;
+  warnings: string[];
+};
+
+export type BriefingTemplateRecord = BriefingTemplateSnapshot & {
+  id: string;
+  status: TemplateStatus;
+  source: BriefingTemplateSource;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type BriefingInstance = {
   id: string;
   projectId: string;

@@ -93,6 +93,30 @@ export async function createBriefingInstance(input: {
   return { record, token };
 }
 
+export async function listBriefingInstances() {
+  const db = await getAdminDb();
+  const snapshot = await db.collection(INSTANCE_COLLECTION).orderBy("createdAt", "desc").limit(100).get();
+  return snapshot.docs.map((doc) => doc.data() as BriefingInstanceRecord);
+}
+
+export async function getInternalBriefingInstance(id: string) {
+  const db = await getAdminDb();
+  const instanceDoc = await db.collection(INSTANCE_COLLECTION).doc(id).get();
+  if (!instanceDoc.exists) return null;
+
+  const instance = instanceDoc.data() as BriefingInstanceRecord;
+  const responseDoc = await db.collection(RESPONSE_COLLECTION).doc(id).get();
+  const answers = (responseDoc.data()?.answers ?? {}) as Record<string, unknown>;
+  const progress = calculateBriefingProgress(instance.templateSnapshot.sections, answers);
+
+  if (progress !== instance.progress) {
+    await db.collection(INSTANCE_COLLECTION).doc(id).set({ progress }, { merge: true });
+    instance.progress = progress;
+  }
+
+  return { instance, answers };
+}
+
 export async function getBriefingInstanceBySlug(slug: string) {
   const db = await getAdminDb();
   const snapshot = await db.collection(INSTANCE_COLLECTION).where("slug", "==", normalizeSlug(slug)).limit(1).get();
@@ -156,5 +180,5 @@ export async function completePublicBriefing(slug: string, token: string) {
     completedAt: now,
     lastSavedAt: now,
   }, { merge: true });
-  return { completedAt: now };
+  return { completedAt: now, progress };
 }

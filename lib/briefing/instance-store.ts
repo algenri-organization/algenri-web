@@ -29,65 +29,23 @@ export type BriefingInstanceRecord = {
 };
 
 function normalizeSlug(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
 }
 
-export async function createBriefingInstance(input: {
-  templateId: string;
-  clientName: string;
-  projectName: string;
-  slug: string;
-  createdBy: string;
-}) {
+export async function createBriefingInstance(input: { templateId: string; clientName: string; projectName: string; slug: string; createdBy: string; }) {
   const template = await getBriefingTemplate(input.templateId);
   if (!template) throw new Error("template_not_found");
   if (template.status !== "published") throw new Error("template_not_published");
-
   const slug = normalizeSlug(input.slug);
   if (!slug) throw new Error("invalid_slug");
-
   const db = await getAdminDb();
   const existing = await db.collection(INSTANCE_COLLECTION).where("slug", "==", slug).limit(1).get();
   if (!existing.empty) throw new Error("slug_in_use");
-
   const ref = db.collection(INSTANCE_COLLECTION).doc();
   const now = new Date().toISOString();
   const { token, hash } = createBriefingToken();
-  const snapshot: BriefingTemplateSnapshot = {
-    name: template.name,
-    projectType: template.projectType,
-    version: template.version,
-    privacyNoticeVersion: template.privacyNoticeVersion,
-    sections: template.sections,
-  };
-
-  const record: BriefingInstanceRecord = {
-    id: ref.id,
-    templateId: template.id,
-    templateVersion: template.version,
-    templateSnapshot: snapshot,
-    slug,
-    clientName: input.clientName.trim(),
-    projectName: input.projectName.trim(),
-    clientId: slug,
-    projectId: `${slug}-${ref.id.slice(0, 8)}`,
-    accessTokenHash: hash,
-    status: "not_started",
-    progress: 0,
-    startedAt: null,
-    lastSavedAt: null,
-    completedAt: null,
-    expiresAt: null,
-    createdAt: now,
-    createdBy: input.createdBy,
-  };
-
+  const snapshot: BriefingTemplateSnapshot = { name: template.name, projectType: template.projectType, version: template.version, privacyNoticeVersion: template.privacyNoticeVersion, sections: template.sections };
+  const record: BriefingInstanceRecord = { id: ref.id, templateId: template.id, templateVersion: template.version, templateSnapshot: snapshot, slug, clientName: input.clientName.trim(), projectName: input.projectName.trim(), clientId: slug, projectId: `${slug}-${ref.id.slice(0, 8)}`, accessTokenHash: hash, status: "not_started", progress: 0, startedAt: null, lastSavedAt: null, completedAt: null, expiresAt: null, createdAt: now, createdBy: input.createdBy };
   await ref.set(record);
   await db.collection(RESPONSE_COLLECTION).doc(ref.id).set({ instanceId: ref.id, answers: {}, updatedAt: now });
   return { record, token };
@@ -103,18 +61,26 @@ export async function getInternalBriefingInstance(id: string) {
   const db = await getAdminDb();
   const instanceDoc = await db.collection(INSTANCE_COLLECTION).doc(id).get();
   if (!instanceDoc.exists) return null;
-
   const instance = instanceDoc.data() as BriefingInstanceRecord;
   const responseDoc = await db.collection(RESPONSE_COLLECTION).doc(id).get();
   const answers = (responseDoc.data()?.answers ?? {}) as Record<string, unknown>;
   const progress = calculateBriefingProgress(instance.templateSnapshot.sections, answers);
-
-  if (progress !== instance.progress) {
-    await db.collection(INSTANCE_COLLECTION).doc(id).set({ progress }, { merge: true });
-    instance.progress = progress;
-  }
-
+  if (progress !== instance.progress) { await db.collection(INSTANCE_COLLECTION).doc(id).set({ progress }, { merge: true }); instance.progress = progress; }
   return { instance, answers };
+}
+
+export async function resetBriefingInstance(id: string) {
+  const db = await getAdminDb();
+  const instanceRef = db.collection(INSTANCE_COLLECTION).doc(id);
+  const responseRef = db.collection(RESPONSE_COLLECTION).doc(id);
+  const instanceDoc = await instanceRef.get();
+  if (!instanceDoc.exists) return null;
+  const now = new Date().toISOString();
+  const batch = db.batch();
+  batch.set(responseRef, { instanceId: id, answers: {}, updatedAt: now });
+  batch.set(instanceRef, { status: "not_started", progress: 0, startedAt: null, lastSavedAt: null, completedAt: null }, { merge: true });
+  await batch.commit();
+  return { ok: true, resetAt: now };
 }
 
 export async function getBriefingInstanceBySlug(slug: string) {
@@ -127,17 +93,11 @@ export async function getBriefingInstanceBySlug(slug: string) {
 export async function getAuthorizedPublicBriefing(slug: string, token: string) {
   const instance = await getBriefingInstanceBySlug(slug);
   if (!instance || !verifyBriefingToken(token, instance.accessTokenHash)) return null;
-
   const db = await getAdminDb();
   const response = await db.collection(RESPONSE_COLLECTION).doc(instance.id).get();
   const answers = (response.data()?.answers ?? {}) as Record<string, unknown>;
   const recalculatedProgress = calculateBriefingProgress(instance.templateSnapshot.sections, answers);
-
-  if (recalculatedProgress !== instance.progress) {
-    await db.collection(INSTANCE_COLLECTION).doc(instance.id).set({ progress: recalculatedProgress }, { merge: true });
-    instance.progress = recalculatedProgress;
-  }
-
+  if (recalculatedProgress !== instance.progress) { await db.collection(INSTANCE_COLLECTION).doc(instance.id).set({ progress: recalculatedProgress }, { merge: true }); instance.progress = recalculatedProgress; }
   return { instance, answers };
 }
 
@@ -145,40 +105,23 @@ export async function savePublicBriefingAnswers(slug: string, token: string, ans
   const authorized = await getAuthorizedPublicBriefing(slug, token);
   if (!authorized) return null;
   if (authorized.instance.status === "completed" || authorized.instance.status === "archived") throw new Error("briefing_locked");
-
   const db = await getAdminDb();
   const now = new Date().toISOString();
   const merged = { ...authorized.answers, ...answers };
   const progress = calculateBriefingProgress(authorized.instance.templateSnapshot.sections, merged);
   const status: BriefingStatus = merged && Object.keys(merged).length ? "in_progress" : authorized.instance.status;
-
   await db.collection(RESPONSE_COLLECTION).doc(authorized.instance.id).set({ answers: merged, updatedAt: now }, { merge: true });
-  await db.collection(INSTANCE_COLLECTION).doc(authorized.instance.id).set({
-    progress,
-    status,
-    startedAt: authorized.instance.startedAt ?? now,
-    lastSavedAt: now,
-  }, { merge: true });
-
+  await db.collection(INSTANCE_COLLECTION).doc(authorized.instance.id).set({ progress, status, startedAt: authorized.instance.startedAt ?? now, lastSavedAt: now }, { merge: true });
   return { progress, status, lastSavedAt: now };
 }
 
 export async function completePublicBriefing(slug: string, token: string) {
   const authorized = await getAuthorizedPublicBriefing(slug, token);
   if (!authorized) return null;
-
-  if (hasMissingRequiredBriefingAnswers(authorized.instance.templateSnapshot.sections, authorized.answers)) {
-    throw new Error("required_answers_missing");
-  }
-
+  if (hasMissingRequiredBriefingAnswers(authorized.instance.templateSnapshot.sections, authorized.answers)) throw new Error("required_answers_missing");
   const db = await getAdminDb();
   const now = new Date().toISOString();
   const progress = calculateBriefingProgress(authorized.instance.templateSnapshot.sections, authorized.answers);
-  await db.collection(INSTANCE_COLLECTION).doc(authorized.instance.id).set({
-    progress,
-    status: "completed",
-    completedAt: now,
-    lastSavedAt: now,
-  }, { merge: true });
+  await db.collection(INSTANCE_COLLECTION).doc(authorized.instance.id).set({ progress, status: "completed", completedAt: now, lastSavedAt: now }, { merge: true });
   return { completedAt: now, progress };
 }

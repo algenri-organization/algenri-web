@@ -107,6 +107,13 @@ export async function getAuthorizedPublicBriefing(slug: string, token: string) {
   const db = await getAdminDb();
   const response = await db.collection(RESPONSE_COLLECTION).doc(instance.id).get();
   const answers = (response.data()?.answers ?? {}) as Record<string, unknown>;
+  const recalculatedProgress = calculateBriefingProgress(instance.templateSnapshot.sections, answers);
+
+  if (recalculatedProgress !== instance.progress) {
+    await db.collection(INSTANCE_COLLECTION).doc(instance.id).set({ progress: recalculatedProgress }, { merge: true });
+    instance.progress = recalculatedProgress;
+  }
+
   return { instance, answers };
 }
 

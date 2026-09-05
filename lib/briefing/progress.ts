@@ -22,7 +22,7 @@ export function isBriefingQuestionVisible(question: BriefingQuestion, answers: R
   return true;
 }
 
-function isAnswered(question: BriefingQuestion, value: unknown) {
+export function isBriefingQuestionAnswered(question: BriefingQuestion, value: unknown) {
   if (value === null || value === undefined) return false;
   if (typeof value === "string") return value.trim().length > 0;
   if (Array.isArray(value)) return value.length > 0;
@@ -34,13 +34,22 @@ export function calculateBriefingProgress(sections: BriefingSection[], answers: 
   const visibleQuestions = sections
     .flatMap((section) => section.questions)
     .filter((question) => isBriefingQuestionVisible(question, answers));
-  const required = visibleQuestions.filter((question) => question.required);
 
-  if (!required.length) {
-    const answeredVisible = visibleQuestions.filter((question) => isAnswered(question, answers[question.id])).length;
-    return visibleQuestions.length ? Math.round((answeredVisible / visibleQuestions.length) * 100) : 0;
-  }
+  if (!visibleQuestions.length) return 0;
 
-  const completed = required.filter((question) => isAnswered(question, answers[question.id])).length;
-  return Math.round((completed / required.length) * 100);
+  const answeredVisible = visibleQuestions.filter((question) =>
+    isBriefingQuestionAnswered(question, answers[question.id]),
+  ).length;
+
+  return Math.round((answeredVisible / visibleQuestions.length) * 100);
+}
+
+export function hasMissingRequiredBriefingAnswers(
+  sections: BriefingSection[],
+  answers: Record<string, unknown>,
+) {
+  return sections
+    .flatMap((section) => section.questions)
+    .filter((question) => question.required && isBriefingQuestionVisible(question, answers))
+    .some((question) => !isBriefingQuestionAnswered(question, answers[question.id]));
 }

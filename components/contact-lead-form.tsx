@@ -97,7 +97,7 @@ export default function ContactLeadForm() {
 
       <label className="mt-5 flex items-start gap-3 text-xs leading-5 text-white/50">
         <input name="consent" type="checkbox" required className="mt-1" />
-        <span>Autorizo a ALGENRI a utilizar estes dados para entrar em contato comigo sobre esta solicitação, conforme a finalidade informada.</span>
+        <span>Autorizo a ALGENRI a utilizar estes dados para entrar em contato comigo sobre esta solicitação. Li e concordo com a <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-cyan-200 underline underline-offset-2 hover:text-white">Política de Privacidade</a>.</span>
       </label>
 
       <button disabled={busy} className="button-primary mt-6 disabled:opacity-50">

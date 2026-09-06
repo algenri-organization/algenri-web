@@ -7,6 +7,7 @@ export const metadata = {
 
 const activeCards = [
   { href: "/interno/leads", icon: Users, title: "Interessados", text: "Acompanhe contatos comerciais registrados pelo site e o status das notificações." },
+  { href: "/interno/clientes", icon: FolderKanban, title: "Clientes e Projetos", text: "Centralize dados dos clientes, projetos, status e evolução operacional." },
   { href: "/interno/briefings/modelos", icon: FileText, title: "Modelos de Briefing", text: "Importe, revise, versione e publique modelos reutilizáveis." },
   { href: "/interno/briefings/instancias", icon: FolderKanban, title: "Criar / Enviar Briefing", text: "Gere uma instância individual e o link seguro para cada cliente." },
   { href: "/interno/briefings/recebidos", icon: Inbox, title: "Briefings Recebidos", text: "Visualize respostas concluídas ou em andamento e exporte os dados do projeto." },
@@ -14,7 +15,6 @@ const activeCards = [
 ];
 
 const futureCards = [
-  { icon: FolderKanban, title: "Clientes e Projetos", text: "Centralizar proposta, contrato, desenvolvimento, homologação, entrega e suporte." },
   { icon: Settings2, title: "Configurações", text: "Canais, integrações, notificações, usuários e preferências operacionais." },
 ];
 

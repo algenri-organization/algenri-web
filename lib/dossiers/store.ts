@@ -62,10 +62,12 @@ function makeSections(): DossierSection[] {
   return DEFAULT_SECTIONS.map(([key, title], index) => ({ id: key, key, title, content: "", order: index, source: "system", editable: true }));
 }
 
-export async function listProjectDossiers() {
+export async function listProjectDossiers(projectId?: string) {
   const db = await getAdminDb();
   const snap = await db.collection(DOSSIER_COLLECTION).orderBy("updatedAt", "desc").limit(100).get();
-  return snap.docs.map((doc) => doc.data() as ProjectDossierRecord);
+  let dossiers = snap.docs.map((doc) => doc.data() as ProjectDossierRecord);
+  if (projectId) dossiers = dossiers.filter((dossier) => dossier.projectId === projectId);
+  return dossiers;
 }
 
 export async function getProjectDossier(id: string) {
@@ -82,6 +84,7 @@ export async function createProjectDossierFromBriefing(briefingInstanceId: strin
   const source = await getInternalBriefingInstance(briefingInstanceId);
   if (!source) throw new Error("briefing_not_found");
   if (source.instance.status !== "completed") throw new Error("briefing_not_completed");
+  if (!source.instance.linkedAt) throw new Error("briefing_not_linked");
 
   const ref = db.collection(DOSSIER_COLLECTION).doc();
   const now = new Date().toISOString();

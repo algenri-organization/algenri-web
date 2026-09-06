@@ -14,6 +14,7 @@ export function SiteFooter() {
             <a href="/solucoes" className="hover:text-white">Soluções</a>
             <a href="/planos" className="hover:text-white">Planos</a>
             <a href="/diagnostico" className="hover:text-white">Diagnóstico</a>
+            <a href="/privacidade" className="hover:text-white">Privacidade</a>
             <a href="/interno" className="hover:text-white">Área interna</a>
           </div>
         </div>
@@ -29,7 +30,7 @@ export function SiteFooter() {
       <div className="border-t border-white/8">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-5 text-xs text-white/32 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <span>© {new Date().getFullYear()} ALGENRI. Todos os direitos reservados.</span>
-          <span>Tecnologia que impulsiona o seu amanhã.</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2"><a href="/privacidade" className="hover:text-white">Política de Privacidade</a><span>Tecnologia que impulsiona o seu amanhã.</span></div>
         </div>
       </div>
     </footer>

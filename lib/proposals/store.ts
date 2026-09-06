@@ -15,8 +15,9 @@ export type CommercialProposalRecord = {
   id:string; tenantId:string; clientId:string; clientName:string; projectId:string; projectName:string;
   sourceDossierId:string|null; sourceDossierVersion:string|null; proposalGroupId:string; proposalNumber:string; version:string; previousVersionId:string|null;
   status:ProposalStatus; title:string; summary:string; sections:ProposalSection[]; investmentItems:InvestmentItem[]; optionalItems:OptionalItem[];
-  subtotal:number; discountType:"none"|"fixed"|"percentage"; discountValue:number; total:number; recurringMonthly:number; recurringAnnual:number;
+  subtotal:number; discountType:"none"|"fixed"|"percentage"; discountScope:"one_time"|"all"; discountValue:number; total:number; recurringMonthly:number; recurringAnnual:number;
   paymentTerms:string; validityDate:string; validityDays:number; commercialConditions:string; observations:string;
+  aiMetadata?: { generatedAt:string; generatedBy:string; model:string; source:string } | null;
   createdBy:string; createdAt:string; updatedBy:string; updatedAt:string; sentAt:string|null; approvedAt:string|null; rejectedAt:string|null; archivedAt:string|null;
 };
 
@@ -25,12 +26,16 @@ const DEFAULT_SECTIONS:[string,string][] = [
 ];
 const text=(v:unknown)=>typeof v==="string"?v.trim():"";
 const num=(v:unknown)=>Number.isFinite(Number(v))?Number(v):0;
-function recalc(items:InvestmentItem[], discountType:CommercialProposalRecord["discountType"], discountValue:number){
+function recalc(items:InvestmentItem[], discountType:CommercialProposalRecord["discountType"], discountValue:number, discountScope:CommercialProposalRecord["discountScope"]){
   const oneTime=items.filter(i=>i.billingType==="one_time").reduce((s,i)=>s+i.totalValue,0);
   const monthly=items.filter(i=>i.billingType==="recurring"&&i.recurrence==="monthly").reduce((s,i)=>s+i.totalValue,0);
   const annual=items.filter(i=>i.billingType==="recurring"&&i.recurrence==="annual").reduce((s,i)=>s+i.totalValue,0);
-  const subtotal=oneTime; const discount=discountType==="fixed"?Math.min(discountValue,subtotal):discountType==="percentage"?subtotal*Math.min(Math.max(discountValue,0),100)/100:0;
-  return { subtotal, total:Math.max(0,subtotal-discount), recurringMonthly:monthly, recurringAnnual:annual };
+  const percentage=Math.min(Math.max(discountValue,0),100)/100;
+  const oneTimeDiscount=discountType==="fixed"?Math.min(discountValue,oneTime):discountType==="percentage"?oneTime*percentage:0;
+  const applyRecurring=discountType==="percentage"&&discountScope==="all";
+  const monthlyNet=applyRecurring?monthly*(1-percentage):monthly;
+  const annualNet=applyRecurring?annual*(1-percentage):annual;
+  return { subtotal:oneTime, total:Math.max(0,oneTime-oneTimeDiscount), recurringMonthly:Math.max(0,monthlyNet), recurringAnnual:Math.max(0,annualNet) };
 }
 function normalizeItems(raw:unknown):InvestmentItem[]{ return Array.isArray(raw)?raw.map((x:any,i)=>{const q=Math.max(0,num(x.quantity)||1),u=Math.max(0,num(x.unitValue));return { id:text(x.id)||`item-${i+1}`,description:text(x.description),quantity:q,unitValue:u,totalValue:q*u,billingType:x.billingType==="recurring"?"recurring":"one_time",recurrence:x.billingType==="recurring"?(x.recurrence||"monthly"):null,order:i }}):[]; }
 function defaultSections(dossier?:Awaited<ReturnType<typeof getProjectDossier>>):ProposalSection[]{
@@ -50,18 +55,24 @@ export async function createCommercialProposal(input:{projectId:string;dossierId
   let record!:CommercialProposalRecord;
   await db.runTransaction(async tx=>{ const counter=await tx.get(counterRef); const next=(counter.data()?.value??0)+1; const proposalNumber=`PROP-${year}-${String(next).padStart(4,"0")}`; record={
     id:ref.id,tenantId:TENANT,clientId:client.id,clientName:client.tradeName||client.legalName,projectId:project.id,projectName:project.name,sourceDossierId:dossier?.id??null,sourceDossierVersion:dossier?.version??null,
-    proposalGroupId:groupId,proposalNumber,version:"1.0",previousVersionId:null,status:"draft",title:text(input.title)||`Proposta Comercial — ${project.name}`,summary:"",sections:defaultSections(dossier),investmentItems:[],optionalItems:[],subtotal:0,discountType:"none",discountValue:0,total:0,recurringMonthly:0,recurringAnnual:0,paymentTerms:"",validityDate:validity.toISOString().slice(0,10),validityDays,commercialConditions:"",observations:"",createdBy,createdAt:iso,updatedBy:createdBy,updatedAt:iso,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; tx.set(counterRef,{value:next,updatedAt:iso},{merge:true}); tx.set(ref,record); }); return record;
+    proposalGroupId:groupId,proposalNumber,version:"1.0",previousVersionId:null,status:"draft",title:text(input.title)||`Proposta Comercial — ${project.name}`,summary:"",sections:defaultSections(dossier),investmentItems:[],optionalItems:[],subtotal:0,discountType:"none",discountScope:"all",discountValue:0,total:0,recurringMonthly:0,recurringAnnual:0,paymentTerms:"",validityDate:validity.toISOString().slice(0,10),validityDays,commercialConditions:"",observations:"",aiMetadata:null,createdBy,createdAt:iso,updatedBy:createdBy,updatedAt:iso,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; tx.set(counterRef,{value:next,updatedAt:iso},{merge:true}); tx.set(ref,record); }); return record;
 }
 export async function updateCommercialProposal(id:string,input:Record<string,unknown>,updatedBy:string){
   const current=await getCommercialProposal(id); if(!current)return null; if(!["draft","in_review"].includes(current.status))throw new Error("proposal_locked");
-  const items=normalizeItems(input.investmentItems??current.investmentItems); const discountType=(text(input.discountType)||current.discountType) as CommercialProposalRecord["discountType"]; const discountValue=Math.max(0,num(input.discountValue??current.discountValue)); const totals=recalc(items,discountType,discountValue);
+  const items=normalizeItems(input.investmentItems??current.investmentItems); const discountType=(text(input.discountType)||current.discountType) as CommercialProposalRecord["discountType"]; const discountScope=(text(input.discountScope)||(current.discountScope??"all")) as CommercialProposalRecord["discountScope"]; const discountValue=Math.max(0,num(input.discountValue??current.discountValue)); const totals=recalc(items,discountType,discountValue,discountScope);
   const sections=Array.isArray(input.sections)?(input.sections as any[]).map((s,i)=>({...s,order:i,id:text(s.id)||`section-${i+1}`,title:text(s.title),content:text(s.content),source:s.source||"manual",editable:true})):current.sections;
-  const patch:CommercialProposalRecord={...current,title:text(input.title)||current.title,summary:text(input.summary),sections,investmentItems:items,optionalItems:Array.isArray(input.optionalItems)?input.optionalItems as OptionalItem[]:current.optionalItems,discountType,discountValue,...totals,paymentTerms:text(input.paymentTerms),validityDate:text(input.validityDate)||current.validityDate,commercialConditions:text(input.commercialConditions),observations:text(input.observations),updatedBy,updatedAt:new Date().toISOString()};
+  const patch:CommercialProposalRecord={...current,title:text(input.title)||current.title,summary:text(input.summary),sections,investmentItems:items,optionalItems:Array.isArray(input.optionalItems)?input.optionalItems as OptionalItem[]:current.optionalItems,discountType,discountScope,discountValue,...totals,paymentTerms:text(input.paymentTerms),validityDate:text(input.validityDate)||current.validityDate,commercialConditions:text(input.commercialConditions),observations:text(input.observations),updatedBy,updatedAt:new Date().toISOString()};
   const db=await getAdminDb(); await db.collection(PROPOSALS).doc(id).set(patch); return patch;
+}
+export async function applyAiProposalDraft(id:string,input:{summary:string;sections:ProposalSection[];model:string;source:string},updatedBy:string){
+  const current=await getCommercialProposal(id); if(!current)return null; if(!["draft","in_review"].includes(current.status))throw new Error("proposal_locked");
+  const now=new Date().toISOString();
+  const patch={summary:input.summary,sections:input.sections,aiMetadata:{generatedAt:now,generatedBy:updatedBy,model:input.model,source:input.source},updatedBy,updatedAt:now};
+  const db=await getAdminDb(); await db.collection(PROPOSALS).doc(id).set(patch,{merge:true}); return getCommercialProposal(id);
 }
 export async function changeProposalStatus(id:string,status:ProposalStatus,updatedBy:string){
   const current=await getCommercialProposal(id); if(!current)return null; const now=new Date().toISOString(); const patch:any={status,updatedBy,updatedAt:now}; if(status==="sent")patch.sentAt=current.sentAt??now; if(status==="approved")patch.approvedAt=now; if(status==="rejected")patch.rejectedAt=now; if(status==="archived")patch.archivedAt=now;
   const db=await getAdminDb(); await db.collection(PROPOSALS).doc(id).set(patch,{merge:true}); return getCommercialProposal(id);
 }
 function bumpVersion(v:string){ const [maj,min]=v.split(".").map(Number); return `${Number.isFinite(maj)?maj:1}.${(Number.isFinite(min)?min:0)+1}`; }
-export async function createProposalVersion(id:string,createdBy:string){ const current=await getCommercialProposal(id); if(!current)throw new Error("proposal_not_found"); const db=await getAdminDb(); const ref=db.collection(PROPOSALS).doc(); const now=new Date().toISOString(); const next:CommercialProposalRecord={...current,id:ref.id,version:bumpVersion(current.version),previousVersionId:current.id,status:"draft",createdBy,createdAt:now,updatedBy:createdBy,updatedAt:now,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; await ref.set(next); return next; }
+export async function createProposalVersion(id:string,createdBy:string){ const current=await getCommercialProposal(id); if(!current)throw new Error("proposal_not_found"); const db=await getAdminDb(); const ref=db.collection(PROPOSALS).doc(); const now=new Date().toISOString(); const next:CommercialProposalRecord={...current,id:ref.id,discountScope:current.discountScope??"all",version:bumpVersion(current.version),previousVersionId:current.id,status:"draft",createdBy,createdAt:now,updatedBy:createdBy,updatedAt:now,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; await ref.set(next); return next; }

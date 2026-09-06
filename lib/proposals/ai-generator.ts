@@ -52,6 +52,31 @@ function extractOutputText(payload: any) {
   return "";
 }
 
+function classifyProviderFailure(status: number, payload: any) {
+  const type = String(payload?.error?.type ?? "").toLowerCase();
+  const code = String(payload?.error?.code ?? "").toLowerCase();
+  const message = String(payload?.error?.message ?? "").toLowerCase();
+  const joined = `${type} ${code} ${message}`;
+
+  if (joined.includes("insufficient_quota") || joined.includes("billing") || joined.includes("quota") || joined.includes("credit balance")) {
+    return "ai_insufficient_quota";
+  }
+  if (status === 401 || joined.includes("invalid_api_key") || joined.includes("incorrect api key") || joined.includes("authentication")) {
+    return "ai_invalid_credentials";
+  }
+  if (status === 429 || joined.includes("rate_limit") || joined.includes("rate limit")) {
+    return "ai_rate_limited";
+  }
+  if (status === 404 || joined.includes("model_not_found") || joined.includes("does not exist") || joined.includes("model") && joined.includes("access")) {
+    return "ai_model_unavailable";
+  }
+  if (status >= 500) return "ai_provider_unavailable";
+  if (status === 400 && (joined.includes("json_schema") || joined.includes("schema") || joined.includes("response_format"))) {
+    return "ai_schema_rejected";
+  }
+  return "ai_generation_failed";
+}
+
 export async function generateProposalWithAi(input: {
   proposalId: string;
   source?: ProposalAiSource;
@@ -173,21 +198,36 @@ ${safeJson(context)}`;
     },
   };
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      input: prompt,
-      text: { format: { type: "json_schema", name: "algenri_commercial_proposal", strict: true, schema } },
-    }),
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    console.error("Proposal AI request failed", { status: response.status, error: payload?.error?.message });
-    throw new Error("ai_generation_failed");
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        input: prompt,
+        text: { format: { type: "json_schema", name: "algenri_commercial_proposal", strict: true, schema } },
+      }),
+    });
+  } catch (error) {
+    console.error("Proposal AI network request failed", error);
+    throw new Error("ai_provider_unreachable");
   }
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const diagnostic = classifyProviderFailure(response.status, payload);
+    console.error("Proposal AI request failed", {
+      status: response.status,
+      providerType: payload?.error?.type,
+      providerCode: payload?.error?.code,
+      providerMessage: payload?.error?.message,
+      diagnostic,
+      model,
+    });
+    throw new Error(diagnostic);
+  }
+
   const outputText = extractOutputText(payload);
   if (!outputText) throw new Error("ai_empty_response");
 

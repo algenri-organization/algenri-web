@@ -1,0 +1,6 @@
+import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
+import { getContract, updateContract } from "@/lib/contracts/store";
+
+export const runtime="nodejs"; export const dynamic="force-dynamic";
+export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){try{await requireAlgenriInternalUser(request);const {id}=await params;const contract=await getContract(id);if(!contract)return Response.json({ok:false,error:"contract_not_found"},{status:404});return Response.json({ok:true,contract});}catch(error){const auth=internalAuthResponse(error);if(auth)return auth;return Response.json({ok:false,error:"contract_read_failed"},{status:500});}}
+export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}){try{const user=await requireAlgenriInternalUser(request);const {id}=await params;const body=await request.json();const contract=await updateContract(id,body,user.email??user.uid);if(!contract)return Response.json({ok:false,error:"contract_not_found"},{status:404});return Response.json({ok:true,contract});}catch(error){const auth=internalAuthResponse(error);if(auth)return auth;const code=error instanceof Error?error.message:"contract_update_failed";return Response.json({ok:false,error:code},{status:code==="contract_locked"?409:500});}}

@@ -18,6 +18,7 @@ export type CommercialProposalRecord = {
   subtotal:number; discountType:"none"|"fixed"|"percentage"; discountScope:"one_time"|"all"; discountValue:number; total:number; recurringMonthly:number; recurringAnnual:number;
   paymentTerms:string; validityDate:string; validityDays:number; commercialConditions:string; observations:string;
   aiMetadata?: { generatedAt:string; generatedBy:string; model:string; source:string } | null;
+  pdfMetadata?: { lastGeneratedAt:string; lastGeneratedBy:string; generationCount:number } | null;
   createdBy:string; createdAt:string; updatedBy:string; updatedAt:string; sentAt:string|null; approvedAt:string|null; rejectedAt:string|null; archivedAt:string|null;
 };
 
@@ -55,7 +56,7 @@ export async function createCommercialProposal(input:{projectId:string;dossierId
   let record!:CommercialProposalRecord;
   await db.runTransaction(async tx=>{ const counter=await tx.get(counterRef); const next=(counter.data()?.value??0)+1; const proposalNumber=`PROP-${year}-${String(next).padStart(4,"0")}`; record={
     id:ref.id,tenantId:TENANT,clientId:client.id,clientName:client.tradeName||client.legalName,projectId:project.id,projectName:project.name,sourceDossierId:dossier?.id??null,sourceDossierVersion:dossier?.version??null,
-    proposalGroupId:groupId,proposalNumber,version:"1.0",previousVersionId:null,status:"draft",title:text(input.title)||`Proposta Comercial — ${project.name}`,summary:"",sections:defaultSections(dossier),investmentItems:[],optionalItems:[],subtotal:0,discountType:"none",discountScope:"all",discountValue:0,total:0,recurringMonthly:0,recurringAnnual:0,paymentTerms:"",validityDate:validity.toISOString().slice(0,10),validityDays,commercialConditions:"",observations:"",aiMetadata:null,createdBy,createdAt:iso,updatedBy:createdBy,updatedAt:iso,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; tx.set(counterRef,{value:next,updatedAt:iso},{merge:true}); tx.set(ref,record); }); return record;
+    proposalGroupId:groupId,proposalNumber,version:"1.0",previousVersionId:null,status:"draft",title:text(input.title)||`Proposta Comercial — ${project.name}`,summary:"",sections:defaultSections(dossier),investmentItems:[],optionalItems:[],subtotal:0,discountType:"none",discountScope:"all",discountValue:0,total:0,recurringMonthly:0,recurringAnnual:0,paymentTerms:"",validityDate:validity.toISOString().slice(0,10),validityDays,commercialConditions:"",observations:"",aiMetadata:null,pdfMetadata:null,createdBy,createdAt:iso,updatedBy:createdBy,updatedAt:iso,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; tx.set(counterRef,{value:next,updatedAt:iso},{merge:true}); tx.set(ref,record); }); return record;
 }
 export async function updateCommercialProposal(id:string,input:Record<string,unknown>,updatedBy:string){
   const current=await getCommercialProposal(id); if(!current)return null; if(!["draft","in_review"].includes(current.status))throw new Error("proposal_locked");
@@ -70,9 +71,15 @@ export async function applyAiProposalDraft(id:string,input:{summary:string;secti
   const patch={summary:input.summary,sections:input.sections,aiMetadata:{generatedAt:now,generatedBy:updatedBy,model:input.model,source:input.source},updatedBy,updatedAt:now};
   const db=await getAdminDb(); await db.collection(PROPOSALS).doc(id).set(patch,{merge:true}); return getCommercialProposal(id);
 }
+export async function recordProposalPdfGeneration(id:string,generatedBy:string){
+  const current=await getCommercialProposal(id); if(!current)return null;
+  const now=new Date().toISOString(); const generationCount=(current.pdfMetadata?.generationCount??0)+1;
+  const db=await getAdminDb(); await db.collection(PROPOSALS).doc(id).set({pdfMetadata:{lastGeneratedAt:now,lastGeneratedBy:generatedBy,generationCount}},{merge:true});
+  return {lastGeneratedAt:now,lastGeneratedBy:generatedBy,generationCount};
+}
 export async function changeProposalStatus(id:string,status:ProposalStatus,updatedBy:string){
   const current=await getCommercialProposal(id); if(!current)return null; const now=new Date().toISOString(); const patch:any={status,updatedBy,updatedAt:now}; if(status==="sent")patch.sentAt=current.sentAt??now; if(status==="approved")patch.approvedAt=now; if(status==="rejected")patch.rejectedAt=now; if(status==="archived")patch.archivedAt=now;
   const db=await getAdminDb(); await db.collection(PROPOSALS).doc(id).set(patch,{merge:true}); return getCommercialProposal(id);
 }
 function bumpVersion(v:string){ const [maj,min]=v.split(".").map(Number); return `${Number.isFinite(maj)?maj:1}.${(Number.isFinite(min)?min:0)+1}`; }
-export async function createProposalVersion(id:string,createdBy:string){ const current=await getCommercialProposal(id); if(!current)throw new Error("proposal_not_found"); const db=await getAdminDb(); const ref=db.collection(PROPOSALS).doc(); const now=new Date().toISOString(); const next:CommercialProposalRecord={...current,id:ref.id,discountScope:current.discountScope??"all",version:bumpVersion(current.version),previousVersionId:current.id,status:"draft",createdBy,createdAt:now,updatedBy:createdBy,updatedAt:now,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null}; await ref.set(next); return next; }
+export async function createProposalVersion(id:string,createdBy:string){ const current=await getCommercialProposal(id); if(!current)throw new Error("proposal_not_found"); const db=await getAdminDb(); const ref=db.collection(PROPOSALS).doc(); const now=new Date().toISOString(); const next:CommercialProposalRecord={...current,id:ref.id,discountScope:current.discountScope??"all",version:bumpVersion(current.version),previousVersionId:current.id,status:"draft",createdBy,createdAt:now,updatedBy:createdBy,updatedAt:now,sentAt:null,approvedAt:null,rejectedAt:null,archivedAt:null,pdfMetadata:null}; await ref.set(next); return next; }

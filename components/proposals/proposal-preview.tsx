@@ -21,32 +21,61 @@ export default function ProposalPreview({ id }: { id: string }) {
   const [user,setUser]=useState<User|null>(null),[ready,setReady]=useState(false),[proposal,setProposal]=useState<Proposal|null>(null),[message,setMessage]=useState("");
   useEffect(()=>onAuthStateChanged(firebaseAuth,u=>{setUser(u);setReady(true)}),[]);
   useEffect(()=>{if(!user)return;authFetch(user,`/api/internal/proposals/${id}`).then(async r=>{const p=await r.json();if(!r.ok)throw new Error("Não foi possível abrir a proposta.");setProposal(p.proposal)}).catch(e=>setMessage(e.message))},[user,id]);
-  useEffect(()=>{if(!proposal)return;const params=new URLSearchParams(window.location.search);if(params.get("print")==="1")setTimeout(()=>window.print(),900)},[proposal]);
+  useEffect(()=>{if(!proposal)return;const params=new URLSearchParams(window.location.search);if(params.get("print")==="1")setTimeout(()=>window.print(),1100)},[proposal]);
   const oneTimeItems=useMemo(()=>proposal?.investmentItems.filter(i=>i.billingType==="one_time")??[],[proposal]);
   const recurringItems=useMemo(()=>proposal?.investmentItems.filter(i=>i.billingType==="recurring")??[],[proposal]);
   if(!ready)return <main className="min-h-screen grid place-items-center bg-slate-100 text-slate-700">Carregando…</main>;
   if(!user)return <main className="min-h-screen grid place-items-center bg-slate-100 text-slate-700">Faça login em /interno para visualizar a proposta.</main>;
   if(!proposal)return <main className="min-h-screen grid place-items-center bg-slate-100 text-slate-700">{message||"Carregando proposta…"}</main>;
-  return <main className="min-h-screen bg-slate-200 py-8 text-slate-900 print:bg-white print:py-0">
+  return <main className="proposal-print-root min-h-screen bg-slate-200 py-8 text-slate-900 print:bg-white print:py-0">
     <style jsx global>{`
       @page { size: A4; margin: 0; }
       @media print {
         html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+        body > header, body > footer, body > .neural-identity-field { display: none !important; }
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .proposal-print-root { margin: 0 !important; padding: 0 !important; background: white !important; }
         .proposal-sheet { box-shadow: none !important; margin: 0 !important; width: 210mm !important; max-width: none !important; }
-        .cover { width: 210mm !important; height: 297mm !important; min-height: 297mm !important; break-after: page !important; page-break-after: always !important; }
+        .cover { box-sizing: border-box !important; width: 210mm !important; height: 297mm !important; min-height: 297mm !important; max-height: 297mm !important; overflow: hidden !important; break-after: page !important; page-break-after: always !important; }
         .proposal-body { padding: 18mm 16mm 16mm !important; }
         .proposal-section { break-inside: avoid; page-break-inside: avoid; }
       }
     `}</style>
     <div className="mx-auto mb-4 flex max-w-[210mm] justify-between px-2 print:hidden"><a href={`/interno/propostas/${id}`} className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm shadow"><ArrowLeft size={15}/>Voltar ao editor</a><button onClick={()=>window.print()} className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"><Printer size={15}/>Imprimir / Salvar PDF</button></div>
     <article className="proposal-sheet mx-auto w-[210mm] max-w-[calc(100%-24px)] bg-white shadow-2xl">
-      <section className="cover relative flex h-[297mm] min-h-[297mm] flex-col justify-between overflow-hidden bg-[#040c17] p-14 text-white">
-        <img src="/hero-art.webp.jpeg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-center opacity-40 brightness-[.38] contrast-125"/>
-        <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(4,12,23,.98)_0%,rgba(4,12,23,.88)_43%,rgba(4,12,23,.42)_72%,rgba(4,12,23,.72)_100%)]"/>
-        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-[linear-gradient(to_top,rgba(4,12,23,.98),transparent)]"/>
-        <div className="relative z-10"><img src="/algenri-logo.webp" alt="ALGENRI" className="h-16 w-auto object-contain object-left"/><p className="mt-16 text-xs font-semibold tracking-[.28em] text-cyan-300">PROPOSTA COMERCIAL</p><h1 className="mt-5 max-w-2xl text-5xl font-semibold leading-tight tracking-[-.04em]">{proposal.title}</h1><p className="mt-6 text-xl text-white/75">{proposal.clientName}</p><p className="mt-1 text-base text-white/55">{proposal.projectName}</p></div>
-        <div className="relative z-10 border-t border-white/20 pt-6"><div className="grid grid-cols-2 gap-6 text-sm"><div><p className="text-white/45">Proposta</p><p className="mt-1 font-semibold">{proposal.proposalNumber} · v{proposal.version}</p></div><div><p className="text-white/45">Validade</p><p className="mt-1 font-semibold">{date(proposal.validityDate)}</p></div></div><p className="mt-8 text-sm tracking-wide text-white/65">Tecnologia que impulsiona o seu amanhã.</p></div>
+      <section className="cover relative flex h-[297mm] min-h-[297mm] flex-col overflow-hidden bg-[#030a14] px-14 py-12 text-white">
+        <img src="/hero-art.webp.jpeg" alt="" aria-hidden="true" className="absolute inset-y-0 right-0 h-full w-[72%] object-cover object-[68%_center] opacity-80 brightness-[.48] contrast-125 saturate-125"/>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,#030a14_0%,rgba(3,10,20,.98)_30%,rgba(3,10,20,.78)_53%,rgba(3,10,20,.24)_78%,rgba(3,10,20,.5)_100%)]"/>
+        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(to_top,#030a14_4%,rgba(3,10,20,.9)_28%,transparent_100%)]"/>
+        <div className="absolute right-[9%] top-[10%] h-48 w-48 rounded-full border border-cyan-300/10 shadow-[0_0_90px_rgba(34,211,238,.15)]"/>
+
+        <div className="relative z-10">
+          <img src="/algenri-logo.webp" alt="ALGENRI" className="h-14 w-auto object-contain object-left"/>
+        </div>
+
+        <div className="relative z-10 mt-[28mm] max-w-[145mm]">
+          <div className="flex items-center gap-4">
+            <p className="text-[11px] font-semibold tracking-[.34em] text-cyan-300">PROPOSTA COMERCIAL</p>
+            <div className="h-px w-28 bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400"/>
+          </div>
+          <h1 className="mt-7 max-w-[142mm] text-[42px] font-semibold leading-[1.08] tracking-[-.04em]">{proposal.title}</h1>
+          <p className="mt-8 text-lg font-semibold tracking-[.02em] text-white/90">{proposal.clientName}</p>
+          <p className="mt-2 text-sm tracking-[.12em] text-white/55">{proposal.projectName}</p>
+        </div>
+
+        <div className="relative z-10 mt-auto">
+          <div className="mb-8 flex items-end justify-between gap-8">
+            <div className="max-w-[92mm]">
+              <div className="mb-4 h-0.5 w-9 bg-gradient-to-r from-cyan-300 to-violet-400"/>
+              <p className="text-[11px] uppercase leading-5 tracking-[.24em] text-white/60">Pessoas · Ideias · Tecnologia · Evolução</p>
+              <p className="mt-3 text-sm text-white/78">Tecnologia que impulsiona o seu amanhã.</p>
+            </div>
+            <div className="grid min-w-[62mm] grid-cols-2 gap-5 border-l border-white/25 pl-6 text-[11px]">
+              <div><p className="uppercase tracking-[.16em] text-white/35">Proposta</p><p className="mt-2 font-semibold text-white/85">{proposal.proposalNumber}</p><p className="mt-1 text-white/50">v{proposal.version}</p></div>
+              <div><p className="uppercase tracking-[.16em] text-white/35">Validade</p><p className="mt-2 font-semibold text-white/85">{date(proposal.validityDate)}</p></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div className="proposal-body p-12">

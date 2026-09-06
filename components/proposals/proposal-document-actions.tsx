@@ -30,8 +30,10 @@ export default function ProposalDocumentActions({ id }: { id: string }) {
     }
   }
 
-  return <div className="fixed bottom-5 right-5 z-40 flex gap-2 print:hidden">
-    <button onClick={preview} className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-[#071423]/95 px-4 py-2.5 text-sm font-semibold text-white shadow-xl backdrop-blur"><Eye size={16}/>Visualizar proposta</button>
-    <button disabled={!user||busy} onClick={generatePdf} className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-xl disabled:opacity-50"><FileDown size={16}/>{busy?"Preparando…":"Gerar PDF"}</button>
+  return <div className="fixed inset-x-0 bottom-5 z-40 px-5 print:hidden">
+    <div className="mx-auto flex w-full max-w-5xl justify-end gap-2">
+      <button onClick={preview} className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-[#071423]/95 px-4 py-2.5 text-sm font-semibold text-white shadow-xl backdrop-blur"><Eye size={16}/>Visualizar proposta</button>
+      <button disabled={!user||busy} onClick={generatePdf} className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-xl disabled:opacity-50"><FileDown size={16}/>{busy?"Preparando…":"Gerar PDF"}</button>
+    </div>
   </div>;
 }

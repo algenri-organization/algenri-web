@@ -1,0 +1,5 @@
+import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
+import { changeProposalStatus, type ProposalStatus } from "@/lib/proposals/store";
+const allowed=new Set<ProposalStatus>(["draft","in_review","ready_to_send","sent","negotiation","approved","rejected","expired","archived"]);
+export const runtime="nodejs"; export const dynamic="force-dynamic";
+export async function POST(request:Request,context:{params:Promise<{id:string}>}){ try{ const user=await requireAlgenriInternalUser(request); const {id}=await context.params; const body=await request.json(); const status=String(body.status??"") as ProposalStatus; if(!allowed.has(status))return Response.json({ok:false,error:"invalid_status"},{status:400}); const proposal=await changeProposalStatus(id,status,user.email??user.uid); if(!proposal)return Response.json({ok:false,error:"proposal_not_found"},{status:404}); return Response.json({ok:true,proposal}); }catch(error){ const auth=internalAuthResponse(error); if(auth)return auth; return Response.json({ok:false,error:"proposal_status_failed"},{status:500}); } }

@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     await requireAlgenriInternalUser(request);
-    const dossiers = await listProjectDossiers();
+    const projectId = new URL(request.url).searchParams.get("projectId") || undefined;
+    const dossiers = await listProjectDossiers(projectId);
     return Response.json({ ok: true, dossiers });
   } catch (error) {
     const authResponse = internalAuthResponse(error);
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     const authResponse = internalAuthResponse(error);
     if (authResponse) return authResponse;
     const code = error instanceof Error ? error.message : "dossier_create_failed";
-    const status = code === "briefing_not_found" ? 404 : code === "briefing_not_completed" ? 409 : 500;
+    const status = code === "briefing_not_found" ? 404 : ["briefing_not_completed", "briefing_not_linked"].includes(code) ? 409 : 500;
     console.error("Dossier creation failed", error);
     return Response.json({ ok: false, error: code }, { status });
   }

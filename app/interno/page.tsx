@@ -10,10 +10,10 @@ const activeCards = [
   { href: "/interno/briefings/modelos", icon: FileText, title: "Modelos de Briefing", text: "Importe, revise, versione e publique modelos reutilizáveis." },
   { href: "/interno/briefings/instancias", icon: FolderKanban, title: "Criar / Enviar Briefing", text: "Gere uma instância individual e o link seguro para cada cliente." },
   { href: "/interno/briefings/recebidos", icon: Inbox, title: "Briefings Recebidos", text: "Visualize respostas concluídas ou em andamento e exporte os dados do projeto." },
+  { href: "/interno/dossies", icon: MessageSquareText, title: "Dossiês de Projeto", text: "Transforme briefings concluídos em documento estruturado para análise, escopo e proposta." },
 ];
 
 const futureCards = [
-  { icon: MessageSquareText, title: "Dossiês de Projeto", text: "Transformar briefings em documento inicial para cliente e entrada estruturada para IA." },
   { icon: FolderKanban, title: "Clientes e Projetos", text: "Centralizar proposta, contrato, desenvolvimento, homologação, entrega e suporte." },
   { icon: Settings2, title: "Configurações", text: "Canais, integrações, notificações, usuários e preferências operacionais." },
 ];

@@ -1,4 +1,4 @@
-import { ArrowRight, FileSignature, FileText, FolderKanban, Inbox, LayoutDashboard, MessageSquareText, Settings2, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, FileSignature, FileText, FolderKanban, Inbox, LayoutDashboard, MessageSquareText, Settings2, Users } from "lucide-react";
 
 export const metadata = {
   title: "Área Interna | ALGENRI",
@@ -6,6 +6,7 @@ export const metadata = {
 };
 
 const activeCards = [
+  { href: "/interno/prontidao", icon: BadgeCheck, title: "Prontidão para Vendas", text: "Valide os canais essenciais e confirme se a ALGENRI está pronta para receber e atender novos leads." },
   { href: "/interno/leads", icon: Users, title: "Interessados", text: "Acompanhe contatos comerciais registrados pelo site e o status das notificações." },
   { href: "/interno/clientes", icon: FolderKanban, title: "Clientes e Projetos", text: "Centralize dados dos clientes, projetos, status e evolução operacional." },
   { href: "/interno/briefings/modelos", icon: FileText, title: "Modelos de Briefing", text: "Importe, revise, versione e publique modelos reutilizáveis." },

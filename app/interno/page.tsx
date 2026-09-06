@@ -1,4 +1,4 @@
-import { ArrowRight, FileText, FolderKanban, Inbox, LayoutDashboard, MessageSquareText, Settings2, Users } from "lucide-react";
+import { ArrowRight, FileSignature, FileText, FolderKanban, Inbox, LayoutDashboard, MessageSquareText, Settings2, Users } from "lucide-react";
 
 export const metadata = {
   title: "Área Interna | ALGENRI",
@@ -13,6 +13,7 @@ const activeCards = [
   { href: "/interno/briefings/recebidos", icon: Inbox, title: "Briefings Recebidos", text: "Visualize respostas concluídas ou em andamento e exporte os dados do projeto." },
   { href: "/interno/dossies", icon: MessageSquareText, title: "Dossiês de Projeto", text: "Transforme briefings concluídos em documento estruturado para análise, escopo e proposta." },
   { href: "/interno/propostas", icon: FileText, title: "Propostas Comerciais", text: "Crie, versione e acompanhe propostas comerciais vinculadas aos projetos da ALGENRI." },
+  { href: "/interno/contratos", icon: FileSignature, title: "Contratos", text: "Converta propostas aprovadas em contratos, acompanhe assinatura e armazene o PDF assinado." },
 ];
 
 const futureCards = [

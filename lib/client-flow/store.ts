@@ -1,3 +1,4 @@
+import type { Query } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 
 const CLIENTS = "clients";
@@ -8,48 +9,16 @@ export type ClientStatus = "lead" | "negotiation" | "active" | "paused" | "inact
 export type ProjectStatus = "diagnosis" | "briefing" | "proposal" | "contract" | "onboarding" | "development" | "validation" | "publication" | "delivery" | "support" | "completed" | "paused" | "cancelled";
 
 export type ClientRecord = {
-  id: string;
-  legalName: string;
-  tradeName: string;
-  taxId: string;
-  segment: string;
-  city: string;
-  state: string;
-  country: string;
-  website: string;
-  instagram: string;
-  email: string;
-  phone: string;
-  whatsapp: string;
+  id: string; legalName: string; tradeName: string; taxId: string; segment: string; city: string; state: string; country: string;
+  website: string; instagram: string; email: string; phone: string; whatsapp: string;
   primaryContact: { name: string; role: string; email: string; phone: string };
-  relationshipStatus: ClientStatus;
-  notes: string;
-  tenantId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  archivedAt: string | null;
+  relationshipStatus: ClientStatus; notes: string; tenantId: string; createdBy: string; createdAt: string; updatedAt: string; archivedAt: string | null;
 };
 
 export type ProjectRecord = {
-  id: string;
-  clientId: string;
-  clientName: string;
-  name: string;
-  projectType: string;
-  status: ProjectStatus;
-  responsibleUserId: string;
-  responsibleName: string;
-  startDate: string;
-  expectedDeliveryDate: string;
-  completedAt: string | null;
-  description: string;
-  notes: string;
-  tenantId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  archivedAt: string | null;
+  id: string; clientId: string; clientName: string; name: string; projectType: string; status: ProjectStatus;
+  responsibleUserId: string; responsibleName: string; startDate: string; expectedDeliveryDate: string; completedAt: string | null;
+  description: string; notes: string; tenantId: string; createdBy: string; createdAt: string; updatedAt: string; archivedAt: string | null;
 };
 
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
@@ -61,40 +30,34 @@ export async function listClients() {
 }
 
 export async function getClient(id: string) {
-  const db = await getAdminDb();
-  const doc = await db.collection(CLIENTS).doc(id).get();
-  if (!doc.exists) return null;
-  const client = doc.data() as ClientRecord;
+  const db = await getAdminDb(); const doc = await db.collection(CLIENTS).doc(id).get();
+  if (!doc.exists) return null; const client = doc.data() as ClientRecord;
   return client.tenantId === DEFAULT_TENANT_ID ? client : null;
 }
 
 export async function createClient(input: Record<string, unknown>, createdBy: string) {
-  const db = await getAdminDb();
-  const ref = db.collection(CLIENTS).doc();
-  const now = new Date().toISOString();
-  const tradeName = text(input.tradeName);
-  const legalName = text(input.legalName);
-  if (!tradeName && !legalName) throw new Error("client_name_required");
+  const db = await getAdminDb(); const ref = db.collection(CLIENTS).doc(); const now = new Date().toISOString();
+  const tradeName = text(input.tradeName); const legalName = text(input.legalName); if (!tradeName && !legalName) throw new Error("client_name_required");
+  const contact = input.primaryContact as Record<string, unknown> | undefined;
   const record: ClientRecord = {
     id: ref.id, legalName, tradeName, taxId: text(input.taxId), segment: text(input.segment), city: text(input.city), state: text(input.state), country: text(input.country) || "Brasil",
     website: text(input.website), instagram: text(input.instagram), email: text(input.email), phone: text(input.phone), whatsapp: text(input.whatsapp),
-    primaryContact: { name: text((input.primaryContact as Record<string, unknown> | undefined)?.name), role: text((input.primaryContact as Record<string, unknown> | undefined)?.role), email: text((input.primaryContact as Record<string, unknown> | undefined)?.email), phone: text((input.primaryContact as Record<string, unknown> | undefined)?.phone) },
-    relationshipStatus: (text(input.relationshipStatus) || "lead") as ClientStatus, notes: text(input.notes), tenantId: DEFAULT_TENANT_ID, createdBy, createdAt: now, updatedAt: now, archivedAt: null,
+    primaryContact: { name: text(contact?.name), role: text(contact?.role), email: text(contact?.email), phone: text(contact?.phone) },
+    relationshipStatus: (text(input.relationshipStatus) || "lead") as ClientStatus, notes: text(input.notes), tenantId: DEFAULT_TENANT_ID,
+    createdBy, createdAt: now, updatedAt: now, archivedAt: null,
   };
-  await ref.set(record);
-  return record;
+  await ref.set(record); return record;
 }
 
 export async function updateClient(id: string, input: Record<string, unknown>) {
   const current = await getClient(id); if (!current) return null;
   const updated: ClientRecord = { ...current, ...input, id: current.id, tenantId: current.tenantId, createdAt: current.createdAt, createdBy: current.createdBy, updatedAt: new Date().toISOString() } as ClientRecord;
-  const db = await getAdminDb(); await db.collection(CLIENTS).doc(id).set(updated);
-  return updated;
+  const db = await getAdminDb(); await db.collection(CLIENTS).doc(id).set(updated); return updated;
 }
 
 export async function listProjects(clientId?: string) {
   const db = await getAdminDb();
-  let query: FirebaseFirestore.Query = db.collection(PROJECTS).where("tenantId", "==", DEFAULT_TENANT_ID);
+  let query: Query = db.collection(PROJECTS).where("tenantId", "==", DEFAULT_TENANT_ID);
   if (clientId) query = query.where("clientId", "==", clientId);
   const snapshot = await query.get();
   return snapshot.docs.map((doc) => doc.data() as ProjectRecord).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

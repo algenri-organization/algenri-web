@@ -12,6 +12,7 @@ const activeCards = [
   { href: "/interno/briefings/instancias", icon: FolderKanban, title: "Criar / Enviar Briefing", text: "Gere uma instância individual e o link seguro para cada cliente." },
   { href: "/interno/briefings/recebidos", icon: Inbox, title: "Briefings Recebidos", text: "Visualize respostas concluídas ou em andamento e exporte os dados do projeto." },
   { href: "/interno/dossies", icon: MessageSquareText, title: "Dossiês de Projeto", text: "Transforme briefings concluídos em documento estruturado para análise, escopo e proposta." },
+  { href: "/interno/propostas", icon: FileText, title: "Propostas Comerciais", text: "Crie, versione e acompanhe propostas comerciais vinculadas aos projetos da ALGENRI." },
 ];
 
 const futureCards = [

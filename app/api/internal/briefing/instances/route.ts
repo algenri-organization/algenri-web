@@ -7,11 +7,17 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     await requireAlgenriInternalUser(request);
-    const instances = await listBriefingInstances();
+    const url = new URL(request.url);
+    const projectId = url.searchParams.get("projectId") || undefined;
+    const unlinked = url.searchParams.get("unlinked") === "true";
+    const instances = await listBriefingInstances({ projectId, unlinked });
     return Response.json({
       ok: true,
       instances: instances.map((instance) => ({
         id: instance.id,
+        clientId: instance.clientId,
+        projectId: instance.projectId,
+        linkedAt: instance.linkedAt ?? null,
         clientName: instance.clientName,
         projectName: instance.projectName,
         slug: instance.slug,
@@ -40,9 +46,11 @@ export async function POST(request: Request) {
     const templateId = String(body.templateId ?? "");
     const clientName = String(body.clientName ?? "").trim();
     const projectName = String(body.projectName ?? "").trim();
+    const clientId = String(body.clientId ?? "").trim() || undefined;
+    const projectId = String(body.projectId ?? "").trim() || undefined;
     const slug = String(body.slug ?? "").trim();
 
-    if (!templateId || !clientName || !projectName || !slug) {
+    if (!templateId || !slug || ((!clientId || !projectId) && (!clientName || !projectName))) {
       return Response.json({ ok: false, error: "missing_fields" }, { status: 400 });
     }
 
@@ -50,6 +58,8 @@ export async function POST(request: Request) {
       templateId,
       clientName,
       projectName,
+      clientId,
+      projectId,
       slug,
       createdBy: user.email ?? user.uid,
     });
@@ -63,15 +73,15 @@ export async function POST(request: Request) {
         clientName: record.clientName,
         projectName: record.projectName,
         status: record.status,
+        linkedAt: record.linkedAt ?? null,
       },
       accessUrl: `${origin}/briefing/${record.slug}?token=${encodeURIComponent(token)}`,
     }, { status: 201 });
   } catch (error) {
     const authResponse = internalAuthResponse(error);
     if (authResponse) return authResponse;
-
     const code = error instanceof Error ? error.message : "briefing_instance_create_failed";
-    const status = code === "template_not_found" ? 404 : code === "template_not_published" || code === "slug_in_use" || code === "invalid_slug" ? 409 : 500;
+    const status = code === "template_not_found" || code === "client_not_found" ? 404 : ["template_not_published","slug_in_use","invalid_slug","project_client_mismatch"].includes(code) ? 409 : 500;
     console.error("Briefing instance creation failed", error);
     return Response.json({ ok: false, error: code }, { status });
   }

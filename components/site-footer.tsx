@@ -12,7 +12,7 @@ export function SiteFooter() {
           <p className="font-medium text-white/75">Navegação</p>
           <div className="mt-3 flex flex-col gap-2">
             <a href="/solucoes" className="hover:text-white">Soluções</a>
-            <a href="/planos" className="hover:text-white">Planos</a>
+            <a href="/planos" className="hover:text-white">Evolução Digital</a>
             <a href="/diagnostico" className="hover:text-white">Diagnóstico</a>
             <a href="/privacidade" className="hover:text-white">Privacidade</a>
           </div>

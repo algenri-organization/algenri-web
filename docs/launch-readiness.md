@@ -83,13 +83,16 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 
 ### P1 — recomendado antes ou logo após o lançamento
 - [ ] Revisar textos comerciais e preços definitivos dos planos.
-- [ ] Criar respostas padrão de primeiro atendimento no WhatsApp.
-- [ ] Criar checklist interno de qualificação do lead.
-- [ ] Criar checklist de onboarding após fechamento.
+- [x] Criar respostas padrão de primeiro atendimento no WhatsApp — `docs/launch-whatsapp-responses.md`.
+- [x] Criar checklist interno de qualificação do lead — `docs/launch-lead-qualification.md`.
+- [x] Criar checklist de onboarding após fechamento — `docs/launch-onboarding.md`.
 - [ ] Confirmar domínio e SSL em produção; favicon e metadados básicos já existem no código. Falta revisar compartilhamento social/OG image e validar o domínio externamente.
 - [ ] Verificar responsividade das páginas públicas em celular.
 - [ ] Selecionar provedor financeiro definitivo considerando boleto, link, cartão parcelado/recorrente, PIX e PIX Automático.
 - [ ] Revisar entregabilidade do e-mail comercial (SPF, DKIM e DMARC) e confirmar envio como `contato@algenri.com.br`; o primeiro teste externo recebido caiu em Spam.
+
+### Ajustes rápidos de apresentação antes da abertura pública
+- [x] Remover o link da Área Interna do rodapé público; o acesso interno continua disponível diretamente pela rota autenticada.
 
 ## Pós-lançamento
 Todos os refinamentos não bloqueadores ficam na Issue #36 — Backlog pós-liberação para vendas.

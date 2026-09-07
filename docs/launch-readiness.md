@@ -27,6 +27,10 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Dossiês.
 - Propostas Comerciais com IA, edição, versionamento e PDF funcional, embora ainda com refinamento visual pendente.
 - Contratos V1 para registro operacional e armazenamento do PDF assinado.
+- Política de Privacidade/LGPD publicada e vinculada ao consentimento.
+- Faturadora de lançamento definida: JM MIND E PERFORMANCE LTDA.
+- Modelo contratual manual temporário documentado em `docs/launch-contract-template.md`.
+- Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -36,16 +40,21 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Upload do contrato assinado na ALGENRI.
 - Cobrança/pagamento via meio financeiro definido pela empresa, sem necessidade de checkout integrado no lançamento.
 
+## Dependências externas em andamento
+- Template de WhatsApp da Meta em análise. Não bloquear a sequência de lançamento enquanto a aprovação estiver pendente.
+- Cadastro/ajuste de CNAEs da JM MIND em andamento com o contador.
+
 ## Bloqueadores reais antes da liberação
 
 ### P0 — obrigatório
 - [ ] Validar ponta a ponta a captação de lead em produção: formulário salva, WhatsApp abre corretamente e lead aparece na área interna.
-- [ ] Confirmar o número oficial de WhatsApp configurado para o contato comercial.
+- [x] Confirmar o número oficial de WhatsApp configurado para o contato comercial: +55 42 99127-4684.
 - [ ] Confirmar que o e-mail contato@algenri.com.br está ativo e sendo monitorado.
-- [ ] Criar e publicar Política de Privacidade/LGPD, pois o site coleta nome, empresa, WhatsApp, e-mail e consentimento.
-- [ ] Inserir link para Política de Privacidade junto ao consentimento e no rodapé.
-- [ ] Definir o processo financeiro mínimo de lançamento: dados para cobrança, meio de pagamento aceito e emissão de documento fiscal quando aplicável.
-- [ ] Definir o modelo contratual/manual que será usado nas primeiras vendas até a evolução do módulo de contratos.
+- [x] Criar e publicar Política de Privacidade/LGPD, pois o site coleta nome, empresa, WhatsApp, e-mail e consentimento.
+- [x] Inserir link para Política de Privacidade junto ao consentimento e no rodapé.
+- [ ] Definir o processo financeiro mínimo de lançamento: conta/PIX ou outro meio de recebimento, regra de cobrança e emissão de documento fiscal quando aplicável.
+- [x] Definir a empresa faturadora do lançamento: JM MIND E PERFORMANCE LTDA.
+- [x] Definir o modelo contratual/manual que será usado nas primeiras vendas até a evolução do módulo de contratos.
 - [ ] Fazer um teste comercial completo com um cliente fictício ou piloto: lead → proposta → contrato → pagamento/cobrança → projeto em desenvolvimento.
 
 ### P1 — recomendado antes ou logo após o lançamento

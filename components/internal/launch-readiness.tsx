@@ -20,6 +20,7 @@ const labels: Record<string, string> = {
   metaAccessToken: "Token da API do WhatsApp",
   metaPhoneNumberId: "Phone Number ID da Meta",
   notifyWhatsAppNumber: "Número que recebe novos leads",
+  leadNotificationTemplate: "Template de alerta de novo lead",
   contactEmailPublished: "E-mail comercial publicado",
   privacyPolicyPublished: "Política de Privacidade publicada",
 };
@@ -81,7 +82,7 @@ export default function LaunchReadiness() {
 
           <section className="mt-6 rounded-2xl border border-white/10 bg-white/[.025] p-5">
             <h2 className="font-semibold">Validação final do canal</h2>
-            <p className="mt-2 text-sm leading-6 text-white/50">Mesmo com todos os itens configurados, faça um envio real pelo formulário público de Contato. Confirme três resultados: o lead aparece em Interessados, o WhatsApp do cliente abre com a mensagem preparada e a notificação do novo lead chega ao número interno da ALGENRI.</p>
+            <p className="mt-2 text-sm leading-6 text-white/50">Mesmo com todos os itens configurados, faça um envio real pelo formulário público de Contato. Confirme três resultados: o lead aparece em Interessados, o WhatsApp do cliente abre com a mensagem preparada e a notificação do novo lead chega ao número interno da ALGENRI usando o template aprovado pela Meta.</p>
             <div className="mt-4 flex flex-wrap gap-3"><a href="/contato" target="_blank" className="rounded-xl bg-violet-300 px-4 py-2.5 text-sm font-semibold text-slate-950">Abrir formulário de teste</a><a href="/interno/leads" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white/65">Ver interessados</a></div>
           </section>
         </>}

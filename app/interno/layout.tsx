@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import InternalAuthGate from "@/components/internal/internal-auth-gate";
+import InternalAccessGate from "@/components/internal/internal-access-gate";
 import InternalSidebar from "@/components/internal/internal-sidebar";
 
 export const metadata = {
@@ -11,7 +12,7 @@ export default function InternalLayout({ children }: { children: ReactNode }) {
     <InternalAuthGate>
       <div className="flex min-h-screen bg-[#040c17]">
         <InternalSidebar />
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-w-0 flex-1"><InternalAccessGate>{children}</InternalAccessGate></div>
       </div>
     </InternalAuthGate>
   );

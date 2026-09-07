@@ -1,5 +1,5 @@
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
-import { isInternalAdmin, listInternalUsers, provisionInternalUser, updateInternalUser } from "@/lib/internal/users";
+import { isInternalAdmin, listInternalUsers, normalizePermissions, provisionInternalUser, updateInternalUser } from "@/lib/internal/users";
 
 async function requireAdmin(request: Request) {
   const user = await requireAlgenriInternalUser(request);
@@ -28,7 +28,12 @@ export async function POST(request: Request) {
   try {
     await requireAdmin(request);
     const body = await request.json();
-    const user = await provisionInternalUser({ email: String(body.email || ""), displayName: String(body.displayName || ""), role: body.role === "admin" ? "admin" : "member" });
+    const user = await provisionInternalUser({
+      email: String(body.email || ""),
+      displayName: String(body.displayName || ""),
+      role: body.role === "admin" ? "admin" : "member",
+      permissions: normalizePermissions(body.permissions),
+    });
     return Response.json({ ok: true, user });
   } catch (error) {
     const handled = authError(error);
@@ -43,7 +48,12 @@ export async function PATCH(request: Request) {
   try {
     const actor = await requireAdmin(request);
     const body = await request.json();
-    await updateInternalUser(actor.uid, { uid: String(body.uid || ""), role: body.role === "admin" ? "admin" : body.role === "member" ? "member" : undefined, active: typeof body.active === "boolean" ? body.active : undefined });
+    await updateInternalUser(actor.uid, {
+      uid: String(body.uid || ""),
+      role: body.role === "admin" ? "admin" : body.role === "member" ? "member" : undefined,
+      active: typeof body.active === "boolean" ? body.active : undefined,
+      permissions: Array.isArray(body.permissions) ? normalizePermissions(body.permissions) : undefined,
+    });
     return Response.json({ ok: true });
   } catch (error) {
     const handled = authError(error);

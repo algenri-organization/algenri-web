@@ -2,16 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, sendPasswordResetEmail, updateProfile, type User } from "firebase/auth";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Camera, KeyRound, Save, ShieldCheck, UserRound, X } from "lucide-react";
-import { firebaseAuth, firebaseStorage } from "@/lib/firebase/client";
+import { firebaseAuth } from "@/lib/firebase/client";
 
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function initials(user: User | null) {
   const label = user?.displayName?.trim() || user?.email?.split("@")[0] || "AL";
   const parts = label.split(/[._\-\s]+/).filter(Boolean);
   return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : label.slice(0, 2)).toUpperCase();
+}
+
+async function profilePhotoRequest(user: User, method: "POST" | "DELETE", file?: File) {
+  const token = await user.getIdToken();
+  const body = file ? (() => { const data = new FormData(); data.append("file", file); return data; })() : undefined;
+  const response = await fetch("/api/internal/profile/photo", {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "photo_request_failed");
+  return payload as { ok: true; photoURL?: string };
 }
 
 export default function UserProfileAdmin() {
@@ -37,12 +50,11 @@ export default function UserProfileAdmin() {
     try {
       let nextPhotoURL = photoURL.trim() || null;
       if (photoFile) {
-        if (!photoFile.type.startsWith("image/")) throw new Error("Selecione um arquivo de imagem.");
+        if (!ALLOWED_PHOTO_TYPES.has(photoFile.type)) throw new Error("Selecione uma imagem JPG, PNG ou WebP.");
         if (photoFile.size > MAX_PHOTO_SIZE) throw new Error("A foto deve ter no máximo 5 MB.");
-        const extension = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
-        const storageRef = ref(firebaseStorage, `internal-users/${user.uid}/profile/avatar.${extension}`);
-        await uploadBytes(storageRef, photoFile, { contentType: photoFile.type });
-        nextPhotoURL = await getDownloadURL(storageRef);
+        const uploaded = await profilePhotoRequest(user, "POST", photoFile);
+        if (!uploaded.photoURL) throw new Error("Não foi possível obter a URL da foto enviada.");
+        nextPhotoURL = uploaded.photoURL;
       }
       await updateProfile(user, { displayName: displayName.trim() || null, photoURL: nextPhotoURL });
       setPhotoFile(null);
@@ -50,7 +62,8 @@ export default function UserProfileAdmin() {
       setMessage("Perfil atualizado com sucesso. A área interna será recarregada para aplicar a nova identificação.");
       window.setTimeout(() => window.location.reload(), 900);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível atualizar o perfil.");
+      const code = e instanceof Error ? e.message : "";
+      setError(code === "photo_upload_failed" ? "Não foi possível enviar a foto. Verifique a configuração do armazenamento e tente novamente." : code || "Não foi possível atualizar o perfil.");
     } finally {
       setSaving(false);
     }
@@ -60,6 +73,7 @@ export default function UserProfileAdmin() {
     if (!user) return;
     setSaving(true); setMessage(""); setError("");
     try {
+      await profilePhotoRequest(user, "DELETE");
       await updateProfile(user, { photoURL: null });
       setPhotoURL(""); setPhotoFile(null);
       setMessage("Foto removida. A área interna será recarregada.");
@@ -116,8 +130,8 @@ export default function UserProfileAdmin() {
               <label className="block"><span className="mb-2 block text-xs font-medium text-white/50">E-mail de acesso</span><input className={`${input} opacity-60`} value={user.email ?? ""} disabled /></label>
               <div>
                 <span className="mb-2 block text-xs font-medium text-white/50">Foto de perfil</span>
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300/20 bg-cyan-300/[.025] px-4 py-4 text-sm text-cyan-100 transition hover:bg-cyan-300/[.05]"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Selecionar imagem do computador"}<input type="file" accept="image/*" className="hidden" onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)} /></label>
-                <p className="mt-2 text-xs text-white/30">JPG, PNG ou WebP. Máximo de 5 MB. A imagem será armazenada no Firebase Storage.</p>
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300/20 bg-cyan-300/[.025] px-4 py-4 text-sm text-cyan-100 transition hover:bg-cyan-300/[.05]"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Selecionar imagem do computador"}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)} /></label>
+                <p className="mt-2 text-xs text-white/30">JPG, PNG ou WebP. Máximo de 5 MB. O envio passa pelo backend autenticado da ALGENRI.</p>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">

@@ -15,7 +15,6 @@ export function SiteFooter() {
             <a href="/planos" className="hover:text-white">Planos</a>
             <a href="/diagnostico" className="hover:text-white">Diagnóstico</a>
             <a href="/privacidade" className="hover:text-white">Privacidade</a>
-            <a href="/interno" className="hover:text-white">Área interna</a>
           </div>
         </div>
         <div>

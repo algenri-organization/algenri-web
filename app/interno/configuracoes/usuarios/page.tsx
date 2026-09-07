@@ -1,3 +1,4 @@
+import TeamAccessAdmin from "@/components/internal/team-access-admin";
 import UserProfileAdmin from "@/components/internal/user-profile-admin";
 
 export const metadata = {
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function UsersPage() {
-  return <UserProfileAdmin />;
+  return <><UserProfileAdmin /><div className="mx-auto -mt-14 max-w-5xl px-5 pb-20 sm:px-6 lg:px-8"><TeamAccessAdmin /></div></>;
 }

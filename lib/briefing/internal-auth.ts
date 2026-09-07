@@ -1,4 +1,5 @@
 import { getAdminAuth } from "@/lib/firebase/admin";
+import { getInternalUserRecord } from "@/lib/internal/users";
 
 export type InternalUser = {
   uid: string;
@@ -30,6 +31,12 @@ export async function requireAlgenriInternalUser(request: Request): Promise<Inte
 
   if (!email || !email.endsWith("@algenri.com.br")) {
     throw new Error("INTERNAL_ACCESS_DENIED");
+  }
+
+  const accessRecord = await getInternalUserRecord(decoded.uid);
+  if (accessRecord) {
+    if (!accessRecord.active) throw new Error("INTERNAL_ACCESS_DENIED");
+    return { uid: decoded.uid, email };
   }
 
   const provisionedEmails = getProvisionedInternalEmails();

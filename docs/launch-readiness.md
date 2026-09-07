@@ -31,6 +31,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Faturadora de lançamento definida: JM MIND E PERFORMANCE LTDA.
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
 - Estratégia financeira de lançamento definida com múltiplos meios de recebimento.
+- Provedor financeiro de lançamento definido: C6 Bank como principal e Cora como alternativa operacional, conforme `docs/launch-financial-provider.md`.
 - E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace e com recebimento externo validado.
 - Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
 - Fluxo comercial fictício validado até contrato, incluindo criação, salvamento e upload do PDF assinado; cobrança permanece operacional/manual no lançamento.
@@ -51,7 +52,9 @@ Meios de recebimento previstos:
 - transferência bancária;
 - boleto bancário;
 - link de pagamento;
-- cartão de crédito quando disponível pelo provedor contratado.
+- cartão de crédito conforme condição negociada.
+
+O C6 Bank será o provedor principal nesta fase. A Cora permanece como alternativa/reserva. A operação inicial será manual, sem integração obrigatória com a Área Interna.
 
 Evoluções financeiras pós-lançamento:
 - cobrança recorrente automatizada;
@@ -61,7 +64,7 @@ Evoluções financeiras pós-lançamento:
 - registro de cobrança, vencimento, pagamento e inadimplência dentro da Área Interna;
 - integração futura com emissão fiscal e/ou provedor financeiro escolhido.
 
-A escolha do provedor financeiro definitivo deve considerar taxas, antecipação, parcelamento, recorrência, PIX Automático, boleto, API e integração com a plataforma ALGENRI.
+O provedor poderá ser reavaliado futuramente considerando taxas, antecipação, parcelamento, recorrência, PIX Automático, boleto, API e integração com a plataforma ALGENRI.
 
 ## Dependências externas em andamento
 - Template de WhatsApp da Meta em análise. Não bloquear a sequência de lançamento enquanto a aprovação estiver pendente.
@@ -89,7 +92,7 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 - [x] Criar checklist de onboarding após fechamento — `docs/launch-onboarding.md`.
 - [ ] Confirmar domínio e SSL em produção; favicon e metadados básicos já existem no código. Falta revisar compartilhamento social/OG image e validar o domínio externamente.
 - [ ] Verificar responsividade das páginas públicas em celular.
-- [ ] Selecionar provedor financeiro definitivo considerando boleto, link, cartão parcelado/recorrente, PIX e PIX Automático.
+- [x] Selecionar provedor financeiro de lançamento — C6 Bank como principal; Cora como alternativa. Decisão registrada em `docs/launch-financial-provider.md`.
 - [ ] Revisar entregabilidade do e-mail comercial (SPF, DKIM e DMARC) e confirmar envio como `contato@algenri.com.br`; o primeiro teste externo recebido caiu em Spam.
 
 ### Ajustes rápidos de apresentação antes da abertura pública

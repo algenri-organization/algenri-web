@@ -36,6 +36,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
 - Fluxo comercial fictício validado até contrato, incluindo criação, salvamento e upload do PDF assinado; cobrança permanece operacional/manual no lançamento.
 - Deployment de produção validado após os ajustes de SEO/social e responsividade mobile.
+- Domínio `algenri.com.br` validado em produção com HTTPS ativo, sem alerta de certificado, e redirecionamento automático de HTTP para HTTPS.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -94,13 +95,20 @@ A evolução futura da camada financeira deve considerar taxas, antecipação, p
 - [x] Criar respostas padrão de primeiro atendimento no WhatsApp — `docs/launch-whatsapp-responses.md`.
 - [x] Criar checklist interno de qualificação do lead — `docs/launch-lead-qualification.md`.
 - [x] Criar checklist de onboarding após fechamento — `docs/launch-onboarding.md`.
-- [ ] Confirmar domínio e SSL em produção; favicon, metadados, Open Graph, robots e sitemap já foram implementados. Falta apenas validação externa final do domínio/SSL.
+- [x] Confirmar domínio e SSL em produção: HTTPS ativo sem alerta de certificado e redirecionamento HTTP → HTTPS validado manualmente em produção.
 - [x] Verificar e ajustar responsividade das páginas públicas em celular.
 - [x] Selecionar provedor financeiro de lançamento: C6 Bank principal, Cora alternativa/reserva.
 - [x] Revisar entregabilidade do e-mail comercial: envio como `contato@algenri.com.br` validado e autenticação confirmada em mensagem real com SPF=pass, DKIM=pass e DMARC=pass.
 
+**P1 concluído: todos os itens recomendados para lançamento foram validados.**
+
 ### Ajustes rápidos de apresentação antes da abertura pública
 - [x] Remover o link da Área Interna do rodapé público; o acesso interno continua disponível diretamente pela rota autenticada.
+
+## Status final de lançamento
+**ALGENRI liberada para vendas.**
+
+O fluxo mínimo de aquisição, atendimento, diagnóstico, proposta, contrato, cobrança operacional e início de projeto está funcional. Os refinamentos restantes são pós-lançamento e não bloqueiam comercialização.
 
 ## Pós-lançamento
 Todos os refinamentos não bloqueadores ficam na Issue #36 — Backlog pós-liberação para vendas.

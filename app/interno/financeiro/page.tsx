@@ -1,4 +1,4 @@
-import FinanceAdmin from "@/components/finance/finance-admin";
+import FinanceAdminStable from "@/components/finance/finance-admin-stable";
 
 export const metadata = {
   title: "Financeiro | ALGENRI",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function FinancePage() {
-  return <FinanceAdmin />;
+  return <FinanceAdminStable />;
 }

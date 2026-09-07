@@ -36,6 +36,7 @@ export type ProjectDossierRecord = {
   version: string;
   title: string;
   sections: DossierSection[];
+  aiMetadata?: { generatedAt: string; generatedBy: string; model: string; source: "briefing" } | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -108,6 +109,7 @@ export async function createProjectDossierFromBriefing(briefingInstanceId: strin
     version: "1.0",
     title: `Dossiê do Projeto — ${source.instance.clientName}`,
     sections: makeSections(),
+    aiMetadata: null,
     createdBy,
     createdAt: now,
     updatedAt: now,
@@ -133,4 +135,19 @@ export async function updateProjectDossier(id: string, input: { title?: string; 
   await ref.set(patch, { merge: true });
   const updated = await ref.get();
   return updated.data() as ProjectDossierRecord;
+}
+
+export async function applyAiDossierDraft(id: string, input: { sections: DossierSection[]; model: string }, updatedBy: string) {
+  const current = await getProjectDossier(id);
+  if (!current) return null;
+  if (["finalized", "archived"].includes(current.status)) throw new Error("dossier_locked");
+  const now = new Date().toISOString();
+  const db = await getAdminDb();
+  await db.collection(DOSSIER_COLLECTION).doc(id).set({
+    sections: input.sections.map((section, index) => ({ ...section, order: index })),
+    status: "review_ready",
+    aiMetadata: { generatedAt: now, generatedBy: updatedBy, model: input.model, source: "briefing" },
+    updatedAt: now,
+  }, { merge: true });
+  return getProjectDossier(id);
 }

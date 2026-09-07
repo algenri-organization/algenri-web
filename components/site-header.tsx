@@ -6,7 +6,7 @@ import { BrandLogo } from "./brand-logo";
 
 const navigation = [
   { href: "/solucoes", label: "Soluções" },
-  { href: "/planos", label: "Planos" },
+  { href: "/planos", label: "Evolução Digital" },
   { href: "/diagnostico", label: "Diagnóstico" },
   { href: "/contato", label: "Contato" },
 ];

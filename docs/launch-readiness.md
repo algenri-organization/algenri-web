@@ -32,6 +32,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
 - Estratégia financeira de lançamento definida com C6 Bank como provedor principal e Cora como alternativa operacional/reserva.
 - E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace, com recebimento externo e envio como remetente validados.
+- Autenticação do e-mail validada em mensagem real recebida no Outlook/Hotmail: SPF=pass, DKIM=pass e DMARC=pass.
 - Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
 - Fluxo comercial fictício validado até contrato, incluindo criação, salvamento e upload do PDF assinado; cobrança permanece operacional/manual no lançamento.
 - Deployment de produção validado após os ajustes de SEO/social e responsividade mobile.
@@ -96,7 +97,7 @@ A evolução futura da camada financeira deve considerar taxas, antecipação, p
 - [ ] Confirmar domínio e SSL em produção; favicon, metadados, Open Graph, robots e sitemap já foram implementados. Falta apenas validação externa final do domínio/SSL.
 - [x] Verificar e ajustar responsividade das páginas públicas em celular.
 - [x] Selecionar provedor financeiro de lançamento: C6 Bank principal, Cora alternativa/reserva.
-- [ ] Revisar entregabilidade do e-mail comercial em SPF, DKIM e DMARC. O envio como `contato@algenri.com.br` já foi validado com mensagem teste; falta apenas confirmar a autenticação DNS/cabeçalho.
+- [x] Revisar entregabilidade do e-mail comercial: envio como `contato@algenri.com.br` validado e autenticação confirmada em mensagem real com SPF=pass, DKIM=pass e DMARC=pass.
 
 ### Ajustes rápidos de apresentação antes da abertura pública
 - [x] Remover o link da Área Interna do rodapé público; o acesso interno continua disponível diretamente pela rota autenticada.

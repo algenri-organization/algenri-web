@@ -18,7 +18,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 
 ### Pronto para venda
 - Site institucional com posicionamento e soluções.
-- Página de planos de evolução.
+- Página de Evolução Digital com abordagem consultiva, sem preços públicos.
 - Diagnóstico Digital ALGENRI.
 - Formulário de contato com registro do lead.
 - Área interna para acompanhamento de interessados.
@@ -34,6 +34,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace e com recebimento externo validado.
 - Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
 - Fluxo comercial fictício validado até contrato, incluindo criação, salvamento e upload do PDF assinado; cobrança permanece operacional/manual no lançamento.
+- Deployment de produção atualizado após o PR #44 e validado operacionalmente.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -82,7 +83,7 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 **P0 concluído: não há bloqueador funcional interno para iniciar vendas.**
 
 ### P1 — recomendado antes ou logo após o lançamento
-- [ ] Revisar textos comerciais e preços definitivos dos planos.
+- [x] Revisar posicionamento comercial e preços de lançamento: valores mantidos apenas para uso interno em `docs/launch-pricing-internal.md`; página pública sem preços e orientada à venda consultiva.
 - [x] Criar respostas padrão de primeiro atendimento no WhatsApp — `docs/launch-whatsapp-responses.md`.
 - [x] Criar checklist interno de qualificação do lead — `docs/launch-lead-qualification.md`.
 - [x] Criar checklist de onboarding após fechamento — `docs/launch-onboarding.md`.

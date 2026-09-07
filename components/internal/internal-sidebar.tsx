@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { BadgeCheck, BriefcaseBusiness, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, Menu, MessageSquareText, Settings2, Users, X } from "lucide-react";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { useEffect } from "react";
+import { BadgeCheck, BriefcaseBusiness, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, LogOut, Menu, MessageSquareText, Settings2, Users, X } from "lucide-react";
+import { firebaseAuth } from "@/lib/firebase/client";
 
 type Item = { label: string; href?: string; icon: React.ElementType; disabled?: boolean };
 type Group = { label: string; icon: React.ElementType; items: Item[] };
@@ -49,11 +52,26 @@ const groups: Group[] = [
   },
 ];
 
+function userLabel(user: User | null) {
+  if (!user) return "Usuário";
+  if (user.displayName?.trim()) return user.displayName.trim();
+  return user.email?.split("@")[0] || "Usuário";
+}
+
+function userInitials(user: User | null) {
+  const label = userLabel(user);
+  const parts = label.split(/[._\-\s]+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : label.slice(0, 2)).toUpperCase();
+}
+
 export default function InternalSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(firebaseAuth.currentUser);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map((group) => [group.label, true])));
+
+  useEffect(() => onAuthStateChanged(firebaseAuth, setUser), []);
 
   const activeGroup = useMemo(() => groups.find((group) => group.items.some((item) => item.href && pathname.startsWith(item.href))), [pathname]);
 
@@ -61,13 +79,20 @@ export default function InternalSidebar() {
     setOpenGroups((current) => ({ ...current, [label]: !current[label] }));
   }
 
+  async function logout() {
+    await signOut(firebaseAuth);
+    window.location.href = "/interno";
+  }
+
   const sidebar = (
-    <aside className={`flex h-full flex-col border-r border-white/10 bg-[#06111f]/98 text-white shadow-[20px_0_70px_rgba(0,0,0,.18)] backdrop-blur-xl transition-all duration-300 ${collapsed ? "w-[84px]" : "w-[276px]"}`}>
+    <aside className={`flex h-full flex-col border-r border-white/10 bg-[#06111f] text-white shadow-[20px_0_70px_rgba(0,0,0,.18)] transition-all duration-300 ${collapsed ? "w-[84px]" : "w-[276px]"}`}>
       <div className="flex h-[74px] items-center justify-between border-b border-white/10 px-4">
-        <a href="/interno" className="flex min-w-0 items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.06] text-sm font-bold text-cyan-200">A</div>
-          {!collapsed && <div className="min-w-0"><p className="truncate text-sm font-semibold">ALGENRI</p><p className="truncate text-[10px] uppercase tracking-[.18em] text-white/35">Área interna</p></div>}
-        </a>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 overflow-hidden place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.06] text-xs font-bold text-cyan-200">
+            {user?.photoURL ? <img src={user.photoURL} alt="Foto do usuário" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : userInitials(user)}
+          </div>
+          {!collapsed && <div className="min-w-0"><p className="truncate text-sm font-semibold">{userLabel(user)}</p><p className="truncate text-[10px] uppercase tracking-[.18em] text-white/35">Área interna</p></div>}
+        </div>
         <button onClick={() => setCollapsed((value) => !value)} className="hidden rounded-lg p-2 text-white/40 transition hover:bg-white/5 hover:text-white lg:block" aria-label={collapsed ? "Expandir menu" : "Recolher menu"}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button>
         <button onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-white/50 lg:hidden" aria-label="Fechar menu"><X className="h-5 w-5" /></button>
       </div>
@@ -103,7 +128,8 @@ export default function InternalSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-white/10 p-3">
+      <div className="shrink-0 border-t border-white/10 bg-[#06111f] p-3">
+        <button onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/55 transition hover:bg-rose-400/[.08] hover:text-rose-100"><LogOut className="h-5 w-5 shrink-0" />{!collapsed && <span>Sair</span>}</button>
         <a href="/" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/45 transition hover:bg-white/5 hover:text-white"><Home className="h-5 w-5 shrink-0" />{!collapsed && <span>Voltar ao site</span>}</a>
       </div>
     </aside>
@@ -112,8 +138,8 @@ export default function InternalSidebar() {
   return (
     <>
       <button onClick={() => setMobileOpen(true)} className="fixed left-4 top-[86px] z-40 grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-[#06111f]/95 text-white shadow-xl backdrop-blur-xl lg:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
-      <div className="fixed bottom-0 left-0 top-[72px] z-30 hidden lg:block">{sidebar}</div>
-      {mobileOpen && <><button className="fixed inset-0 top-[72px] z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" /><div className="fixed bottom-0 left-0 top-[72px] z-50 lg:hidden">{sidebar}</div></>}
+      <div className="fixed bottom-0 left-0 top-[72px] z-50 hidden lg:block">{sidebar}</div>
+      {mobileOpen && <><button className="fixed inset-0 top-[72px] z-50 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" /><div className="fixed bottom-0 left-0 top-[72px] z-[60] lg:hidden">{sidebar}</div></>}
       <div className={`hidden lg:block transition-all duration-300 ${collapsed ? "w-[84px]" : "w-[276px]"}`} aria-hidden />
     </>
   );

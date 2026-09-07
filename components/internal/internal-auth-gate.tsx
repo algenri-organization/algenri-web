@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
-import { Loader2, LockKeyhole, LogIn, LogOut } from "lucide-react";
+import { Loader2, LockKeyhole, LogIn } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase/client";
 
 export default function InternalAuthGate({ children }: { children: ReactNode }) {
@@ -61,12 +61,5 @@ export default function InternalAuthGate({ children }: { children: ReactNode }) 
     );
   }
 
-  return (
-    <>
-      <div className="fixed right-5 top-[86px] z-40 hidden md:block">
-        <button onClick={() => signOut(firebaseAuth)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#06111f]/90 px-3 py-2 text-xs text-white/55 backdrop-blur-xl transition hover:text-white"><LogOut className="h-3.5 w-3.5" />Sair</button>
-      </div>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

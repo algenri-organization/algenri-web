@@ -1,6 +1,12 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { BrandLogo } from "./brand-logo";
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  if (pathname.startsWith("/interno")) return null;
+
   return (
     <footer className="border-t border-white/10 bg-black/10">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 text-sm text-white/48 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">

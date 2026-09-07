@@ -35,8 +35,8 @@ const groups: Group[] = [
     label: "Financeiro",
     icon: CircleDollarSign,
     items: [
-      { label: "Cobranças", icon: CircleDollarSign, disabled: true },
-      { label: "Recebimentos", icon: CircleDollarSign, disabled: true },
+      { label: "Cobranças", href: "/interno/financeiro#cobrancas", icon: CircleDollarSign },
+      { label: "Recebimentos", href: "/interno/financeiro#recebimentos", icon: CircleDollarSign },
     ],
   },
   {
@@ -73,7 +73,7 @@ export default function InternalSidebar() {
 
   useEffect(() => onAuthStateChanged(firebaseAuth, setUser), []);
 
-  const activeGroup = useMemo(() => groups.find((group) => group.items.some((item) => item.href && pathname.startsWith(item.href))), [pathname]);
+  const activeGroup = useMemo(() => groups.find((group) => group.items.some((item) => item.href && pathname.startsWith(item.href.split("#")[0]))), [pathname]);
 
   function toggleGroup(label: string) {
     setOpenGroups((current) => ({ ...current, [label]: !current[label] }));
@@ -117,7 +117,8 @@ export default function InternalSidebar() {
                 <div className="ml-5 mt-1 space-y-1 border-l border-white/10 pl-3">
                   {group.items.map((item) => {
                     const Icon = item.icon;
-                    const active = Boolean(item.href && pathname.startsWith(item.href));
+                    const itemPath = item.href?.split("#")[0];
+                    const active = Boolean(itemPath && pathname.startsWith(itemPath));
                     if (item.disabled) return <div key={item.label} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs text-white/25"><Icon className="h-4 w-4" /><span className="flex-1">{item.label}</span><span className="text-[9px] uppercase tracking-wider">em breve</span></div>;
                     return <a key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs transition ${active ? "bg-white/[.07] text-cyan-200" : "text-white/50 hover:bg-white/[.04] hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</a>;
                   })}

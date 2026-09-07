@@ -33,6 +33,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
 - Estratégia financeira de lançamento definida com múltiplos meios de recebimento.
 - E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace e com recebimento externo validado.
+- Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -69,7 +70,7 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 ## Bloqueadores reais antes da liberação
 
 ### P0 — obrigatório
-- [ ] Validar ponta a ponta a captação de lead em produção: formulário salva, WhatsApp abre corretamente e lead aparece na área interna.
+- [x] Validar ponta a ponta a captação de lead em produção: formulário salva, WhatsApp abre corretamente e lead aparece na área interna.
 - [x] Confirmar o número oficial de WhatsApp configurado para o contato comercial: +55 42 99127-4684.
 - [x] Confirmar que o e-mail contato@algenri.com.br está ativo e sendo monitorado; recebimento externo validado em 06/09/2026.
 - [x] Criar e publicar Política de Privacidade/LGPD, pois o site coleta nome, empresa, WhatsApp, e-mail e consentimento.

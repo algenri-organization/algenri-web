@@ -12,6 +12,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return Response.json({ ok: true, charge });
   } catch (error) {
     const authResponse = internalAuthResponse(error); if (authResponse) return authResponse;
+    const code = error instanceof Error ? error.message : "finance_charge_update_failed";
+    if (["description_required","amount_required","due_date_required"].includes(code)) return Response.json({ ok: false, error: code }, { status: 400 });
     console.error("Finance charge update failed", error);
     return Response.json({ ok: false, error: "finance_charge_update_failed" }, { status: 500 });
   }

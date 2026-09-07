@@ -13,7 +13,8 @@ function pageModule(pathname:string):ModuleKey|null{
   if(["/interno/leads","/interno/clientes","/interno/projetos","/interno/propostas","/interno/contratos"].some(prefix=>pathname.startsWith(prefix)))return "commercial";
   if(pathname.startsWith("/interno/briefings/instancias")||pathname.startsWith("/interno/briefings/recebidos")||pathname.startsWith("/interno/dossies"))return "operation";
   if(pathname.startsWith("/interno/financeiro"))return "finance";
-  if(pathname==="/interno/configuracoes"||pathname.startsWith("/interno/prontidao")||pathname.startsWith("/interno/briefings/modelos"))return "settings";
+  if(pathname.startsWith("/interno/configuracoes/usuarios"))return null;
+  if(pathname.startsWith("/interno/configuracoes")||pathname.startsWith("/interno/prontidao")||pathname.startsWith("/interno/briefings/modelos"))return "settings";
   return null;
 }
 

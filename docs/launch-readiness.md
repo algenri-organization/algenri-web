@@ -18,7 +18,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 
 ### Pronto para venda
 - Site institucional com posicionamento e soluções.
-- Página de planos de evolução.
+- Página de Evolução Digital com abordagem consultiva, sem preços públicos.
 - Diagnóstico Digital ALGENRI.
 - Formulário de contato com registro do lead.
 - Área interna para acompanhamento de interessados.
@@ -30,10 +30,11 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Política de Privacidade/LGPD publicada e vinculada ao consentimento.
 - Faturadora de lançamento definida: JM MIND E PERFORMANCE LTDA.
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
-- Estratégia financeira de lançamento definida com múltiplos meios de recebimento.
-- E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace e com recebimento externo validado.
+- Estratégia financeira de lançamento definida com C6 Bank como provedor principal e Cora como alternativa operacional/reserva.
+- E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace, com recebimento externo e envio como remetente validados.
 - Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
 - Fluxo comercial fictício validado até contrato, incluindo criação, salvamento e upload do PDF assinado; cobrança permanece operacional/manual no lançamento.
+- Deployment de produção validado após os ajustes de SEO/social e responsividade mobile.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -44,6 +45,12 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 
 ## Estratégia financeira de lançamento
 A JM MIND E PERFORMANCE LTDA será a empresa faturadora da ALGENRI no lançamento.
+
+### Provedor principal
+C6 Bank, utilizando os meios já disponíveis na conta PJ para cobrança operacional do lançamento.
+
+### Alternativa/reserva
+Cora, mantida como opção complementar para cobranças e contingência operacional.
 
 Meios de recebimento previstos:
 - PIX empresarial;
@@ -60,7 +67,7 @@ Evoluções financeiras pós-lançamento:
 - registro de cobrança, vencimento, pagamento e inadimplência dentro da Área Interna;
 - integração futura com emissão fiscal e/ou provedor financeiro escolhido.
 
-A escolha do provedor financeiro definitivo deve considerar taxas, antecipação, parcelamento, recorrência, PIX Automático, boleto, API e integração com a plataforma ALGENRI.
+A evolução futura da camada financeira deve considerar taxas, antecipação, parcelamento, recorrência, PIX Automático, boleto, API e integração com a plataforma ALGENRI.
 
 ## Dependências externas em andamento
 - Template de WhatsApp da Meta em análise. Não bloquear a sequência de lançamento enquanto a aprovação estiver pendente.
@@ -82,14 +89,14 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 **P0 concluído: não há bloqueador funcional interno para iniciar vendas.**
 
 ### P1 — recomendado antes ou logo após o lançamento
-- [ ] Revisar textos comerciais e preços definitivos dos planos.
+- [x] Revisar posicionamento comercial e preços de lançamento; página pública sem preços e abordagem consultiva mantida.
 - [x] Criar respostas padrão de primeiro atendimento no WhatsApp — `docs/launch-whatsapp-responses.md`.
 - [x] Criar checklist interno de qualificação do lead — `docs/launch-lead-qualification.md`.
 - [x] Criar checklist de onboarding após fechamento — `docs/launch-onboarding.md`.
-- [ ] Confirmar domínio e SSL em produção; favicon e metadados básicos já existem no código. Falta revisar compartilhamento social/OG image e validar o domínio externamente.
-- [ ] Verificar responsividade das páginas públicas em celular.
-- [ ] Selecionar provedor financeiro definitivo considerando boleto, link, cartão parcelado/recorrente, PIX e PIX Automático.
-- [ ] Revisar entregabilidade do e-mail comercial (SPF, DKIM e DMARC) e confirmar envio como `contato@algenri.com.br`; o primeiro teste externo recebido caiu em Spam.
+- [ ] Confirmar domínio e SSL em produção; favicon, metadados, Open Graph, robots e sitemap já foram implementados. Falta apenas validação externa final do domínio/SSL.
+- [x] Verificar e ajustar responsividade das páginas públicas em celular.
+- [x] Selecionar provedor financeiro de lançamento: C6 Bank principal, Cora alternativa/reserva.
+- [ ] Revisar entregabilidade do e-mail comercial em SPF, DKIM e DMARC. O envio como `contato@algenri.com.br` já foi validado com mensagem teste; falta apenas confirmar a autenticação DNS/cabeçalho.
 
 ### Ajustes rápidos de apresentação antes da abertura pública
 - [x] Remover o link da Área Interna do rodapé público; o acesso interno continua disponível diretamente pela rota autenticada.

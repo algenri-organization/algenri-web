@@ -16,12 +16,13 @@ export async function GET(request: Request) {
       metaAccessToken: configured("META_WHATSAPP_ACCESS_TOKEN"),
       metaPhoneNumberId: configured("META_WHATSAPP_PHONE_NUMBER_ID"),
       notifyWhatsAppNumber: configured("ALGENRI_WHATSAPP_NOTIFY_NUMBER"),
+      leadNotificationTemplate: configured("META_WHATSAPP_LEAD_TEMPLATE_NAME"),
       contactEmailPublished: true,
       privacyPolicyPublished: true,
     };
 
     const whatsappRedirectReady = checks.publicWhatsAppNumber;
-    const whatsappNotificationReady = checks.metaAccessToken && checks.metaPhoneNumberId && checks.notifyWhatsAppNumber;
+    const whatsappNotificationReady = checks.metaAccessToken && checks.metaPhoneNumberId && checks.notifyWhatsAppNumber && checks.leadNotificationTemplate;
     const commercialLeadReady = whatsappRedirectReady && whatsappNotificationReady && checks.contactEmailPublished && checks.privacyPolicyPublished;
 
     return Response.json({

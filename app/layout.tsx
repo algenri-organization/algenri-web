@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   },
   description:
     "Sites, inteligência artificial, automações, vídeos e sistemas para empresas que querem evoluir no digital.",
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/algenri-mark.svg",
     shortcut: "/algenri-mark.svg",
@@ -24,6 +27,13 @@ export const metadata: Metadata = {
     siteName: "ALGENRI",
     locale: "pt_BR",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ALGENRI — Soluções Digitais, IA e Automação",
+    description:
+      "Tecnologia, presença digital e automação para transformar ideias em negócios mais eficientes.",
+    images: ["/opengraph-image"],
   },
 };
 

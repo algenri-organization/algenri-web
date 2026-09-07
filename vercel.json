@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "test -z \"$(git diff --name-only $VERCEL_GIT_PREVIOUS_SHA HEAD | grep -vE '^(docs/|.*\\.md$)')\""
+}

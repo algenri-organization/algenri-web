@@ -31,6 +31,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Faturadora de lançamento definida: JM MIND E PERFORMANCE LTDA.
 - Modelo contratual manual temporário documentado em `docs/launch-contract-template.md`.
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
+- Estratégia financeira de lançamento definida com múltiplos meios de recebimento.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -38,11 +39,32 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Preparação do contrato fora do sistema enquanto o gerador automático não estiver pronto.
 - Assinatura do contrato por ferramenta externa ou assinatura convencional.
 - Upload do contrato assinado na ALGENRI.
-- Cobrança/pagamento via meio financeiro definido pela empresa, sem necessidade de checkout integrado no lançamento.
+- Cobrança/pagamento via PIX, transferência, boleto ou link de pagamento, sem necessidade de checkout integrado no lançamento.
+
+## Estratégia financeira de lançamento
+A JM MIND E PERFORMANCE LTDA será a empresa faturadora da ALGENRI no lançamento.
+
+Meios de recebimento previstos:
+- PIX empresarial;
+- transferência bancária;
+- boleto bancário;
+- link de pagamento;
+- cartão de crédito quando disponível pelo provedor contratado.
+
+Evoluções financeiras pós-lançamento:
+- cobrança recorrente automatizada;
+- cartão de crédito com parcelamento do valor global do contrato em número de parcelas equivalente aos meses contratados, quando comercial e tecnicamente adequado;
+- PIX Automático para mensalidades e contratos recorrentes;
+- conciliação de pagamentos com clientes/projetos;
+- registro de cobrança, vencimento, pagamento e inadimplência dentro da Área Interna;
+- integração futura com emissão fiscal e/ou provedor financeiro escolhido.
+
+A escolha do provedor financeiro definitivo deve considerar taxas, antecipação, parcelamento, recorrência, PIX Automático, boleto, API e integração com a plataforma ALGENRI.
 
 ## Dependências externas em andamento
 - Template de WhatsApp da Meta em análise. Não bloquear a sequência de lançamento enquanto a aprovação estiver pendente.
 - Cadastro/ajuste de CNAEs da JM MIND em andamento com o contador.
+- Ativação do e-mail comercial `contato@algenri.com.br`.
 
 ## Bloqueadores reais antes da liberação
 
@@ -52,7 +74,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - [ ] Confirmar que o e-mail contato@algenri.com.br está ativo e sendo monitorado.
 - [x] Criar e publicar Política de Privacidade/LGPD, pois o site coleta nome, empresa, WhatsApp, e-mail e consentimento.
 - [x] Inserir link para Política de Privacidade junto ao consentimento e no rodapé.
-- [ ] Definir o processo financeiro mínimo de lançamento: conta/PIX ou outro meio de recebimento, regra de cobrança e emissão de documento fiscal quando aplicável.
+- [x] Definir o processo financeiro mínimo de lançamento: PIX, transferência, boleto e link de pagamento, com cartão quando disponível pelo provedor escolhido.
 - [x] Definir a empresa faturadora do lançamento: JM MIND E PERFORMANCE LTDA.
 - [x] Definir o modelo contratual/manual que será usado nas primeiras vendas até a evolução do módulo de contratos.
 - [ ] Fazer um teste comercial completo com um cliente fictício ou piloto: lead → proposta → contrato → pagamento/cobrança → projeto em desenvolvimento.
@@ -64,6 +86,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - [ ] Criar checklist de onboarding após fechamento.
 - [ ] Confirmar domínio, SSL, favicon, metadados e compartilhamento social.
 - [ ] Verificar responsividade das páginas públicas em celular.
+- [ ] Selecionar provedor financeiro definitivo considerando boleto, link, cartão parcelado/recorrente, PIX e PIX Automático.
 
 ## Pós-lançamento
 Todos os refinamentos não bloqueadores ficam na Issue #36 — Backlog pós-liberação para vendas.

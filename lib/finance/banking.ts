@@ -2,19 +2,31 @@ export type BankingProviderStatus = {
   provider: "c6" | "cora";
   label: string;
   configured: boolean;
-  mode: "manual" | "credentials-ready";
+  mode: "manual";
   missing: string[];
+  status: "requested" | "deferred";
+  detail: string;
 };
 
-function envPresent(name: string) { return Boolean(process.env[name]?.trim()); }
-
 export function getBankingStatus(): BankingProviderStatus[] {
-  const providers = [
-    { provider: "c6" as const, label: "C6 Bank", vars: ["C6_CLIENT_ID", "C6_CLIENT_SECRET"] },
-    { provider: "cora" as const, label: "Cora", vars: ["CORA_CLIENT_ID", "CORA_CLIENT_SECRET"] },
+  return [
+    {
+      provider: "c6",
+      label: "C6 Bank — aguardando retorno",
+      configured: false,
+      mode: "manual",
+      missing: [],
+      status: "requested",
+      detail: "Integração solicitada ao C6. API, homologação e credenciais ainda precisam ser confirmadas pelo banco.",
+    },
+    {
+      provider: "cora",
+      label: "Cora — integração adiada",
+      configured: false,
+      mode: "manual",
+      missing: [],
+      status: "deferred",
+      detail: "Integração mantida como alternativa futura e não será ativada nesta fase.",
+    },
   ];
-  return providers.map(({ provider, label, vars }) => {
-    const missing = vars.filter((name) => !envPresent(name));
-    return { provider, label, configured: missing.length === 0, mode: missing.length === 0 ? "credentials-ready" : "manual", missing };
-  });
 }

@@ -18,6 +18,29 @@ export default function InternalAuthGate({ children }: { children: ReactNode }) 
     setReady(true);
   }), []);
 
+  useEffect(() => {
+    const publicHeader = document.querySelector("body > header") as HTMLElement | null;
+    const previousHeaderDisplay = publicHeader?.style.display ?? "";
+    const previousOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+
+    if (!ready || !user) {
+      if (publicHeader) publicHeader.style.display = "none";
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      if (publicHeader) publicHeader.style.display = previousHeaderDisplay;
+      document.documentElement.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    }
+
+    return () => {
+      if (publicHeader) publicHeader.style.display = previousHeaderDisplay;
+      document.documentElement.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [ready, user]);
+
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);

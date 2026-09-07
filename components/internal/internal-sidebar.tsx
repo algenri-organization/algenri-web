@@ -33,7 +33,7 @@ const groups: Group[] = [
     { label: "Prontidão", href: "/interno/prontidao", icon: BadgeCheck },
     { label: "Modelos de briefing", href: "/interno/briefings/modelos", icon: FileText },
     { label: "Integrações", icon: Settings2, disabled: true },
-    { label: "Usuários", icon: Users, disabled: true },
+    { label: "Usuários", href: "/interno/configuracoes/usuarios", icon: Users },
   ]},
 ];
 

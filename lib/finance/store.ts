@@ -50,8 +50,17 @@ export async function updateCharge(id: string, input: Record<string, unknown>) {
   const current = await getCharge(id); if (!current) return null;
   const status = text(input.status) as ChargeStatus;
   const nextStatus: ChargeStatus = ["pending", "paid", "cancelled"].includes(status) ? status : current.status;
+  const description = input.description === undefined ? current.description : text(input.description);
+  if (!description) throw new Error("description_required");
+  const amountCents = input.amount === undefined ? current.amountCents : amountToCents(input.amount);
+  if (amountCents <= 0) throw new Error("amount_required");
+  const dueDate = input.dueDate === undefined ? current.dueDate : text(input.dueDate);
+  if (!dueDate) throw new Error("due_date_required");
   const updated: ChargeRecord = {
     ...current,
+    description,
+    amountCents,
+    dueDate,
     status: nextStatus,
     paymentMethod: input.paymentMethod === undefined ? current.paymentMethod : text(input.paymentMethod),
     notes: input.notes === undefined ? current.notes : text(input.notes),

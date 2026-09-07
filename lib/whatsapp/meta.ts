@@ -4,6 +4,10 @@ function cleanPhone(value: string | undefined) {
   return (value ?? "").replace(/\D/g, "");
 }
 
+function textParameter(value: string | null | undefined, fallback = "Não informado") {
+  return { type: "text" as const, text: value?.trim() || fallback };
+}
+
 export function buildProspectWhatsAppUrl(lead: CommercialLead) {
   const number = cleanPhone(process.env.ALGENRI_WHATSAPP_PUBLIC_NUMBER);
   if (!number) return null;
@@ -22,9 +26,11 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
   const token = process.env.META_WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
   const recipient = cleanPhone(process.env.ALGENRI_WHATSAPP_NOTIFY_NUMBER);
+  const templateName = process.env.META_WHATSAPP_LEAD_TEMPLATE_NAME?.trim();
+  const templateLanguage = process.env.META_WHATSAPP_TEMPLATE_LANGUAGE?.trim() || "pt_BR";
   const apiVersion = process.env.META_WHATSAPP_API_VERSION || "v23.0";
 
-  if (!token || !phoneNumberId || !recipient) {
+  if (!token || !phoneNumberId || !recipient || !templateName) {
     return { status: "skipped" as const, error: "whatsapp_notification_not_configured" };
   }
 
@@ -32,19 +38,23 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: recipient,
-    type: "text",
-    text: {
-      preview_url: false,
-      body: [
-        "Novo interessado no site ALGENRI",
-        `Nome: ${lead.name}`,
-        `Empresa: ${lead.company}`,
-        `WhatsApp: ${lead.whatsapp}`,
-        lead.email ? `E-mail: ${lead.email}` : "",
-        `Interesse: ${lead.interest}`,
-        lead.message ? `Mensagem: ${lead.message}` : "",
-        `Registro: ${lead.id}`,
-      ].filter(Boolean).join("\n"),
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: templateLanguage },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            textParameter(lead.name),
+            textParameter(lead.company),
+            textParameter(lead.whatsapp),
+            textParameter(lead.email),
+            textParameter(lead.interest),
+            textParameter(lead.message),
+          ],
+        },
+      ],
     },
   };
 

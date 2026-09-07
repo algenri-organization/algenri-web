@@ -40,6 +40,7 @@ const groups: Group[] = [
     label: "Configurações",
     icon: Settings2,
     items: [
+      { label: "Visão geral", href: "/interno/configuracoes", icon: Settings2 },
       { label: "Prontidão", href: "/interno/prontidao", icon: BadgeCheck },
       { label: "Modelos de briefing", href: "/interno/briefings/modelos", icon: FileText },
       { label: "Integrações", icon: Settings2, disabled: true },

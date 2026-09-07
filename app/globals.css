@@ -176,6 +176,65 @@ footer *:has(> img[src="/algenri-mark.svg"]) + * {
   }
 }
 
+@media (max-width: 640px) {
+  .page-hero {
+    padding: 4.25rem 1.25rem 3rem;
+  }
+
+  .page-shell > section:first-child:not(.page-hero) {
+    padding-top: 4.5rem !important;
+    padding-bottom: 3rem !important;
+  }
+
+  .page-shell > section:first-child h1,
+  .section-title {
+    font-size: clamp(2.35rem, 11vw, 3.2rem) !important;
+    line-height: 1.03 !important;
+    letter-spacing: -.045em !important;
+    overflow-wrap: anywhere;
+  }
+
+  .section-copy {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .eyebrow {
+    line-height: 1.55;
+    letter-spacing: .14em;
+  }
+
+  .glass,
+  .glass-soft {
+    backdrop-filter: blur(14px);
+  }
+
+  .page-shell article > span.absolute {
+    position: static !important;
+    display: inline-flex;
+    margin-bottom: 1rem;
+  }
+
+  .page-shell article p.min-h-24 {
+    min-height: 0 !important;
+  }
+
+  a[href^="mailto:"] {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 390px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  main:not(.page-shell) > section:first-child h1 {
+    font-size: 2.75rem;
+    line-height: .98;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {

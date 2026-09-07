@@ -25,7 +25,12 @@ function amountToCents(value: unknown) {
   const parsed = Number(normalized); return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
 }
 function addMonths(dateString: string, months: number) {
-  const [year, month, day] = dateString.split("-").map(Number); const date = new Date(Date.UTC(year, month - 1 + months, day));
+  const [year, month, day] = dateString.split("-").map(Number);
+  const targetMonthIndex = month - 1 + months;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const date = new Date(Date.UTC(targetYear, targetMonth, Math.min(day, lastDay)));
   return date.toISOString().slice(0, 10);
 }
 function recurrenceMonths(frequency: RecurrenceFrequency) { return frequency === "quarterly" ? 3 : frequency === "semiannual" ? 6 : frequency === "annual" ? 12 : 1; }

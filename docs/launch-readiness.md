@@ -32,6 +32,7 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Modelo contratual manual temporário documentado em `docs/launch-contract-template.md`.
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
 - Estratégia financeira de lançamento definida com múltiplos meios de recebimento.
+- E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace e com recebimento externo validado.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
@@ -64,14 +65,13 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 ## Dependências externas em andamento
 - Template de WhatsApp da Meta em análise. Não bloquear a sequência de lançamento enquanto a aprovação estiver pendente.
 - Cadastro/ajuste de CNAEs da JM MIND em andamento com o contador.
-- Ativação do e-mail comercial `contato@algenri.com.br`.
 
 ## Bloqueadores reais antes da liberação
 
 ### P0 — obrigatório
 - [ ] Validar ponta a ponta a captação de lead em produção: formulário salva, WhatsApp abre corretamente e lead aparece na área interna.
 - [x] Confirmar o número oficial de WhatsApp configurado para o contato comercial: +55 42 99127-4684.
-- [ ] Confirmar que o e-mail contato@algenri.com.br está ativo e sendo monitorado.
+- [x] Confirmar que o e-mail contato@algenri.com.br está ativo e sendo monitorado; recebimento externo validado em 06/09/2026.
 - [x] Criar e publicar Política de Privacidade/LGPD, pois o site coleta nome, empresa, WhatsApp, e-mail e consentimento.
 - [x] Inserir link para Política de Privacidade junto ao consentimento e no rodapé.
 - [x] Definir o processo financeiro mínimo de lançamento: PIX, transferência, boleto e link de pagamento, com cartão quando disponível pelo provedor escolhido.
@@ -87,6 +87,7 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 - [ ] Confirmar domínio, SSL, favicon, metadados e compartilhamento social.
 - [ ] Verificar responsividade das páginas públicas em celular.
 - [ ] Selecionar provedor financeiro definitivo considerando boleto, link, cartão parcelado/recorrente, PIX e PIX Automático.
+- [ ] Revisar entregabilidade do e-mail comercial (SPF, DKIM e DMARC) e confirmar envio como `contato@algenri.com.br`; o primeiro teste externo recebido caiu em Spam.
 
 ## Pós-lançamento
 Todos os refinamentos não bloqueadores ficam na Issue #36 — Backlog pós-liberação para vendas.

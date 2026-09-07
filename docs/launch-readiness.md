@@ -24,21 +24,20 @@ A ALGENRI será considerada liberada para vendas quando for possível:
 - Área interna para acompanhamento de interessados.
 - Clientes e Projetos.
 - Briefings.
-- Dossiês.
+- Dossiês com geração por IA, revisão e avanço direto para proposta.
 - Propostas Comerciais com IA, edição, versionamento e PDF funcional, embora ainda com refinamento visual pendente.
-- Contratos V1 para registro operacional e armazenamento do PDF assinado.
+- Contratos operacionais gerados a partir de proposta aprovada, com visualização, impressão/salvamento em PDF, upload do assinado e avanço do projeto.
 - Política de Privacidade/LGPD publicada e vinculada ao consentimento.
 - Faturadora de lançamento definida: JM MIND E PERFORMANCE LTDA.
-- Modelo contratual manual temporário documentado em `docs/launch-contract-template.md`.
 - Roteiro de teste comercial ponta a ponta documentado em `docs/launch-commercial-test.md`.
 - Estratégia financeira de lançamento definida com múltiplos meios de recebimento.
 - E-mail comercial `contato@algenri.com.br` ativo como alias do Google Workspace e com recebimento externo validado.
 - Captação de lead em produção validada: formulário salva, lead aparece na Área Interna e WhatsApp comercial abre corretamente.
+- Fluxo comercial fictício validado até contrato, incluindo criação, salvamento e upload do PDF assinado; cobrança permanece operacional/manual no lançamento.
 
 ### Pode operar manualmente no lançamento
 - Envio da proposta ao cliente por WhatsApp/e-mail utilizando o PDF gerado.
 - Negociação e aceite comercial.
-- Preparação do contrato fora do sistema enquanto o gerador automático não estiver pronto.
 - Assinatura do contrato por ferramenta externa ou assinatura convencional.
 - Upload do contrato assinado na ALGENRI.
 - Cobrança/pagamento via PIX, transferência, boleto ou link de pagamento, sem necessidade de checkout integrado no lançamento.
@@ -77,15 +76,17 @@ A escolha do provedor financeiro definitivo deve considerar taxas, antecipação
 - [x] Inserir link para Política de Privacidade junto ao consentimento e no rodapé.
 - [x] Definir o processo financeiro mínimo de lançamento: PIX, transferência, boleto e link de pagamento, com cartão quando disponível pelo provedor escolhido.
 - [x] Definir a empresa faturadora do lançamento: JM MIND E PERFORMANCE LTDA.
-- [x] Definir o modelo contratual/manual que será usado nas primeiras vendas até a evolução do módulo de contratos.
-- [ ] Fazer um teste comercial completo com um cliente fictício ou piloto: lead → proposta → contrato → pagamento/cobrança → projeto em desenvolvimento.
+- [x] Definir modelo contratual operacional para as primeiras vendas.
+- [x] Fazer teste comercial completo com cliente fictício/piloto: lead → briefing/dossiê → proposta → contrato → cobrança operacional/manual → projeto apto a seguir para desenvolvimento. Validados também salvamento e upload do PDF assinado.
+
+**P0 concluído: não há bloqueador funcional interno para iniciar vendas.**
 
 ### P1 — recomendado antes ou logo após o lançamento
 - [ ] Revisar textos comerciais e preços definitivos dos planos.
 - [ ] Criar respostas padrão de primeiro atendimento no WhatsApp.
 - [ ] Criar checklist interno de qualificação do lead.
 - [ ] Criar checklist de onboarding após fechamento.
-- [ ] Confirmar domínio, SSL, favicon, metadados e compartilhamento social.
+- [ ] Confirmar domínio e SSL em produção; favicon e metadados básicos já existem no código. Falta revisar compartilhamento social/OG image e validar o domínio externamente.
 - [ ] Verificar responsividade das páginas públicas em celular.
 - [ ] Selecionar provedor financeiro definitivo considerando boleto, link, cartão parcelado/recorrente, PIX e PIX Automático.
 - [ ] Revisar entregabilidade do e-mail comercial (SPF, DKIM e DMARC) e confirmar envio como `contato@algenri.com.br`; o primeiro teste externo recebido caiu em Spam.

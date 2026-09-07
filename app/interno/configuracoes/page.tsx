@@ -1,4 +1,4 @@
-import { BadgeCheck, Building2, CircleDollarSign, FileSignature, FileText, Mail, PlugZap, Settings2, ShieldCheck, Smartphone, Users } from "lucide-react";
+import { BadgeCheck, Building2, CircleDollarSign, FileText, Mail, PlugZap, Settings2, ShieldCheck, Smartphone, Users } from "lucide-react";
 
 export const metadata = {
   title: "Configurações | ALGENRI",
@@ -10,13 +10,14 @@ const sections = [
     icon: Building2,
     title: "Empresa e identidade",
     text: "Central para dados institucionais, identidade da ALGENRI e informações utilizadas em documentos comerciais.",
-    status: "Estrutura preparada",
-    tone: "cyan",
+    status: "Disponível",
+    tone: "emerald",
     items: [
-      { label: "Identidade ALGENRI", detail: "Marca, domínio e posicionamento institucional." },
+      { label: "Identidade ALGENRI", detail: "Marca, domínio, slogan e posicionamento institucional." },
       { label: "Empresa faturadora", detail: "JM MIND E PERFORMANCE LTDA definida para o lançamento." },
-      { label: "Dados jurídicos", detail: "Complementação de CNPJ, endereço e representante permanece como refinamento pós-lançamento." },
+      { label: "Dados jurídicos", detail: "CNPJ, endereço e representante podem ser preenchidos com os dados oficiais quando confirmados." },
     ],
+    action: { href: "/interno/configuracoes/empresa", label: "Editar dados da empresa" },
   },
   {
     icon: Smartphone,
@@ -34,14 +35,15 @@ const sections = [
   {
     icon: CircleDollarSign,
     title: "Financeiro",
-    text: "Configuração operacional dos meios de cobrança enquanto a integração financeira é evoluída.",
-    status: "Definido para lançamento",
+    text: "Cobranças, parcelamentos, recorrência, previsão de recebimentos e preparação para integração bancária.",
+    status: "Operacional",
     tone: "emerald",
     items: [
-      { label: "Provedor principal", detail: "C6 Bank." },
-      { label: "Alternativa / reserva", detail: "Cora." },
-      { label: "Cobrança integrada", detail: "Automação, conciliação e recorrência ficam para uma próxima fase." },
+      { label: "Controle financeiro", detail: "Cobranças únicas, parceladas e recorrentes disponíveis na Área Interna." },
+      { label: "C6 Bank", detail: "Integração solicitada; API, homologação e credenciais aguardam confirmação do banco." },
+      { label: "Cora", detail: "Alternativa mantida para o futuro e adiada nesta fase." },
     ],
+    action: { href: "/interno/financeiro", label: "Abrir financeiro" },
   },
   {
     icon: PlugZap,
@@ -72,13 +74,14 @@ const sections = [
     icon: Users,
     title: "Usuários e acesso",
     text: "Controle de quem pode acessar a Área Interna e quais permissões cada perfil possui.",
-    status: "Próxima evolução",
-    tone: "slate",
+    status: "Operacional",
+    tone: "emerald",
     items: [
       { label: "Autenticação", detail: "Área interna protegida por Firebase Authentication." },
-      { label: "Acesso corporativo", detail: "A regra atual restringe o acesso a contas internas da ALGENRI." },
-      { label: "Perfis e permissões", detail: "Gestão granular de usuários será adicionada quando a equipe crescer." },
+      { label: "Equipe", detail: "Cadastro, ativação e desativação de contas internas disponíveis." },
+      { label: "Perfis e permissões", detail: "Administrador e Colaborador com permissões por módulo." },
     ],
+    action: { href: "/interno/configuracoes/usuarios", label: "Gerenciar usuários" },
   },
 ];
 
@@ -138,9 +141,9 @@ export default function ConfiguracoesPage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold"><Mail className="h-4 w-4 text-cyan-300" /> Próximas configurações</div>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/42">Quando surgirem novas necessidades, esta central poderá receber edição de dados da empresa, usuários e permissões, preferências de notificação, integrações financeiras e modelos adicionais sem alterar a navegação principal.</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/42">A próxima evolução desta central poderá concentrar preferências de notificação, integrações financeiras quando o C6 responder e modelos adicionais de documentos.</p>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-white/35"><span className="rounded-full border border-white/10 px-3 py-2">Empresa</span><span className="rounded-full border border-white/10 px-3 py-2">Usuários</span><span className="rounded-full border border-white/10 px-3 py-2">Notificações</span><span className="rounded-full border border-white/10 px-3 py-2">Integrações</span><span className="rounded-full border border-white/10 px-3 py-2">Documentos</span></div>
+            <div className="flex flex-wrap gap-2 text-xs text-white/35"><span className="rounded-full border border-white/10 px-3 py-2">Notificações</span><span className="rounded-full border border-white/10 px-3 py-2">Integrações</span><span className="rounded-full border border-white/10 px-3 py-2">Documentos</span></div>
           </div>
         </section>
       </div>

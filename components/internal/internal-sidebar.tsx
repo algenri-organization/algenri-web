@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { BadgeCheck, BriefcaseBusiness, Building2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, LogOut, Menu, MessageSquareText, PlugZap, Settings2, Users, X } from "lucide-react";
+import { BadgeCheck, Bell, BriefcaseBusiness, Building2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, LogOut, Menu, MessageSquareText, PlugZap, Settings2, Users, X } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase/client";
 
 type ModuleKey="commercial"|"operation"|"finance"|"settings";
@@ -33,6 +33,7 @@ const groups: Group[] = [
     { label: "Visão geral", href: "/interno/configuracoes", icon: Settings2 },
     { label: "Empresa e identidade", href: "/interno/configuracoes/empresa", icon: Building2 },
     { label: "Integrações", href: "/interno/configuracoes/integracoes", icon: PlugZap },
+    { label: "Notificações", href: "/interno/configuracoes/notificacoes", icon: Bell },
     { label: "Prontidão", href: "/interno/prontidao", icon: BadgeCheck },
     { label: "Modelos de briefing", href: "/interno/briefings/modelos", icon: FileText },
     { label: "Usuários", href: "/interno/configuracoes/usuarios", icon: Users, always:true },

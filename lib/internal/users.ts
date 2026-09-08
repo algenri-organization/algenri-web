@@ -29,7 +29,7 @@ export function isBootstrapAdmin(email: string) {
 }
 
 export function normalizePermissions(value: unknown): InternalModule[] {
-  if (!Array.isArray(value)) return [...INTERNAL_MODULES];
+  if (!Array.isArray(value)) return [];
   return INTERNAL_MODULES.filter((module) => value.includes(module));
 }
 
@@ -43,7 +43,7 @@ export async function getInternalUserRecord(uid: string) {
 export async function getInternalAccess(uid: string, email: string) {
   if (isBootstrapAdmin(email)) return { role: "admin" as const, permissions: [...INTERNAL_MODULES], active: true };
   const record = await getInternalUserRecord(uid);
-  if (!record) return { role: "member" as const, permissions: [...INTERNAL_MODULES], active: true };
+  if (!record) return { role: "member" as const, permissions: [] as InternalModule[], active: false };
   if (!record.active) return { role: record.role, permissions: [] as InternalModule[], active: false };
   return {
     role: record.role,
@@ -65,9 +65,9 @@ export async function listInternalUsers(current: { uid: string; email: string })
     const data = doc.data() as InternalUserRecord;
     return { ...data, permissions: data.role === "admin" ? [...INTERNAL_MODULES] : normalizePermissions(data.permissions) };
   });
-  if (!users.some((u) => u.uid === current.uid)) {
+  if (!users.some((u) => u.uid === current.uid) && isBootstrapAdmin(current.email)) {
     const authUser = await auth.getUser(current.uid);
-    users.unshift({ uid: current.uid, email: current.email, displayName: authUser.displayName || "", role: isBootstrapAdmin(current.email) ? "admin" : "member", active: true, permissions: [...INTERNAL_MODULES] });
+    users.unshift({ uid: current.uid, email: current.email, displayName: authUser.displayName || "", role: "admin", active: true, permissions: [...INTERNAL_MODULES] });
   }
   return users;
 }

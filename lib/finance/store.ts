@@ -2,6 +2,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { getClient, getProject } from "@/lib/client-flow/store";
 
 const CHARGES = "finance_charges";
+const PAYMENT_EVENTS = "finance_payment_events";
 const DEFAULT_TENANT_ID = process.env.ALGENRI_TENANT_ID ?? "algenri";
 
 export type ChargeStatus = "pending" | "paid" | "cancelled";
@@ -16,6 +17,7 @@ export type ChargeRecord = {
   seriesId: string; scheduleType: ScheduleType; installmentIndex: number; installmentCount: number;
   recurrenceFrequency: RecurrenceFrequency | ""; bankProvider: BankProvider; bankChargeId: string;
   providerFeeCents?: number; netAmountCents?: number; settledAt?: string | null; settlementNotes?: string;
+  receivedAmountCents?: number; balanceCents?: number; lastPaymentAt?: string | null;
 };
 
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
@@ -35,17 +37,27 @@ function addMonths(dateString: string, months: number) {
   return date.toISOString().slice(0, 10);
 }
 function recurrenceMonths(frequency: RecurrenceFrequency) { return frequency === "quarterly" ? 3 : frequency === "semiannual" ? 6 : frequency === "annual" ? 12 : 1; }
+function receivedFor(charge: ChargeRecord) {
+  if (typeof charge.receivedAmountCents === "number") return Math.max(0, charge.receivedAmountCents);
+  return charge.status === "paid" ? charge.amountCents : 0;
+}
 
 export async function listCharges() {
   const db = await getAdminDb();
   const snapshot = await db.collection(CHARGES).where("tenantId", "==", DEFAULT_TENANT_ID).get();
-  return snapshot.docs.map((doc) => doc.data() as ChargeRecord).sort((a, b) => (a.dueDate || "9999").localeCompare(b.dueDate || "9999"));
+  return snapshot.docs.map((doc) => {
+    const charge = doc.data() as ChargeRecord;
+    const receivedAmountCents = receivedFor(charge);
+    return { ...charge, receivedAmountCents, balanceCents: Math.max(0, charge.amountCents - receivedAmountCents) };
+  }).sort((a, b) => (a.dueDate || "9999").localeCompare(b.dueDate || "9999"));
 }
 
 export async function getCharge(id: string) {
   const db = await getAdminDb(); const doc = await db.collection(CHARGES).doc(id).get();
   if (!doc.exists) return null; const charge = doc.data() as ChargeRecord;
-  return charge.tenantId === DEFAULT_TENANT_ID ? charge : null;
+  if (charge.tenantId !== DEFAULT_TENANT_ID) return null;
+  const receivedAmountCents = receivedFor(charge);
+  return { ...charge, receivedAmountCents, balanceCents: Math.max(0, charge.amountCents - receivedAmountCents) };
 }
 
 export async function createChargePlan(input: Record<string, unknown>, createdBy: string) {
@@ -77,6 +89,7 @@ export async function createChargePlan(input: Record<string, unknown>, createdBy
       tenantId: DEFAULT_TENANT_ID, createdBy, createdAt: now, updatedAt: now, seriesId, scheduleType,
       installmentIndex: index + 1, installmentCount: count, recurrenceFrequency: scheduleType === "recurring" ? recurrenceFrequency : "",
       bankProvider, bankChargeId: "", providerFeeCents: 0, netAmountCents: partAmount, settledAt: null, settlementNotes: "",
+      receivedAmountCents: 0, balanceCents: partAmount, lastPaymentAt: null,
     };
     batch.set(ref, record); records.push(record);
   }
@@ -93,15 +106,49 @@ export async function updateCharge(id: string, input: Record<string, unknown>) {
   const nextStatus: ChargeStatus = ["pending", "paid", "cancelled"].includes(status) ? status : current.status;
   const description = input.description === undefined ? current.description : text(input.description); if (!description) throw new Error("description_required");
   const amountCents = input.amount === undefined ? current.amountCents : amountToCents(input.amount); if (amountCents <= 0) throw new Error("amount_required");
+  let receivedAmountCents = current.receivedAmountCents ?? receivedFor(current);
+  if (nextStatus === "paid") receivedAmountCents = amountCents;
+  if (nextStatus === "pending" && current.status === "paid" && input.status !== undefined) receivedAmountCents = 0;
+  if (receivedAmountCents > amountCents) throw new Error("amount_below_received");
   const dueDate = input.dueDate === undefined ? current.dueDate : text(input.dueDate); if (!dueDate) throw new Error("due_date_required");
   const updated: ChargeRecord = {
     ...current, description, amountCents, dueDate, status: nextStatus,
     paymentMethod: input.paymentMethod === undefined ? current.paymentMethod : text(input.paymentMethod), notes: input.notes === undefined ? current.notes : text(input.notes),
     paidAt: nextStatus === "paid" ? (current.paidAt || new Date().toISOString()) : nextStatus === "pending" ? null : current.paidAt,
+    receivedAmountCents, balanceCents: Math.max(0, amountCents - receivedAmountCents),
     netAmountCents: current.settledAt ? Math.max(0, amountCents - (current.providerFeeCents ?? 0)) : current.netAmountCents,
     updatedAt: new Date().toISOString(),
   };
   const db = await getAdminDb(); await db.collection(CHARGES).doc(id).set(updated); return updated;
+}
+
+export async function recordChargePayment(id: string, input: Record<string, unknown>, createdBy: string) {
+  const paymentCents = amountToCents(input.amount); if (paymentCents <= 0) throw new Error("payment_amount_required");
+  const method = text(input.paymentMethod) || "Pix";
+  const notes = text(input.notes);
+  const db = await getAdminDb(); const chargeRef = db.collection(CHARGES).doc(id); const eventRef = db.collection(PAYMENT_EVENTS).doc();
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(chargeRef); if (!snap.exists) return null;
+    const current = snap.data() as ChargeRecord; if (current.tenantId !== DEFAULT_TENANT_ID) return null;
+    if (current.status === "cancelled") throw new Error("charge_cancelled");
+    const alreadyReceived = receivedFor(current); const balance = Math.max(0, current.amountCents - alreadyReceived);
+    if (balance <= 0 || current.status === "paid") throw new Error("charge_already_paid");
+    if (paymentCents > balance) throw new Error("payment_exceeds_balance");
+    const now = new Date().toISOString(); const receivedAmountCents = alreadyReceived + paymentCents; const paid = receivedAmountCents >= current.amountCents;
+    const updated: ChargeRecord = {
+      ...current,
+      status: paid ? "paid" : "pending",
+      paidAt: paid ? now : null,
+      paymentMethod: method,
+      receivedAmountCents,
+      balanceCents: Math.max(0, current.amountCents - receivedAmountCents),
+      lastPaymentAt: now,
+      updatedAt: now,
+    };
+    tx.set(chargeRef, updated);
+    tx.set(eventRef, { id: eventRef.id, tenantId: DEFAULT_TENANT_ID, chargeId: id, clientId: current.clientId, amountCents: paymentCents, paymentMethod: method, notes, createdBy, createdAt: now });
+    return updated;
+  });
 }
 
 export async function reconcileCharge(id: string, input: Record<string, unknown>) {
@@ -116,6 +163,8 @@ export async function reconcileCharge(id: string, input: Record<string, unknown>
     netAmountCents: current.amountCents - providerFeeCents,
     settledAt: now,
     settlementNotes: input.notes === undefined ? (current.settlementNotes ?? "") : text(input.notes),
+    receivedAmountCents: current.amountCents,
+    balanceCents: 0,
     updatedAt: now,
   };
   const db = await getAdminDb();

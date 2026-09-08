@@ -105,3 +105,22 @@ export async function listCommercialLeads(limit = 100) {
   const snapshot = await db.collection(LEADS_COLLECTION).orderBy("createdAt", "desc").limit(limit).get();
   return snapshot.docs.map((doc) => doc.data() as CommercialLead);
 }
+
+export async function deleteAllCommercialLeads() {
+  const db = await getAdminDb();
+  let deleted = 0;
+
+  while (true) {
+    const snapshot = await db.collection(LEADS_COLLECTION).limit(400).get();
+    if (snapshot.empty) break;
+
+    const batch = db.batch();
+    for (const doc of snapshot.docs) batch.delete(doc.ref);
+    await batch.commit();
+    deleted += snapshot.size;
+
+    if (snapshot.size < 400) break;
+  }
+
+  return deleted;
+}

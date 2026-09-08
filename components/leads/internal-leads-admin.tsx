@@ -53,6 +53,7 @@ export default function InternalLeadsAdmin() {
   const [ready, setReady] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [message, setMessage] = useState("");
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => onAuthStateChanged(firebaseAuth, (next) => { setUser(next); setReady(true); }), []);
   useEffect(() => {
@@ -66,6 +67,29 @@ export default function InternalLeadsAdmin() {
       .catch((error) => setMessage(error instanceof Error ? error.message : "Falha ao carregar interessados."));
   }, [user]);
 
+  async function clearTestLeads() {
+    if (!user || leads.length === 0 || clearing) return;
+    const confirmed = window.confirm(`Excluir definitivamente os ${leads.length} lead(s) atuais? Use apenas para limpar a base de testes.`);
+    if (!confirmed) return;
+
+    setClearing(true);
+    setMessage("");
+    try {
+      const response = await authFetch(user, "/api/internal/leads", {
+        method: "DELETE",
+        headers: { "x-algenri-confirm": "DELETE_ALL_TEST_LEADS" },
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error("Não foi possível zerar os leads de teste.");
+      setLeads([]);
+      setMessage(`${payload.deleted ?? 0} lead(s) de teste excluído(s). A mensuração comercial foi zerada.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao zerar leads de teste.");
+    } finally {
+      setClearing(false);
+    }
+  }
+
   if (!ready) return <main className="min-h-screen bg-[#040c17] grid place-items-center text-white">Carregando…</main>;
   if (!user) return <main className="min-h-screen bg-[#040c17] grid place-items-center px-6 text-center text-white"><p>Faça login primeiro em <strong>/interno/briefings/modelos</strong>.</p></main>;
 
@@ -74,7 +98,10 @@ export default function InternalLeadsAdmin() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-4 border-b border-white/10 pb-7 md:flex-row md:items-end md:justify-between">
           <div><p className="text-xs font-semibold uppercase tracking-[.25em] text-cyan-300">ALGENRI CRM</p><h1 className="mt-2 text-3xl font-semibold">Interessados</h1><p className="mt-2 text-sm text-white/50">Contatos registrados pelo site antes da abertura do WhatsApp.</p></div>
-          <a href="/interno" className="text-sm text-white/50 hover:text-white">Voltar ao dashboard</a>
+          <div className="flex flex-wrap items-center gap-3">
+            {leads.length > 0 && <button type="button" onClick={clearTestLeads} disabled={clearing} className="rounded-xl border border-rose-300/20 bg-rose-300/[.05] px-4 py-2.5 text-sm text-rose-100 transition hover:bg-rose-300/[.1] disabled:cursor-not-allowed disabled:opacity-50">{clearing ? "Zerando…" : "Zerar leads de teste"}</button>}
+            <a href="/interno" className="text-sm text-white/50 hover:text-white">Voltar ao dashboard</a>
+          </div>
         </div>
 
         {message && <p className="mt-6 rounded-xl border border-amber-300/20 bg-amber-300/[.05] px-4 py-3 text-sm text-amber-100">{message}</p>}

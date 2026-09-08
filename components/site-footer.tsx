@@ -33,9 +33,14 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-5 text-xs text-white/32 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-5 text-xs text-white/32 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <span>© {new Date().getFullYear()} ALGENRI. Todos os direitos reservados.</span>
-          <div className="flex flex-wrap gap-x-4 gap-y-2"><a href="/privacidade" className="hover:text-white">Política de Privacidade</a><span>Tecnologia que impulsiona o seu amanhã.</span></div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <a href="/privacidade" className="hover:text-white">Política de Privacidade</a>
+            <a href="/termos-de-uso" className="hover:text-white">Termos de Uso</a>
+            <a href="/exclusao-de-dados" className="hover:text-white">Exclusão de Dados</a>
+            <span>Tecnologia que impulsiona o seu amanhã.</span>
+          </div>
         </div>
       </div>
     </footer>

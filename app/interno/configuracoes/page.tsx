@@ -1,4 +1,4 @@
-import { BadgeCheck, Building2, CircleDollarSign, FileText, Mail, PlugZap, Settings2, ShieldCheck, Smartphone, Users } from "lucide-react";
+import { BadgeCheck, Bell, Building2, CircleDollarSign, FileText, Mail, PlugZap, Settings2, ShieldCheck, Smartphone, Users } from "lucide-react";
 
 export const metadata = {
   title: "Configurações | ALGENRI",
@@ -27,7 +27,7 @@ const sections = [
     tone: "emerald",
     items: [
       { label: "E-mail comercial", detail: "contato@algenri.com.br — envio e recebimento validados." },
-      { label: "WhatsApp comercial", detail: "Canal público já validado no fluxo de captação." },
+      { label: "WhatsApp comercial", detail: "Canal público e alerta interno de novos leads já validados em produção." },
       { label: "Prontidão dos canais", detail: "SPF, DKIM, DMARC, domínio e SSL validados." },
     ],
     action: { href: "/interno/prontidao", label: "Abrir prontidão" },
@@ -49,13 +49,27 @@ const sections = [
     icon: PlugZap,
     title: "Integrações",
     text: "Visão central das conexões técnicas utilizadas pela operação digital da ALGENRI.",
-    status: "Evolução contínua",
+    status: "Disponível",
     tone: "violet",
     items: [
-      { label: "Infraestrutura", detail: "Vercel e Firebase sustentam aplicação, autenticação e dados." },
-      { label: "Google Workspace", detail: "E-mail corporativo ativo e autenticado." },
-      { label: "WhatsApp / Meta", detail: "Canal comercial ativo; automações avançadas permanecem evolutivas." },
+      { label: "Infraestrutura", detail: "Vercel, Firebase e GitHub consolidados na operação." },
+      { label: "WhatsApp / Meta", detail: "Template, envio, webhook e monitoramento de eventos operacionais." },
+      { label: "Bancos", detail: "C6 aguardando retorno oficial; Cora adiada nesta fase." },
     ],
+    action: { href: "/interno/configuracoes/integracoes", label: "Abrir integrações" },
+  },
+  {
+    icon: Bell,
+    title: "Notificações",
+    text: "Preferências pessoais de alertas da Área Interna e preparação dos próximos canais automáticos.",
+    status: "Disponível",
+    tone: "cyan",
+    items: [
+      { label: "Área Interna", detail: "Preferências para Financeiro, Comercial e Operação." },
+      { label: "E-mail", detail: "Preferências persistidas; motor de disparo ainda será conectado." },
+      { label: "WhatsApp", detail: "Preferência para futuros alertas críticos, separada do alerta de novos leads já operacional." },
+    ],
+    action: { href: "/interno/configuracoes/notificacoes", label: "Configurar notificações" },
   },
   {
     icon: FileText,
@@ -89,7 +103,6 @@ const toneClasses: Record<string, string> = {
   cyan: "border-cyan-300/15 bg-cyan-300/[.05] text-cyan-200",
   emerald: "border-emerald-300/15 bg-emerald-300/[.05] text-emerald-200",
   violet: "border-violet-300/15 bg-violet-300/[.05] text-violet-200",
-  slate: "border-white/10 bg-white/[.04] text-white/55",
 };
 
 export default function ConfiguracoesPage() {
@@ -99,12 +112,12 @@ export default function ConfiguracoesPage() {
         <div className="border-b border-white/10 pb-8">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.25em] text-cyan-300"><Settings2 className="h-4 w-4" /> Configurações</div>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-.04em] sm:text-5xl">Central de configurações</h1>
-          <p className="mt-3 max-w-3xl leading-7 text-white/55">Organize dados institucionais, canais, integrações, documentos e acessos sem espalhar configurações pela Área Interna.</p>
+          <p className="mt-3 max-w-3xl leading-7 text-white/55">Organize dados institucionais, canais, integrações, notificações, documentos e acessos sem espalhar configurações pela Área Interna.</p>
         </div>
 
         <div className="mt-8 rounded-[26px] border border-emerald-300/12 bg-emerald-300/[.025] p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" /><div><p className="font-semibold">Base operacional validada</p><p className="mt-1 text-sm leading-6 text-white/45">Canais comerciais, domínio, SSL, autenticação do e-mail e infraestrutura já foram validados para a operação de lançamento.</p></div></div>
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" /><div><p className="font-semibold">Base operacional validada</p><p className="mt-1 text-sm leading-6 text-white/45">Canais comerciais, domínio, SSL, autenticação do e-mail, WhatsApp/Meta e infraestrutura já foram validados para a operação de lançamento.</p></div></div>
             <a href="/interno/prontidao" className="button-secondary shrink-0 text-sm">Ver prontidão <BadgeCheck className="h-4 w-4" /></a>
           </div>
         </div>
@@ -141,9 +154,9 @@ export default function ConfiguracoesPage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold"><Mail className="h-4 w-4 text-cyan-300" /> Próximas configurações</div>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/42">A próxima evolução desta central poderá concentrar preferências de notificação, integrações financeiras quando o C6 responder e modelos adicionais de documentos.</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/42">Com empresa, usuários, integrações e notificações estruturados, a próxima evolução pode concentrar modelos de documentos e automações externas adicionais, além da integração financeira quando o C6 responder.</p>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-white/35"><span className="rounded-full border border-white/10 px-3 py-2">Notificações</span><span className="rounded-full border border-white/10 px-3 py-2">Integrações</span><span className="rounded-full border border-white/10 px-3 py-2">Documentos</span></div>
+            <div className="flex flex-wrap gap-2 text-xs text-white/35"><span className="rounded-full border border-white/10 px-3 py-2">Documentos</span><span className="rounded-full border border-white/10 px-3 py-2">C6 API</span><span className="rounded-full border border-white/10 px-3 py-2">Automações</span></div>
           </div>
         </section>
       </div>

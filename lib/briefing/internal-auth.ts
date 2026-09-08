@@ -15,7 +15,7 @@ function apiModule(pathname: string): InternalModule | null {
   if (["/api/internal/leads", "/api/internal/clients", "/api/internal/projects", "/api/internal/proposals", "/api/internal/contracts"].some((prefix) => pathname.startsWith(prefix))) return "commercial";
   if (["/api/internal/briefing", "/api/internal/dossiers"].some((prefix) => pathname.startsWith(prefix))) return "operation";
   if (pathname.startsWith("/api/internal/finance")) return "finance";
-  if (["/api/internal/readiness", "/api/internal/firebase-health"].some((prefix) => pathname.startsWith(prefix))) return "settings";
+  if (["/api/internal/readiness", "/api/internal/firebase-health", "/api/internal/settings"].some((prefix) => pathname.startsWith(prefix))) return "settings";
   return null;
 }
 

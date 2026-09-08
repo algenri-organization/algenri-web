@@ -42,9 +42,7 @@ export async function requireAlgenriInternalUser(request: Request): Promise<Inte
   }
 
   const provisionedEmails = getProvisionedInternalEmails();
-  const isExplicitlyProvisioned = provisionedEmails.has(email);
-  const isVerifiedDomainUser = decoded.email_verified === true;
-  if (!isExplicitlyProvisioned && !isVerifiedDomainUser) throw new Error("INTERNAL_EMAIL_VERIFICATION_REQUIRED");
+  if (!provisionedEmails.has(email)) throw new Error("INTERNAL_ACCESS_DENIED");
   return { uid: decoded.uid, email };
 }
 

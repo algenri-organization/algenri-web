@@ -12,11 +12,21 @@ type Summary = {
   agenda: Array<{ id:string; name:string; clientName:string; status:string; expectedDeliveryDate:string; overdue:boolean }>;
 };
 
+type NotificationPreferences = {
+  commercialUpdatesInApp: boolean;
+  operationUpdatesInApp: boolean;
+};
+
 const emptySummary: Summary = {
   cards: { interested:0, newInterested:0, openProposals:0, pendingContracts:0, activeProjects:0 },
   pipeline: { interested:0, briefing:0, dossier:0, proposal:0, contract:0, project:0 },
   attention: { newLeads:0, proposalsAwaitingDecision:0, contractsPending:0, overdueProjects:0 },
   agenda: [],
+};
+
+const defaultNotificationPreferences: NotificationPreferences = {
+  commercialUpdatesInApp: true,
+  operationUpdatesInApp: true,
 };
 
 async function authFetch(user: User, input: RequestInfo | URL) {
@@ -54,6 +64,7 @@ const quickActions = [
 
 export default function InternalDashboard() {
   const [summary,setSummary]=useState<Summary>(emptySummary);
+  const [notificationPreferences,setNotificationPreferences]=useState<NotificationPreferences>(defaultNotificationPreferences);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
 
@@ -64,16 +75,29 @@ export default function InternalDashboard() {
       const payload=await response.json();
       if(!response.ok) throw new Error("Não foi possível carregar os indicadores.");
       setSummary(payload);
+
+      try {
+        const preferencesResponse=await authFetch(user,"/api/internal/settings/notifications");
+        if(preferencesResponse.ok){
+          const preferencesPayload=await preferencesResponse.json();
+          setNotificationPreferences({
+            commercialUpdatesInApp: preferencesPayload.preferences?.commercialUpdatesInApp ?? true,
+            operationUpdatesInApp: preferencesPayload.preferences?.operationUpdatesInApp ?? true,
+          });
+        }
+      } catch {
+        setNotificationPreferences(defaultNotificationPreferences);
+      }
     }catch(err){setError(err instanceof Error?err.message:"Falha ao carregar os indicadores.");}
     finally{setLoading(false);}
   }),[]);
 
   const attention = [
-    { title:"Novos interessados", value:summary.attention.newLeads, text:"Aguardando primeiro atendimento comercial.", href:"/interno/leads" },
-    { title:"Propostas sem decisão", value:summary.attention.proposalsAwaitingDecision, text:"Enviadas ou em negociação aguardando retorno.", href:"/interno/propostas" },
-    { title:"Contratos pendentes", value:summary.attention.contractsPending, text:"Em preparação ou aguardando assinatura.", href:"/interno/contratos" },
-    { title:"Projetos em atraso", value:summary.attention.overdueProjects, text:"Com data prevista de entrega já ultrapassada.", href:"/interno/projetos" },
-  ];
+    { category:"commercial" as const, title:"Novos interessados", value:summary.attention.newLeads, text:"Aguardando primeiro atendimento comercial.", href:"/interno/leads" },
+    { category:"commercial" as const, title:"Propostas sem decisão", value:summary.attention.proposalsAwaitingDecision, text:"Enviadas ou em negociação aguardando retorno.", href:"/interno/propostas" },
+    { category:"commercial" as const, title:"Contratos pendentes", value:summary.attention.contractsPending, text:"Em preparação ou aguardando assinatura.", href:"/interno/contratos" },
+    { category:"operation" as const, title:"Projetos em atraso", value:summary.attention.overdueProjects, text:"Com data prevista de entrega já ultrapassada.", href:"/interno/projetos" },
+  ].filter((item)=>item.category==="commercial" ? notificationPreferences.commercialUpdatesInApp : notificationPreferences.operationUpdatesInApp);
 
   return (
     <main className="min-h-screen bg-[#040c17] px-5 pb-20 pt-28 text-white sm:px-6 lg:px-8">
@@ -92,7 +116,7 @@ export default function InternalDashboard() {
         <section className="mt-6 grid gap-6 xl:grid-cols-[1.65fr_.85fr]">
           <div className="rounded-[28px] border border-white/10 bg-white/[.025] p-5 sm:p-6"><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-semibold">Pipeline comercial</p><p className="mt-1 text-xs text-white/35">Quantidade real de registros em cada etapa.</p></div><Sparkles className="h-5 w-5 text-cyan-300/70" /></div><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{pipeline.map(({key,label,href,icon:Icon},index)=><a key={key} href={href} className="group rounded-2xl border border-white/[.08] bg-black/15 p-4 transition hover:border-cyan-300/20 hover:bg-white/[.04]"><div className="flex items-center justify-between"><Icon className="h-4 w-4 text-cyan-200" /><span className="text-2xl font-semibold text-white">{loading?"—":summary.pipeline[key]}</span></div><div className="mt-5 flex items-end justify-between"><div><p className="font-medium">{label}</p><p className="mt-1 text-xs text-white/32">Abrir etapa</p></div><span className="text-[10px] text-white/20">0{index+1}</span></div></a>)}</div></div>
 
-          <div className="rounded-[28px] border border-amber-300/10 bg-amber-300/[.025] p-5 sm:p-6"><p className="text-sm font-semibold">Atenção necessária</p><p className="mt-1 text-xs leading-5 text-white/35">Pendências calculadas a partir dos registros atuais.</p><div className="mt-5 space-y-3">{attention.map(item=><a key={item.title} href={item.href} className="block rounded-2xl border border-white/[.07] bg-black/15 p-4 transition hover:border-amber-200/20 hover:bg-white/[.035]"><div className="flex items-start gap-3"><span className={`grid h-8 min-w-8 place-items-center rounded-lg text-sm font-semibold ${item.value>0?"bg-amber-300/10 text-amber-100":"bg-emerald-300/[.07] text-emerald-200"}`}>{loading?"—":item.value}</span><div className="flex-1"><p className="text-sm font-medium text-white/82">{item.title}</p><p className="mt-1 text-xs leading-5 text-white/38">{item.text}</p></div><ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 text-white/20" /></div></a>)}</div></div>
+          <div className="rounded-[28px] border border-amber-300/10 bg-amber-300/[.025] p-5 sm:p-6"><p className="text-sm font-semibold">Atenção necessária</p><p className="mt-1 text-xs leading-5 text-white/35">Pendências calculadas a partir dos registros atuais e das suas preferências de alerta.</p><div className="mt-5 space-y-3">{attention.length===0?<div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-sm leading-6 text-white/35">Os alertas comerciais e operacionais estão desativados nas suas preferências. Você pode reativá-los em Configurações → Notificações.</div>:attention.map(item=><a key={item.title} href={item.href} className="block rounded-2xl border border-white/[.07] bg-black/15 p-4 transition hover:border-amber-200/20 hover:bg-white/[.035]"><div className="flex items-start gap-3"><span className={`grid h-8 min-w-8 place-items-center rounded-lg text-sm font-semibold ${item.value>0?"bg-amber-300/10 text-amber-100":"bg-emerald-300/[.07] text-emerald-200"}`}>{loading?"—":item.value}</span><div className="flex-1"><p className="text-sm font-medium text-white/82">{item.title}</p><p className="mt-1 text-xs leading-5 text-white/38">{item.text}</p></div><ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 text-white/20" /></div></a>)}</div></div>
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-2">

@@ -11,6 +11,7 @@ type Item = { label: string; href?: string; icon: React.ElementType; disabled?: 
 type Group = { label: string; icon: React.ElementType; module:ModuleKey; items: Item[] };
 type ChargeSummary = { dueDate:string; status:string };
 type Access={role:"admin"|"member";permissions:ModuleKey[]};
+type NotificationPreferences={financeOverdueInApp:boolean};
 
 const groups: Group[] = [
   { label: "Comercial", module:"commercial", icon: BriefcaseBusiness, items: [
@@ -49,13 +50,15 @@ export default function InternalSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(firebaseAuth.currentUser);
   const [overdueCount,setOverdueCount]=useState(0);
+  const [financeAlertEnabled,setFinanceAlertEnabled]=useState(true);
   const [access,setAccess]=useState<Access|null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map((group) => [group.label, true])));
 
   useEffect(() => onAuthStateChanged(firebaseAuth, setUser), []);
   useEffect(()=>{if(!user){setAccess(null);return;}let cancelled=false;(async()=>{try{const token=await user.getIdToken();const r=await fetch("/api/internal/access",{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)return;const p=await r.json();if(!cancelled)setAccess(p);}catch{}})();return()=>{cancelled=true};},[user,pathname]);
+  useEffect(()=>{if(!user){setFinanceAlertEnabled(true);return;}let cancelled=false;(async()=>{try{const token=await user.getIdToken();const r=await fetch("/api/internal/settings/notifications",{headers:{Authorization:`Bearer ${token}`},cache:"no-store"});if(!r.ok)return;const p=await r.json();const prefs=p.preferences as Partial<NotificationPreferences>|undefined;if(!cancelled)setFinanceAlertEnabled(prefs?.financeOverdueInApp!==false);}catch{}})();return()=>{cancelled=true};},[user,pathname]);
   const can=(module:ModuleKey)=>access?.role==="admin"||Boolean(access?.permissions?.includes(module));
-  useEffect(()=>{ if(!user||!can("finance")){setOverdueCount(0);return;} let cancelled=false; (async()=>{ try{ const token=await user.getIdToken(); const r=await fetch("/api/internal/finance/charges",{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok)return; const p=await r.json(); const today=new Date().toISOString().slice(0,10); const count=(p.charges??[]).filter((c:ChargeSummary)=>c.status==="pending"&&c.dueDate<today).length; if(!cancelled)setOverdueCount(count); }catch{} })(); return()=>{cancelled=true}; },[user,pathname,access]);
+  useEffect(()=>{ if(!user||!can("finance")||!financeAlertEnabled){setOverdueCount(0);return;} let cancelled=false; (async()=>{ try{ const token=await user.getIdToken(); const r=await fetch("/api/internal/finance/charges",{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok)return; const p=await r.json(); const today=new Date().toISOString().slice(0,10); const count=(p.charges??[]).filter((c:ChargeSummary)=>c.status==="pending"&&c.dueDate<today).length; if(!cancelled)setOverdueCount(count); }catch{} })(); return()=>{cancelled=true}; },[user,pathname,access,financeAlertEnabled]);
 
   const visibleGroups=useMemo(()=>groups.map(group=>{
     if(group.label==="Configurações"){

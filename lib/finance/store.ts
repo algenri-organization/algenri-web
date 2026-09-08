@@ -20,6 +20,11 @@ export type ChargeRecord = {
   receivedAmountCents?: number; balanceCents?: number; lastPaymentAt?: string | null;
 };
 
+export type PaymentEventRecord = {
+  id: string; tenantId: string; chargeId: string; clientId: string; type?: "payment" | "reversal";
+  amountCents: number; paymentMethod?: string; notes: string; createdBy: string; createdAt: string;
+};
+
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
 function integer(value: unknown, fallback = 1) { const parsed = Number(value); return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback; }
 function amountToCents(value: unknown) {
@@ -122,6 +127,12 @@ export async function updateCharge(id: string, input: Record<string, unknown>) {
   const db = await getAdminDb(); await db.collection(CHARGES).doc(id).set(updated); return updated;
 }
 
+export async function listPaymentEvents(chargeId: string) {
+  const db = await getAdminDb();
+  const snapshot = await db.collection(PAYMENT_EVENTS).where("tenantId", "==", DEFAULT_TENANT_ID).where("chargeId", "==", chargeId).get();
+  return snapshot.docs.map((doc) => doc.data() as PaymentEventRecord).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+}
+
 export async function recordChargePayment(id: string, input: Record<string, unknown>, createdBy: string) {
   const paymentCents = amountToCents(input.amount); if (paymentCents <= 0) throw new Error("payment_amount_required");
   const method = text(input.paymentMethod) || "Pix";
@@ -146,7 +157,36 @@ export async function recordChargePayment(id: string, input: Record<string, unkn
       updatedAt: now,
     };
     tx.set(chargeRef, updated);
-    tx.set(eventRef, { id: eventRef.id, tenantId: DEFAULT_TENANT_ID, chargeId: id, clientId: current.clientId, amountCents: paymentCents, paymentMethod: method, notes, createdBy, createdAt: now });
+    tx.set(eventRef, { id: eventRef.id, tenantId: DEFAULT_TENANT_ID, chargeId: id, clientId: current.clientId, type: "payment", amountCents: paymentCents, paymentMethod: method, notes, createdBy, createdAt: now });
+    return updated;
+  });
+}
+
+export async function reverseChargePayment(id: string, input: Record<string, unknown>, createdBy: string) {
+  const reversalCents = amountToCents(input.amount); if (reversalCents <= 0) throw new Error("reversal_amount_required");
+  const notes = text(input.notes); if (!notes) throw new Error("reversal_reason_required");
+  const db = await getAdminDb(); const chargeRef = db.collection(CHARGES).doc(id); const eventRef = db.collection(PAYMENT_EVENTS).doc();
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(chargeRef); if (!snap.exists) return null;
+    const current = snap.data() as ChargeRecord; if (current.tenantId !== DEFAULT_TENANT_ID) return null;
+    if (current.status === "cancelled") throw new Error("charge_cancelled");
+    const alreadyReceived = receivedFor(current); if (alreadyReceived <= 0) throw new Error("nothing_to_reverse");
+    if (reversalCents > alreadyReceived) throw new Error("reversal_exceeds_received");
+    const now = new Date().toISOString(); const receivedAmountCents = alreadyReceived - reversalCents;
+    const updated: ChargeRecord = {
+      ...current,
+      status: "pending",
+      paidAt: null,
+      receivedAmountCents,
+      balanceCents: Math.max(0, current.amountCents - receivedAmountCents),
+      settledAt: null,
+      settlementNotes: current.settledAt ? "Conciliação reaberta após estorno/ajuste de recebimento." : (current.settlementNotes ?? ""),
+      providerFeeCents: current.settledAt ? 0 : current.providerFeeCents,
+      lastPaymentAt: now,
+      updatedAt: now,
+    };
+    tx.set(chargeRef, updated);
+    tx.set(eventRef, { id: eventRef.id, tenantId: DEFAULT_TENANT_ID, chargeId: id, clientId: current.clientId, type: "reversal", amountCents: reversalCents, paymentMethod: current.paymentMethod, notes, createdBy, createdAt: now });
     return updated;
   });
 }

@@ -162,6 +162,9 @@ export async function updateInternalUser(actor: AccessActor, input: { uid: strin
   if (input.role === "admin") {
     patch.permissions = [...INTERNAL_MODULES];
     auditChanges.permissions = patch.permissions;
+  } else if (input.role === "member" && input.permissions === undefined) {
+    patch.permissions = [];
+    auditChanges.permissions = [];
   }
   await targetSnap.ref.set(patch, { merge: true });
   await writeAccessAudit({ actor, action: "user_updated", targetUid: input.uid, targetEmail: target.email, changes: auditChanges });

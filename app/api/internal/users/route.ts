@@ -26,9 +26,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     const body = await request.json();
-    const user = await provisionInternalUser({
+    const user = await provisionInternalUser(actor, {
       email: String(body.email || ""),
       displayName: String(body.displayName || ""),
       role: body.role === "admin" ? "admin" : "member",
@@ -48,7 +48,7 @@ export async function PATCH(request: Request) {
   try {
     const actor = await requireAdmin(request);
     const body = await request.json();
-    await updateInternalUser(actor.uid, {
+    await updateInternalUser(actor, {
       uid: String(body.uid || ""),
       role: body.role === "admin" ? "admin" : body.role === "member" ? "member" : undefined,
       active: typeof body.active === "boolean" ? body.active : undefined,
@@ -59,7 +59,7 @@ export async function PATCH(request: Request) {
     const handled = authError(error);
     if (handled) return handled;
     const code = error instanceof Error ? error.message : "";
-    if (["uid_required", "cannot_disable_self", "cannot_demote_self"].includes(code)) return Response.json({ ok: false, error: code }, { status: 400 });
+    if (["uid_required", "cannot_disable_self", "cannot_demote_self", "user_not_found"].includes(code)) return Response.json({ ok: false, error: code }, { status: code === "user_not_found" ? 404 : 400 });
     return Response.json({ ok: false, error: "user_update_failed" }, { status: 500 });
   }
 }

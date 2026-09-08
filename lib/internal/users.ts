@@ -17,7 +17,10 @@ export type InternalUserRecord = {
   updatedAt?: string;
 };
 
+type AccessActor = { uid: string; email: string };
+
 const COLLECTION = "internal_users";
+const AUDIT_COLLECTION = "internal_access_audit";
 
 function adminEmails() {
   const configured = process.env.ALGENRI_INTERNAL_ADMIN_EMAILS || process.env.ALGENRI_INTERNAL_ALLOWED_EMAILS || "michel@algenri.com.br";
@@ -72,7 +75,26 @@ export async function listInternalUsers(current: { uid: string; email: string })
   return users;
 }
 
-export async function provisionInternalUser(input: { email: string; displayName?: string; role?: InternalRole; permissions?: InternalModule[] }) {
+async function writeAccessAudit(input: {
+  actor: AccessActor;
+  action: "user_provisioned" | "user_updated";
+  targetUid: string;
+  targetEmail?: string;
+  changes: Record<string, unknown>;
+}) {
+  const db = await getAdminDb();
+  await db.collection(AUDIT_COLLECTION).add({
+    actorUid: input.actor.uid,
+    actorEmail: input.actor.email,
+    action: input.action,
+    targetUid: input.targetUid,
+    targetEmail: input.targetEmail || null,
+    changes: input.changes,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+}
+
+export async function provisionInternalUser(actor: AccessActor, input: { email: string; displayName?: string; role?: InternalRole; permissions?: InternalModule[] }) {
   const email = input.email.trim().toLowerCase();
   if (!email.endsWith("@algenri.com.br")) throw new Error("domain_not_allowed");
   const role: InternalRole = input.role === "admin" ? "admin" : "member";
@@ -87,18 +109,42 @@ export async function provisionInternalUser(input: { email: string; displayName?
   }
   const record: InternalUserRecord = { uid: authUser.uid, email, displayName: input.displayName?.trim() || authUser.displayName || "", role, active: true, permissions };
   await db.collection(COLLECTION).doc(authUser.uid).set({ ...record, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await writeAccessAudit({
+    actor,
+    action: "user_provisioned",
+    targetUid: authUser.uid,
+    targetEmail: email,
+    changes: { role, active: true, permissions },
+  });
   return record;
 }
 
-export async function updateInternalUser(actorUid: string, input: { uid: string; role?: InternalRole; active?: boolean; permissions?: InternalModule[] }) {
+export async function updateInternalUser(actor: AccessActor, input: { uid: string; role?: InternalRole; active?: boolean; permissions?: InternalModule[] }) {
   if (!input.uid) throw new Error("uid_required");
-  if (input.uid === actorUid && input.active === false) throw new Error("cannot_disable_self");
-  if (input.uid === actorUid && input.role && input.role !== "admin") throw new Error("cannot_demote_self");
+  if (input.uid === actor.uid && input.active === false) throw new Error("cannot_disable_self");
+  if (input.uid === actor.uid && input.role && input.role !== "admin") throw new Error("cannot_demote_self");
   const db = await getAdminDb();
+  const targetSnap = await db.collection(COLLECTION).doc(input.uid).get();
+  if (!targetSnap.exists) throw new Error("user_not_found");
+  const target = targetSnap.data() as InternalUserRecord;
   const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
-  if (input.role) patch.role = input.role === "admin" ? "admin" : "member";
-  if (typeof input.active === "boolean") patch.active = input.active;
-  if (input.permissions) patch.permissions = normalizePermissions(input.permissions);
-  if (input.role === "admin") patch.permissions = [...INTERNAL_MODULES];
-  await db.collection(COLLECTION).doc(input.uid).set(patch, { merge: true });
+  const auditChanges: Record<string, unknown> = {};
+  if (input.role) {
+    patch.role = input.role === "admin" ? "admin" : "member";
+    auditChanges.role = patch.role;
+  }
+  if (typeof input.active === "boolean") {
+    patch.active = input.active;
+    auditChanges.active = input.active;
+  }
+  if (input.permissions) {
+    patch.permissions = normalizePermissions(input.permissions);
+    auditChanges.permissions = patch.permissions;
+  }
+  if (input.role === "admin") {
+    patch.permissions = [...INTERNAL_MODULES];
+    auditChanges.permissions = patch.permissions;
+  }
+  await targetSnap.ref.set(patch, { merge: true });
+  await writeAccessAudit({ actor, action: "user_updated", targetUid: input.uid, targetEmail: target.email, changes: auditChanges });
 }

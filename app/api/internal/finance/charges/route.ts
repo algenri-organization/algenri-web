@@ -1,5 +1,6 @@
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
-import { createChargePlan, listCharges } from "@/lib/finance/store";
+import { createChargePlan } from "@/lib/finance/store";
+import { listOperationalCharges } from "@/lib/finance/recurring-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     await requireAlgenriInternalUser(request);
-    return Response.json({ ok: true, charges: await listCharges() });
+    return Response.json({ ok: true, charges: await listOperationalCharges() });
   } catch (error) {
     const authResponse = internalAuthResponse(error); if (authResponse) return authResponse;
     console.error("Finance charge list failed", error);

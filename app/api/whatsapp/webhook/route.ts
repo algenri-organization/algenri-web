@@ -34,10 +34,24 @@ export async function GET(request: Request) {
   const challenge = url.searchParams.get("hub.challenge");
   const expected = process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 
-  if (mode === "subscribe" && expected && token === expected && challenge) {
-    return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
+  if (url.searchParams.get("diagnostic") === "1") {
+    return Response.json({
+      endpoint: "whatsapp-webhook",
+      verifyTokenConfigured: Boolean(expected),
+      verifyTokenLength: expected?.length ?? 0,
+      receivedTokenLength: token?.length ?? 0,
+      tokenMatches: Boolean(expected && token && token === expected),
+      mode,
+      challengePresent: Boolean(challenge),
+      vercelEnv: process.env.VERCEL_ENV ?? null,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? null,
+    }, { headers: { "Cache-Control": "no-store" } });
   }
-  return new Response("Forbidden", { status: 403 });
+
+  if (mode === "subscribe" && expected && token === expected && challenge) {
+    return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" } });
+  }
+  return new Response("Forbidden", { status: 403, headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {

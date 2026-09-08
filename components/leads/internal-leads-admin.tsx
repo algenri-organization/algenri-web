@@ -16,6 +16,7 @@ type Lead = {
   status: string;
   createdAt: string;
   notificationStatus: string;
+  notificationError: string | null;
 };
 
 async function authFetch(user: User, input: RequestInfo | URL, init?: RequestInit) {
@@ -25,6 +26,13 @@ async function authFetch(user: User, input: RequestInfo | URL, init?: RequestIni
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
+function notificationLabel(status: string) {
+  if (status === "sent") return "enviada";
+  if (status === "failed") return "falhou";
+  if (status === "skipped") return "não configurada";
+  return status;
 }
 
 export default function InternalLeadsAdmin() {
@@ -69,7 +77,10 @@ export default function InternalLeadsAdmin() {
                   <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/50"><span>{lead.whatsapp}</span>{lead.email && <span>{lead.email}</span>}<span>{formatDate(lead.createdAt)}</span></div>
                   {lead.message && <p className="mt-4 max-w-3xl text-sm leading-6 text-white/55">{lead.message}</p>}
                 </div>
-                <div className="text-xs text-white/35">Notificação WhatsApp: <span className={lead.notificationStatus === "sent" ? "text-emerald-200" : lead.notificationStatus === "failed" ? "text-rose-200" : "text-amber-200"}>{lead.notificationStatus}</span></div>
+                <div className="max-w-sm text-xs text-white/35">
+                  <div>Notificação WhatsApp: <span className={lead.notificationStatus === "sent" ? "text-emerald-200" : lead.notificationStatus === "failed" ? "text-rose-200" : "text-amber-200"}>{notificationLabel(lead.notificationStatus)}</span></div>
+                  {lead.notificationError && <div className="mt-2 break-words rounded-lg border border-white/[.07] bg-black/20 p-2 text-[10px] leading-4 text-white/35">{lead.notificationError}</div>}
+                </div>
               </div>
             </article>
           ))}

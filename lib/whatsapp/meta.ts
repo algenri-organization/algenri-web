@@ -22,29 +22,39 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
   const token = process.env.META_WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
   const recipient = cleanPhone(process.env.ALGENRI_WHATSAPP_NOTIFY_NUMBER);
+  const templateName = process.env.META_WHATSAPP_LEAD_TEMPLATE_NAME?.trim();
+  const templateLanguage = process.env.META_WHATSAPP_TEMPLATE_LANGUAGE?.trim() || "pt_BR";
   const apiVersion = process.env.META_WHATSAPP_API_VERSION || "v23.0";
 
-  if (!token || !phoneNumberId || !recipient) {
-    return { status: "skipped" as const, error: "whatsapp_notification_not_configured" };
+  const missing = [
+    !token ? "META_WHATSAPP_ACCESS_TOKEN" : "",
+    !phoneNumberId ? "META_WHATSAPP_PHONE_NUMBER_ID" : "",
+    !recipient ? "ALGENRI_WHATSAPP_NOTIFY_NUMBER" : "",
+    !templateName ? "META_WHATSAPP_LEAD_TEMPLATE_NAME" : "",
+  ].filter(Boolean);
+
+  if (missing.length) {
+    return { status: "skipped" as const, error: `whatsapp_notification_not_configured:${missing.join(",")}` };
   }
 
   const body = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: recipient,
-    type: "text",
-    text: {
-      preview_url: false,
-      body: [
-        "Novo interessado no site ALGENRI",
-        `Nome: ${lead.name}`,
-        `Empresa: ${lead.company}`,
-        `WhatsApp: ${lead.whatsapp}`,
-        lead.email ? `E-mail: ${lead.email}` : "",
-        `Interesse: ${lead.interest}`,
-        lead.message ? `Mensagem: ${lead.message}` : "",
-        `Registro: ${lead.id}`,
-      ].filter(Boolean).join("\n"),
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: templateLanguage },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: lead.name },
+            { type: "text", text: lead.company },
+            { type: "text", text: lead.whatsapp },
+          ],
+        },
+      ],
     },
   };
 
@@ -59,12 +69,18 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
       cache: "no-store",
     });
 
+    const payloadText = await response.text();
     if (!response.ok) {
-      const payload = await response.text();
-      return { status: "failed" as const, error: `meta_whatsapp_${response.status}:${payload.slice(0, 500)}` };
+      return { status: "failed" as const, error: `meta_whatsapp_${response.status}:${payloadText.slice(0, 800)}` };
     }
 
-    return { status: "sent" as const, error: null };
+    let messageId: string | null = null;
+    try {
+      const payload = JSON.parse(payloadText) as { messages?: Array<{ id?: string }> };
+      messageId = payload.messages?.[0]?.id ?? null;
+    } catch {}
+
+    return { status: "sent" as const, error: messageId ? `message_id:${messageId}` : null };
   } catch (error) {
     return { status: "failed" as const, error: error instanceof Error ? error.message : "meta_whatsapp_request_failed" };
   }

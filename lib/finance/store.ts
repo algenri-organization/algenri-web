@@ -15,6 +15,7 @@ export type ChargeRecord = {
   paymentMethod: string; notes: string; tenantId: string; createdBy: string; createdAt: string; updatedAt: string;
   seriesId: string; scheduleType: ScheduleType; installmentIndex: number; installmentCount: number;
   recurrenceFrequency: RecurrenceFrequency | ""; bankProvider: BankProvider; bankChargeId: string;
+  providerFeeCents?: number; netAmountCents?: number; settledAt?: string | null; settlementNotes?: string;
 };
 
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
@@ -75,7 +76,7 @@ export async function createChargePlan(input: Record<string, unknown>, createdBy
       amountCents: partAmount, dueDate: itemDueDate, status: "pending", paidAt: null, paymentMethod: text(input.paymentMethod), notes: text(input.notes),
       tenantId: DEFAULT_TENANT_ID, createdBy, createdAt: now, updatedAt: now, seriesId, scheduleType,
       installmentIndex: index + 1, installmentCount: count, recurrenceFrequency: scheduleType === "recurring" ? recurrenceFrequency : "",
-      bankProvider, bankChargeId: "",
+      bankProvider, bankChargeId: "", providerFeeCents: 0, netAmountCents: partAmount, settledAt: null, settlementNotes: "",
     };
     batch.set(ref, record); records.push(record);
   }
@@ -97,7 +98,27 @@ export async function updateCharge(id: string, input: Record<string, unknown>) {
     ...current, description, amountCents, dueDate, status: nextStatus,
     paymentMethod: input.paymentMethod === undefined ? current.paymentMethod : text(input.paymentMethod), notes: input.notes === undefined ? current.notes : text(input.notes),
     paidAt: nextStatus === "paid" ? (current.paidAt || new Date().toISOString()) : nextStatus === "pending" ? null : current.paidAt,
+    netAmountCents: current.settledAt ? Math.max(0, amountCents - (current.providerFeeCents ?? 0)) : current.netAmountCents,
     updatedAt: new Date().toISOString(),
   };
   const db = await getAdminDb(); await db.collection(CHARGES).doc(id).set(updated); return updated;
+}
+
+export async function reconcileCharge(id: string, input: Record<string, unknown>) {
+  const current = await getCharge(id); if (!current) return null;
+  if (current.status !== "paid") throw new Error("charge_not_paid");
+  const providerFeeCents = input.providerFee === undefined ? (current.providerFeeCents ?? 0) : amountToCents(input.providerFee);
+  if (providerFeeCents < 0 || providerFeeCents > current.amountCents) throw new Error("provider_fee_invalid");
+  const now = new Date().toISOString();
+  const updated: ChargeRecord = {
+    ...current,
+    providerFeeCents,
+    netAmountCents: current.amountCents - providerFeeCents,
+    settledAt: now,
+    settlementNotes: input.notes === undefined ? (current.settlementNotes ?? "") : text(input.notes),
+    updatedAt: now,
+  };
+  const db = await getAdminDb();
+  await db.collection(CHARGES).doc(id).set(updated);
+  return updated;
 }

@@ -44,8 +44,8 @@ export default function PlanosPage() {
       <section className="mx-auto max-w-7xl px-6 pb-28 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-3">
           {plans.map((plan) => (
-            <article key={plan.name} className={`relative rounded-[30px] p-7 ${plan.featured ? "glass ring-1 ring-cyan-300/25" : "glass-soft"}`}>
-              {plan.featured && <span className="absolute right-6 top-6 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">Mais indicado para evolução contínua</span>}
+            <article key={plan.name} className={`rounded-[30px] p-7 ${plan.featured ? "glass ring-1 ring-cyan-300/25" : "glass-soft"}`}>
+              {plan.featured && <span className="mb-4 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">Mais indicado para evolução contínua</span>}
               <p className="text-xs font-semibold uppercase tracking-[.18em] text-cyan-200/70">{plan.label}</p>
               <p className="mt-2 text-xl font-semibold">{plan.name}</p>
               <p className="mt-5 min-h-24 leading-7 text-white/56">{plan.intro}</p>

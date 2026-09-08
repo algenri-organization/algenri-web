@@ -75,6 +75,24 @@ export async function listInternalUsers(current: { uid: string; email: string })
   return users;
 }
 
+export async function listInternalAccessAudit(limit = 30) {
+  const db = await getAdminDb();
+  const safeLimit = Math.min(Math.max(limit, 1), 100);
+  const snap = await db.collection(AUDIT_COLLECTION).orderBy("createdAt", "desc").limit(safeLimit).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data();
+    const createdAt = data.createdAt && typeof data.createdAt.toDate === "function" ? data.createdAt.toDate().toISOString() : null;
+    return {
+      id: doc.id,
+      actorEmail: String(data.actorEmail || ""),
+      action: data.action === "user_provisioned" ? "user_provisioned" : "user_updated",
+      targetEmail: data.targetEmail ? String(data.targetEmail) : null,
+      changes: data.changes && typeof data.changes === "object" ? data.changes : {},
+      createdAt,
+    };
+  });
+}
+
 async function writeAccessAudit(input: {
   actor: AccessActor;
   action: "user_provisioned" | "user_updated";

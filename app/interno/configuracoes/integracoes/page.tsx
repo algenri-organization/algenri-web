@@ -53,7 +53,7 @@ export default async function IntegracoesPage() {
     { title: "Firebase", category: "Dados e autenticação", status: "operational", statusLabel: "Operacional", detail: "Base da autenticação interna, Firestore e armazenamento de arquivos da plataforma.", icon: Database, items: ["Firebase Authentication", "Firestore", "Storage via backend autenticado"] },
     { title: "GitHub", category: "Código e governança", status: "operational", statusLabel: "Operacional", detail: "Repositório, branches, pull requests e validação contínua do projeto.", icon: GitBranch, items: ["Repositório principal conectado", "Fluxo por pull request", "CI antes de merge"] },
     { title: "Google Workspace", category: "Comunicação", status: "operational", statusLabel: "Operacional", detail: "E-mail corporativo da ALGENRI validado para envio e recebimento.", icon: Mail, items: ["contato@algenri.com.br", "SPF, DKIM e DMARC validados", "Canal comercial ativo"] },
-    { title: "WhatsApp / Meta", category: "Comunicação", status: "pending", statusLabel: "Diagnóstico em andamento", detail: "Envio de templates já é aceito pela Meta; o retorno assíncrono de status está em validação via webhook.", icon: MessageCircle, items: ["Template aprovado e envio aceito pela Meta", "Webhook verificado e campo messages assinado", "Aguardando confirmação de eventos reais de entrega"] },
+    { title: "WhatsApp / Meta", category: "Comunicação", status: "operational", statusLabel: "Operacional", detail: "Integração validada em produção: número registrado, webhooks assinados, pagamento configurado e mensagem real recebida com sucesso.", icon: MessageCircle, items: ["Número ALGENRI registrado e inscrito para webhooks", "Template aprovado e mensagem real recebida", "Monitoramento técnico de eventos mantido nesta central"] },
     { title: "C6 Bank", category: "Financeiro", status: "pending", statusLabel: "Aguardando banco", detail: c6?.detail ?? "Integração solicitada; API, homologação e credenciais ainda precisam ser confirmadas pelo banco.", icon: Banknote, items: ["Controle financeiro permanece manual", "Nenhuma credencial C6 é presumida", "Integração real só após retorno oficial"] },
     { title: "Cora", category: "Financeiro", status: "deferred", statusLabel: "Adiada", detail: cora?.detail ?? "Alternativa futura, sem ativação nesta fase.", icon: Banknote, items: ["Sem custo adicional nesta fase", "Não participa do fluxo atual", "Pode ser retomada futuramente"] },
   ];
@@ -94,15 +94,15 @@ export default async function IntegracoesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-cyan-300"><Webhook className="h-4 w-4" /> WhatsApp / Meta</div>
-              <h2 className="mt-2 text-xl font-semibold">Eventos recebidos pelo webhook</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">Registro técnico dos últimos eventos enviados pela Meta. Um evento sem correspondência pode ser apenas um teste com ID fictício.</p>
+              <h2 className="mt-2 text-xl font-semibold">Monitoramento de eventos do webhook</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">A integração já foi validada em produção. Este registro permanece como acompanhamento técnico para identificar rapidamente falhas futuras de entrega ou eventos sem correspondência.</p>
             </div>
             <div className="text-xs text-white/35">Últimos {webhookEvents.length} eventos</div>
           </div>
 
           <div className="mt-5 space-y-3">
             {webhookEvents.length === 0 ? (
-              <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.04] p-5 text-sm text-amber-100">Nenhum evento registrado ainda. Após o deploy, envie novamente um teste pelo campo <strong>messages</strong> da Meta e atualize esta página.</div>
+              <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5 text-sm text-white/55">Nenhum evento registrado neste painel ainda. O monitoramento permanecerá ativo para os próximos eventos enviados pela Meta.</div>
             ) : webhookEvents.map((event) => (
               <article key={event.id} className="rounded-2xl border border-white/[.08] bg-black/15 p-4">
                 <div className="flex flex-wrap items-center gap-2">

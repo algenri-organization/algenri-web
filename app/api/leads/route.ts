@@ -35,7 +35,12 @@ export async function POST(request: Request) {
 
     const whatsappUrl = buildProspectWhatsAppUrl(lead);
     const notification = await sendLeadWhatsAppNotification(lead);
-    await updateLeadNotification(lead.id, notification.status, notification.error ?? null);
+    await updateLeadNotification(
+      lead.id,
+      notification.status,
+      notification.error ?? null,
+      notification.messageId ?? null,
+    );
 
     return Response.json({
       ok: true,

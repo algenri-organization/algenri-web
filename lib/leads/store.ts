@@ -2,6 +2,8 @@ import { getAdminDb } from "@/lib/firebase/admin";
 
 const LEADS_COLLECTION = "commercial_leads";
 
+export type WhatsAppDeliveryStatus = "accepted" | "sent" | "delivered" | "read" | "failed";
+
 export type CommercialLead = {
   id: string;
   name: string;
@@ -16,6 +18,10 @@ export type CommercialLead = {
   createdAt: string;
   notificationStatus: "pending" | "sent" | "skipped" | "failed";
   notificationError: string | null;
+  notificationMessageId?: string | null;
+  notificationDeliveryStatus?: WhatsAppDeliveryStatus | null;
+  notificationDeliveryAt?: string | null;
+  notificationDeliveryError?: string | null;
 };
 
 export async function createCommercialLead(input: {
@@ -44,6 +50,10 @@ export async function createCommercialLead(input: {
     createdAt: now,
     notificationStatus: "pending",
     notificationError: null,
+    notificationMessageId: null,
+    notificationDeliveryStatus: null,
+    notificationDeliveryAt: null,
+    notificationDeliveryError: null,
   };
 
   await ref.set(record);
@@ -54,9 +64,40 @@ export async function updateLeadNotification(
   id: string,
   notificationStatus: CommercialLead["notificationStatus"],
   notificationError: string | null = null,
+  notificationMessageId: string | null = null,
 ) {
   const db = await getAdminDb();
-  await db.collection(LEADS_COLLECTION).doc(id).set({ notificationStatus, notificationError }, { merge: true });
+  const patch: Record<string, unknown> = { notificationStatus, notificationError };
+  if (notificationMessageId) {
+    patch.notificationMessageId = notificationMessageId;
+    patch.notificationDeliveryStatus = "accepted";
+    patch.notificationDeliveryAt = new Date().toISOString();
+    patch.notificationDeliveryError = null;
+  }
+  await db.collection(LEADS_COLLECTION).doc(id).set(patch, { merge: true });
+}
+
+export async function updateLeadDeliveryByMessageId(input: {
+  messageId: string;
+  status: WhatsAppDeliveryStatus;
+  timestamp?: string | null;
+  error?: string | null;
+}) {
+  const db = await getAdminDb();
+  const snapshot = await db.collection(LEADS_COLLECTION)
+    .where("notificationMessageId", "==", input.messageId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return false;
+
+  const ref = snapshot.docs[0].ref;
+  await ref.set({
+    notificationDeliveryStatus: input.status,
+    notificationDeliveryAt: input.timestamp || new Date().toISOString(),
+    notificationDeliveryError: input.error || null,
+  }, { merge: true });
+  return true;
 }
 
 export async function listCommercialLeads(limit = 100) {

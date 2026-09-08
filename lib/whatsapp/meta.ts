@@ -34,7 +34,7 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
   ].filter(Boolean);
 
   if (missing.length) {
-    return { status: "skipped" as const, error: `whatsapp_notification_not_configured:${missing.join(",")}` };
+    return { status: "skipped" as const, error: `whatsapp_notification_not_configured:${missing.join(",")}`, messageId: null };
   }
 
   const body = {
@@ -71,7 +71,7 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
 
     const payloadText = await response.text();
     if (!response.ok) {
-      return { status: "failed" as const, error: `meta_whatsapp_${response.status}:${payloadText.slice(0, 800)}` };
+      return { status: "failed" as const, error: `meta_whatsapp_${response.status}:${payloadText.slice(0, 800)}`, messageId: null };
     }
 
     let messageId: string | null = null;
@@ -80,8 +80,8 @@ export async function sendLeadWhatsAppNotification(lead: CommercialLead) {
       messageId = payload.messages?.[0]?.id ?? null;
     } catch {}
 
-    return { status: "sent" as const, error: messageId ? `message_id:${messageId}` : null };
+    return { status: "sent" as const, error: null, messageId };
   } catch (error) {
-    return { status: "failed" as const, error: error instanceof Error ? error.message : "meta_whatsapp_request_failed" };
+    return { status: "failed" as const, error: error instanceof Error ? error.message : "meta_whatsapp_request_failed", messageId: null };
   }
 }

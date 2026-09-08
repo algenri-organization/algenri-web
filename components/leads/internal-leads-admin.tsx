@@ -17,6 +17,10 @@ type Lead = {
   createdAt: string;
   notificationStatus: string;
   notificationError: string | null;
+  notificationMessageId?: string | null;
+  notificationDeliveryStatus?: string | null;
+  notificationDeliveryAt?: string | null;
+  notificationDeliveryError?: string | null;
 };
 
 async function authFetch(user: User, input: RequestInfo | URL, init?: RequestInit) {
@@ -29,10 +33,19 @@ function formatDate(value: string) {
 }
 
 function notificationLabel(status: string) {
-  if (status === "sent") return "enviada";
-  if (status === "failed") return "falhou";
+  if (status === "sent") return "aceita pela Meta";
+  if (status === "failed") return "falhou no envio";
   if (status === "skipped") return "não configurada";
   return status;
+}
+
+function deliveryLabel(status?: string | null) {
+  if (status === "accepted") return "aguardando confirmação";
+  if (status === "sent") return "enviada pela Meta";
+  if (status === "delivered") return "entregue";
+  if (status === "read") return "lida";
+  if (status === "failed") return "falhou na entrega";
+  return "sem retorno de webhook";
 }
 
 export default function InternalLeadsAdmin() {
@@ -77,9 +90,13 @@ export default function InternalLeadsAdmin() {
                   <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/50"><span>{lead.whatsapp}</span>{lead.email && <span>{lead.email}</span>}<span>{formatDate(lead.createdAt)}</span></div>
                   {lead.message && <p className="mt-4 max-w-3xl text-sm leading-6 text-white/55">{lead.message}</p>}
                 </div>
-                <div className="max-w-sm text-xs text-white/35">
-                  <div>Notificação WhatsApp: <span className={lead.notificationStatus === "sent" ? "text-emerald-200" : lead.notificationStatus === "failed" ? "text-rose-200" : "text-amber-200"}>{notificationLabel(lead.notificationStatus)}</span></div>
+                <div className="max-w-md text-xs text-white/40">
+                  <div>Envio WhatsApp: <span className={lead.notificationStatus === "sent" ? "text-cyan-200" : lead.notificationStatus === "failed" ? "text-rose-200" : "text-amber-200"}>{notificationLabel(lead.notificationStatus)}</span></div>
+                  <div className="mt-1">Entrega: <span className={lead.notificationDeliveryStatus === "read" || lead.notificationDeliveryStatus === "delivered" ? "text-emerald-200" : lead.notificationDeliveryStatus === "failed" ? "text-rose-200" : "text-amber-200"}>{deliveryLabel(lead.notificationDeliveryStatus)}</span></div>
+                  {lead.notificationDeliveryAt && <div className="mt-1 text-[10px] text-white/30">Última atualização: {formatDate(lead.notificationDeliveryAt)}</div>}
+                  {lead.notificationDeliveryError && <div className="mt-2 break-words rounded-lg border border-rose-300/10 bg-rose-300/[.04] p-2 text-[10px] leading-4 text-rose-100/70">{lead.notificationDeliveryError}</div>}
                   {lead.notificationError && <div className="mt-2 break-words rounded-lg border border-white/[.07] bg-black/20 p-2 text-[10px] leading-4 text-white/35">{lead.notificationError}</div>}
+                  {lead.notificationMessageId && <div className="mt-2 break-all text-[9px] text-white/20">ID Meta: {lead.notificationMessageId}</div>}
                 </div>
               </div>
             </article>

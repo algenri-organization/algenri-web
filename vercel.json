@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]; then BASE=HEAD^; else git fetch origin main --depth=1 >/dev/null 2>&1 || true; BASE=origin/main; fi; test -z \"$(git diff --name-only $BASE...HEAD 2>/dev/null | grep -vE '^(docs/|.*\\.md$)')\""
+  "ignoreCommand": "test -z \"$(git diff-tree -m --no-commit-id --name-only -r HEAD | sort -u | grep -vE '^(docs/|.*\\.md$)')\""
 }

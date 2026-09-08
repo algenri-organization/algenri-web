@@ -1,4 +1,5 @@
 import FinanceAdminStable from "@/components/finance/finance-admin-stable";
+import FinanceSettlementPanel from "@/components/finance/finance-settlement-panel";
 
 export const metadata = {
   title: "Financeiro | ALGENRI",
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function FinancePage() {
-  return <FinanceAdminStable />;
+  return <><FinanceAdminStable /><FinanceSettlementPanel /></>;
 }

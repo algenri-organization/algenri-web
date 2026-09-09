@@ -1,4 +1,5 @@
-import { BadgeCheck, Banknote, Cloud, Database, GitBranch, Mail, MessageCircle, PlugZap, ShieldCheck, Webhook } from "lucide-react";
+import { BadgeCheck, Banknote, Cloud, Database, GitBranch, Mail, MessageCircle, PlugZap, ShieldCheck, Webhook, Zap } from "lucide-react";
+import { listExternalAutomationEvents } from "@/lib/automations/events";
 import { getBankingStatus } from "@/lib/finance/banking";
 import { listWhatsAppWebhookEvents } from "@/lib/whatsapp/webhook-log";
 
@@ -31,6 +32,8 @@ const eventClass: Record<string, string> = {
   delivered: "border-emerald-300/15 bg-emerald-300/[.05] text-emerald-100",
   read: "border-cyan-300/15 bg-cyan-300/[.05] text-cyan-100",
   sent: "border-blue-300/15 bg-blue-300/[.05] text-blue-100",
+  queued: "border-violet-300/15 bg-violet-300/[.05] text-violet-100",
+  skipped: "border-amber-300/15 bg-amber-300/[.05] text-amber-100",
   failed: "border-red-300/15 bg-red-300/[.05] text-red-100",
 };
 
@@ -46,7 +49,10 @@ export default async function IntegracoesPage() {
   const banking = getBankingStatus();
   const c6 = banking.find((provider) => provider.provider === "c6");
   const cora = banking.find((provider) => provider.provider === "cora");
-  const webhookEvents = await listWhatsAppWebhookEvents(25).catch(() => []);
+  const [webhookEvents, automationEvents] = await Promise.all([
+    listWhatsAppWebhookEvents(25).catch(() => []),
+    listExternalAutomationEvents(30).catch(() => []),
+  ]);
 
   const integrations: IntegrationCard[] = [
     { title: "Vercel", category: "Aplicação e deploy", status: "operational", statusLabel: "Operacional", detail: "Hospedagem e pipeline de deploy da aplicação ALGENRI.", icon: Cloud, items: ["Deploy integrado ao GitHub", "Ambientes de preview e produção", "Domínio da aplicação configurado"] },
@@ -54,7 +60,7 @@ export default async function IntegracoesPage() {
     { title: "GitHub", category: "Código e governança", status: "operational", statusLabel: "Operacional", detail: "Repositório, branches, pull requests e validação contínua do projeto.", icon: GitBranch, items: ["Repositório principal conectado", "Fluxo por pull request", "CI antes de merge"] },
     { title: "Google Workspace", category: "Comunicação", status: "operational", statusLabel: "Operacional", detail: "E-mail corporativo da ALGENRI validado para envio e recebimento.", icon: Mail, items: ["contato@algenri.com.br", "SPF, DKIM e DMARC validados", "Canal comercial ativo"] },
     { title: "WhatsApp / Meta", category: "Comunicação", status: "operational", statusLabel: "Operacional", detail: "Integração validada em produção: número registrado, webhooks assinados, pagamento configurado e mensagem real recebida com sucesso.", icon: MessageCircle, items: ["Número ALGENRI registrado e inscrito para webhooks", "Template aprovado e mensagem real recebida", "Monitoramento técnico de eventos mantido nesta central"] },
-    { title: "C6 Bank", category: "Financeiro", status: "pending", statusLabel: "Aguardando banco", detail: c6?.detail ?? "Integração solicitada; API, homologação e credenciais ainda precisam ser confirmadas pelo banco.", icon: Banknote, items: ["Controle financeiro permanece manual", "Nenhuma credencial C6 é presumida", "Integração real só após retorno oficial"] },
+    { title: "C6 Bank", category: "Financeiro", status: "pending", statusLabel: "Aguardando credenciais", detail: c6?.detail ?? "APIs disponíveis; credenciamento, homologação e credenciais de produção ainda dependem do retorno do C6.", icon: Banknote, items: ["Pix, boleto e conciliação são prioridades da futura integração", "Controle financeiro permanece manual enquanto não houver credenciais", "Nenhuma credencial C6 é presumida"] },
     { title: "Cora", category: "Financeiro", status: "deferred", statusLabel: "Adiada", detail: cora?.detail ?? "Alternativa futura, sem ativação nesta fase.", icon: Banknote, items: ["Sem custo adicional nesta fase", "Não participa do fluxo atual", "Pode ser retomada futuramente"] },
   ];
 
@@ -88,6 +94,20 @@ export default async function IntegracoesPage() {
               <div className="mt-5 space-y-2">{integration.items.map((item) => <div key={item} className="rounded-xl border border-white/[.07] bg-black/15 px-3.5 py-3 text-xs leading-5 text-white/42">{item}</div>)}</div>
             </article>;
           })}
+        </section>
+
+        <section className="mt-6 rounded-[28px] border border-violet-300/15 bg-violet-300/[.025] p-5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-violet-200"><Zap className="h-4 w-4" /> Automações externas</div>
+              <h2 className="mt-2 text-xl font-semibold">Histórico de disparos externos</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">Base central para acompanhar automações que saem da plataforma. O fluxo real de novo lead pelo WhatsApp passa a registrar aqui cada tentativa sem armazenar conteúdo do lead ou credenciais. Novos canais poderão usar o mesmo histórico quando forem habilitados.</p>
+            </div>
+            <div className="text-xs text-white/35">Últimos {automationEvents.length} eventos</div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {automationEvents.length === 0 ? <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5 text-sm text-white/55">Nenhum disparo externo registrado após a ativação deste monitor. Os próximos alertas reais de lead pelo WhatsApp serão registrados automaticamente.</div> : automationEvents.map((event) => <article key={event.id} className="rounded-2xl border border-white/[.08] bg-black/15 p-4"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full border border-white/10 bg-white/[.04] px-2.5 py-1 text-[10px] uppercase tracking-[.12em] text-white/55">{event.channel}</span><span className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[.12em] ${eventClass[event.status] ?? "border-white/10 bg-white/[.04] text-white/55"}`}>{event.status}</span><span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-white/45">{event.kind}</span><span className="ml-auto text-[11px] text-white/30">{formatDate(event.occurredAt)}</span></div><div className="mt-3 grid gap-2 text-xs text-white/45 md:grid-cols-2"><div><span className="text-white/25">Provedor:</span> {event.provider}</div><div><span className="text-white/25">Origem:</span> {event.entityType} · {event.entityId}</div>{event.providerMessageId&&<div className="md:col-span-2 break-all"><span className="text-white/25">Message ID:</span> {event.providerMessageId}</div>}{event.error&&<div className="md:col-span-2 rounded-xl border border-red-300/15 bg-red-300/[.04] p-3 text-red-100/80"><span className="font-medium">Erro técnico:</span> {event.error}</div>}</div></article>)}
+          </div>
         </section>
 
         <section className="mt-6 rounded-[28px] border border-cyan-300/15 bg-cyan-300/[.025] p-5 sm:p-6">

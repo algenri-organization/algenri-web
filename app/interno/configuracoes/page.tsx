@@ -74,15 +74,15 @@ const sections = [
   {
     icon: FileText,
     title: "Modelos e documentos",
-    text: "Atalhos para materiais reutilizáveis que padronizam o ciclo comercial e operacional.",
-    status: "Parcialmente disponível",
-    tone: "cyan",
+    text: "Biblioteca reutilizável para padronizar textos-base do ciclo comercial e operacional.",
+    status: "Disponível",
+    tone: "emerald",
     items: [
-      { label: "Modelos de briefing", detail: "Importação, revisão, versionamento e publicação disponíveis." },
-      { label: "Modelos de proposta", detail: "Refinamentos e padronização adicional podem ser incorporados depois." },
-      { label: "Modelos de contrato", detail: "Modelo operacional ativo; melhoria visual e jurídica está no backlog." },
+      { label: "Biblioteca documental", detail: "Criação, edição, publicação, arquivamento e versionamento de modelos." },
+      { label: "Modelos de briefing", detail: "Importação, revisão, versionamento e publicação continuam disponíveis no módulo específico." },
+      { label: "Propostas e contratos", detail: "Biblioteca preparada para seleção de modelos publicados nas próximas integrações." },
     ],
-    action: { href: "/interno/briefings/modelos", label: "Abrir modelos de briefing" },
+    action: { href: "/interno/configuracoes/modelos", label: "Abrir biblioteca de documentos" },
   },
   {
     icon: Users,
@@ -154,9 +154,9 @@ export default function ConfiguracoesPage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold"><Mail className="h-4 w-4 text-cyan-300" /> Próximas configurações</div>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/42">Com empresa, usuários, integrações e notificações estruturados, a próxima evolução pode concentrar modelos de documentos e automações externas adicionais, além da integração financeira quando o C6 responder.</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/42">Com empresa, usuários, integrações, notificações e biblioteca documental estruturados, as próximas evoluções podem conectar modelos publicados aos fluxos de propostas e contratos e ampliar automações externas, além da integração financeira quando o C6 responder.</p>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-white/35"><span className="rounded-full border border-white/10 px-3 py-2">Documentos</span><span className="rounded-full border border-white/10 px-3 py-2">C6 API</span><span className="rounded-full border border-white/10 px-3 py-2">Automações</span></div>
+            <div className="flex flex-wrap gap-2 text-xs text-white/35"><span className="rounded-full border border-white/10 px-3 py-2">Propostas</span><span className="rounded-full border border-white/10 px-3 py-2">Contratos</span><span className="rounded-full border border-white/10 px-3 py-2">C6 API</span><span className="rounded-full border border-white/10 px-3 py-2">Automações</span></div>
           </div>
         </section>
       </div>

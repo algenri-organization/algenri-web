@@ -22,6 +22,8 @@ export type CommercialLead = {
   notificationDeliveryStatus?: WhatsAppDeliveryStatus | null;
   notificationDeliveryAt?: string | null;
   notificationDeliveryError?: string | null;
+  notificationRetryCount?: number;
+  notificationLastRetryAt?: string | null;
 };
 
 export async function createCommercialLead(input: {
@@ -54,10 +56,19 @@ export async function createCommercialLead(input: {
     notificationDeliveryStatus: null,
     notificationDeliveryAt: null,
     notificationDeliveryError: null,
+    notificationRetryCount: 0,
+    notificationLastRetryAt: null,
   };
 
   await ref.set(record);
   return record;
+}
+
+export async function getCommercialLead(id: string) {
+  const db = await getAdminDb();
+  const snap = await db.collection(LEADS_COLLECTION).doc(id).get();
+  if (!snap.exists) return null;
+  return snap.data() as CommercialLead;
 }
 
 export async function updateLeadNotification(
@@ -75,6 +86,20 @@ export async function updateLeadNotification(
     patch.notificationDeliveryError = null;
   }
   await db.collection(LEADS_COLLECTION).doc(id).set(patch, { merge: true });
+}
+
+export async function markLeadNotificationRetry(id: string) {
+  const db = await getAdminDb();
+  const ref = db.collection(LEADS_COLLECTION).doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const current = snap.data() as CommercialLead;
+  const patch = {
+    notificationRetryCount: Number(current.notificationRetryCount ?? 0) + 1,
+    notificationLastRetryAt: new Date().toISOString(),
+  };
+  await ref.set(patch, { merge: true });
+  return { ...current, ...patch } as CommercialLead;
 }
 
 export async function updateLeadDeliveryByMessageId(input: {

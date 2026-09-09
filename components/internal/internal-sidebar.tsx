@@ -34,7 +34,7 @@ const groups: Group[] = [
     { label: "Visão geral", href: "/interno/configuracoes", icon: Settings2 },
     { label: "Empresa e identidade", href: "/interno/configuracoes/empresa", icon: Building2 },
     { label: "Integrações", href: "/interno/configuracoes/integracoes", icon: PlugZap },
-    { label: "Notificações", href: "/interno/configuracoes/notificacoes", icon: Bell },
+    { label: "Notificações", href: "/interno/configuracoes/notificacoes", icon: Bell, always:true },
     { label: "Prontidão", href: "/interno/prontidao", icon: BadgeCheck },
     { label: "Modelos de briefing", href: "/interno/briefings/modelos", icon: FileText },
     { label: "Usuários", href: "/interno/configuracoes/usuarios", icon: Users, always:true },

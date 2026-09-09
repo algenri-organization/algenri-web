@@ -31,7 +31,13 @@ export async function buildContractDocument(contractId:string){
     representative:client.primaryContact?.name||"[PREENCHER REPRESENTANTE]",
   };
 
-  const clauses=[
+  const modelContent=contract.documentModelContent?.trim()||"";
+  const modelClause=modelContent?{
+    title:`Texto-base contratual${contract.sourceDocumentModelName?` — ${contract.sourceDocumentModelName}${contract.sourceDocumentModelVersion?` v${contract.sourceDocumentModelVersion}`:""}`:""}`,
+    content:modelContent,
+  }:null;
+
+  const standardClauses=[
     {title:"1. Objeto",content:`Prestação dos serviços descritos na Proposta Comercial ALGENRI nº ${proposal.proposalNumber}, versão ${proposal.version}, aprovada pela CONTRATANTE, vinculada ao projeto “${project.name}”. A proposta integra este contrato para definição do escopo técnico e comercial.`},
     {title:"2. Escopo e entregáveis",content:[scope||"O escopo será aquele definido na proposta comercial aprovada.",deliverables?`\nEntregáveis:\n${deliverables}`:"",exclusions?`\nItens não incluídos:\n${exclusions}`:""].join("")},
     {title:"3. Prazo",content:`Início previsto: ${contract.startDate||"[A DEFINIR]"}. Término previsto: ${contract.endDate||"[A DEFINIR]"}.${schedule?`\n\nCronograma de referência da proposta:\n${schedule}`:"\n\nO cronograma definitivo depende das validações, conteúdos, acessos e aprovações necessários ao projeto."}`},
@@ -47,6 +53,7 @@ export async function buildContractDocument(contractId:string){
     {title:"13. Disposições gerais",content:`A Proposta Comercial ${proposal.proposalNumber}, versão ${proposal.version}, integra este contrato. Em caso de divergência sobre escopo, valores, entregáveis ou condições específicas, prevalecem os registros expressamente aprovados na proposta e em eventuais aditivos.`},
     {title:"14. Foro",content:`Fica eleito o foro de ${process.env.ALGENRI_CONTRACT_FORUM||"[PREENCHER CIDADE/UF]"}, salvo disposição legal obrigatória em contrário.`},
   ];
+  const clauses=modelClause?[modelClause,...standardClauses]:standardClauses;
 
-  return {contract,proposal,client,project,contractor,contracting,clauses,operationalNotice:"Modelo contratual operacional de lançamento. Antes do uso definitivo em escala, recomenda-se revisão jurídica e preenchimento dos dados societários ainda pendentes."};
+  return {contract,proposal,client,project,contractor,contracting,clauses,operationalNotice:"Modelo contratual operacional de lançamento. Textos-base selecionados permanecem editáveis enquanto o contrato estiver em elaboração. Antes do uso definitivo em escala, recomenda-se revisão jurídica e preenchimento dos dados societários ainda pendentes."};
 }

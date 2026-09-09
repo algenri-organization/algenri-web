@@ -10,6 +10,7 @@ type ModuleKey="commercial"|"operation"|"finance"|"settings";
 type Access={role:"admin"|"member";permissions:ModuleKey[];active:boolean};
 
 function pageModule(pathname:string):ModuleKey|null{
+  if(pathname.startsWith("/interno/configuracoes/notificacoes"))return null;
   if(["/interno/leads","/interno/clientes","/interno/projetos","/interno/propostas","/interno/contratos"].some(prefix=>pathname.startsWith(prefix)))return "commercial";
   if(pathname.startsWith("/interno/briefings/instancias")||pathname.startsWith("/interno/briefings/recebidos")||pathname.startsWith("/interno/dossies"))return "operation";
   if(pathname.startsWith("/interno/financeiro"))return "finance";

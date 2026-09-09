@@ -1,3 +1,4 @@
+import { recordExternalAutomationEvent } from "@/lib/automations/events";
 import { createCommercialLead, updateLeadNotification } from "@/lib/leads/store";
 import { buildProspectWhatsAppUrl, sendLeadWhatsAppNotification } from "@/lib/whatsapp/meta";
 
@@ -41,6 +42,16 @@ export async function POST(request: Request) {
       notification.error ?? null,
       notification.messageId ?? null,
     );
+    await recordExternalAutomationEvent({
+      kind: "new_lead_notification",
+      channel: "whatsapp",
+      status: notification.status,
+      provider: "meta",
+      entityType: "lead",
+      entityId: lead.id,
+      providerMessageId: notification.messageId ?? null,
+      error: notification.error ?? null,
+    }).catch((error) => console.error("External automation event log failed", error));
 
     return Response.json({
       ok: true,

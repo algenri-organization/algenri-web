@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
-import { dryRunRunwayVideoRouter } from "@/lib/studio/runway";
+import { dryRunRunwayVideoRouter, extractRunwayRoutingCost } from "@/lib/studio/runway";
 
 const requestSchema = z.object({
   promptText: z.string().trim().min(3).max(3500),
@@ -18,11 +18,13 @@ export async function POST(request: Request) {
     }
 
     const result = await dryRunRunwayVideoRouter(parsed.data);
+    const routing = result.routing ?? null;
     return Response.json({
       ok: true,
       provider: "runway",
       dryRun: true,
-      routing: result.routing ?? null,
+      routing,
+      costCredits: extractRunwayRoutingCost(routing),
     });
   } catch (error) {
     const auth = internalAuthResponse(error);

@@ -21,17 +21,19 @@ export type RunwayRouterVideoInput = {
 };
 
 export type RunwayTask = {
-  id: string;
+  id?: string;
+  taskId?: string;
   status?: string;
   output?: string[];
   failure?: string;
+  routing?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
 export type RunwayRouterDryRun = {
   routing?: {
     model?: string;
-    estimatedCost?: number;
+    estimatedCost?: number | string | { credits?: number | string };
     resolvedSettings?: unknown;
     [key: string]: unknown;
   };
@@ -75,6 +77,39 @@ async function parseRunwayResponse(response: Response) {
   return payload;
 }
 
+function routerPayload(input: RunwayRouterVideoInput, dryRun: boolean) {
+  const configId = process.env.RUNWAY_MODEL_ROUTER_ID;
+  if (!configId) throw new Error("runway_router_not_configured");
+  const referenceImages = input.referenceImageUrl ? [{ uri: input.referenceImageUrl, role: "first" }] : undefined;
+  return {
+    configId,
+    ...(dryRun ? { dryRun: true } : {}),
+    input: {
+      promptText: input.promptText,
+      aspectRatio: input.aspectRatio,
+      duration: input.duration,
+      ...(referenceImages ? { referenceImages } : {}),
+    },
+  };
+}
+
+export function extractRunwayRoutingCost(routing?: Record<string, unknown> | null) {
+  if (!routing) return null;
+  const candidates = [routing.estimatedCost, routing.realizedCost, routing.cost, routing.credits];
+  for (const candidate of candidates) {
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+    if (typeof candidate === "string" && candidate.trim() && Number.isFinite(Number(candidate))) return Number(candidate);
+    if (candidate && typeof candidate === "object") {
+      const nested = candidate as Record<string, unknown>;
+      for (const value of [nested.credits, nested.amount, nested.value]) {
+        if (typeof value === "number" && Number.isFinite(value)) return value;
+        if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+      }
+    }
+  }
+  return null;
+}
+
 export async function createRunwayImageToVideo(input: RunwayImageToVideoRequest) {
   const response = await fetch(`${RUNWAY_API_BASE}/image_to_video`, {
     method: "POST",
@@ -86,30 +121,23 @@ export async function createRunwayImageToVideo(input: RunwayImageToVideoRequest)
 }
 
 export async function dryRunRunwayVideoRouter(input: RunwayRouterVideoInput) {
-  const configId = process.env.RUNWAY_MODEL_ROUTER_ID;
-  if (!configId) throw new Error("runway_router_not_configured");
-
-  const referenceImages = input.referenceImageUrl
-    ? [{ uri: input.referenceImageUrl, role: "first" }]
-    : undefined;
-
   const response = await fetch(`${RUNWAY_API_BASE}/generate/video`, {
     method: "POST",
     headers: runwayHeaders(),
-    body: JSON.stringify({
-      configId,
-      dryRun: true,
-      input: {
-        promptText: input.promptText,
-        aspectRatio: input.aspectRatio,
-        duration: input.duration,
-        ...(referenceImages ? { referenceImages } : {}),
-      },
-    }),
+    body: JSON.stringify(routerPayload(input, true)),
     cache: "no-store",
   });
-
   return parseRunwayResponse(response) as Promise<RunwayRouterDryRun>;
+}
+
+export async function generateRunwayVideoRouter(input: RunwayRouterVideoInput) {
+  const response = await fetch(`${RUNWAY_API_BASE}/generate/video`, {
+    method: "POST",
+    headers: runwayHeaders(),
+    body: JSON.stringify(routerPayload(input, false)),
+    cache: "no-store",
+  });
+  return parseRunwayResponse(response) as Promise<RunwayTask>;
 }
 
 export async function getRunwayTask(taskId: string) {

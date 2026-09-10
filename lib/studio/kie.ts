@@ -1,6 +1,7 @@
 import "server-only";
 
 const KIE_API_BASE = "https://api.kie.ai";
+export const KIE_STUDIO_VIDEO_MODEL = "kling-2.6/text-to-video";
 
 function getApiKey() {
   const apiKey = process.env.KIE_API_KEY?.trim();
@@ -37,6 +38,7 @@ export function getKieIntegrationStatus() {
     supportsBalanceCheck: true,
     supportsUnifiedJobs: true,
     supportsTaskStatus: true,
+    executableVideoModel: KIE_STUDIO_VIDEO_MODEL,
   };
 }
 
@@ -78,6 +80,36 @@ export async function createKieVideoTask(input: KieVideoTaskInput) {
   const taskId = payload?.data?.taskId ?? null;
   if (!taskId) throw new Error("kie_missing_task_id");
   return { taskId: String(taskId), payload };
+}
+
+export function normalizeKieKling26Duration(seconds: number): 5 | 10 {
+  return Math.max(1, Math.round(seconds)) <= 5 ? 5 : 10;
+}
+
+export function canKieKling26RenderScene(seconds: number) {
+  const normalized = Math.max(1, Math.round(seconds));
+  return normalized <= 10;
+}
+
+export async function createKieKling26TextToVideo(input: {
+  prompt: string;
+  aspectRatio: "16:9" | "9:16" | "1:1";
+  durationSeconds: number;
+  sound?: boolean;
+  callbackUrl?: string;
+}) {
+  if (!canKieKling26RenderScene(input.durationSeconds)) throw new Error("kie_scene_duration_unsupported");
+  const duration = normalizeKieKling26Duration(input.durationSeconds);
+  return createKieVideoTask({
+    model: KIE_STUDIO_VIDEO_MODEL,
+    prompt: input.prompt,
+    aspectRatio: input.aspectRatio,
+    callbackUrl: input.callbackUrl,
+    extraInput: {
+      duration: String(duration),
+      sound: input.sound ?? false,
+    },
+  });
 }
 
 export type KieTaskDetails = {

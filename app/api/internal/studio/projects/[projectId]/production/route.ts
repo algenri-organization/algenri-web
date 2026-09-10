@@ -102,8 +102,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
       if (route.selectedProviderId === "kie-ai") {
         const balance = await getKieCreditBalance();
-        if (balance === null || balance <= 0) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: knownCost ? route.estimatedCredits : null }, { status: 409 });
-        if (knownCost && balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
+        if (balance === null || balance <= 0) return Response.json({ ok: false, error: "kie_insufficient_credits", message: "Saldo Kie.ai insuficiente para iniciar uma nova geração.", balance, estimatedCredits: knownCost ? route.estimatedCredits : null }, { status: 409 });
+        if (knownCost && balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", message: `Saldo Kie.ai insuficiente. Disponível: ${balance} créditos; estimado: ${route.estimatedCredits}.`, balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
         const task = await createKieKling26TextToVideo({ prompt: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
         const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: knownCost ? route.estimatedCredits : null, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
         await upsertStudioSceneGenerationJob(projectId, job);
@@ -145,8 +145,18 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   } catch (error) {
     const auth = internalAuthResponse(error);
     if (auth) return auth;
-    const providerError = error as Error & { status?: number; payload?: unknown };
+    const providerError = error as Error & { status?: number; payload?: any };
     console.error("studio_scene_production_failed", error);
-    return Response.json({ ok: false, error: providerError.message || "studio_scene_production_failed", providerStatus: providerError.status ?? null, providerPayload: providerError.payload ?? null }, { status: 502 });
+    const providerMessage = typeof providerError.payload?.msg === "string" ? providerError.payload.msg : null;
+    const friendlyMessage = providerError.message === "kie_insufficient_credits"
+      ? "A Kie.ai recusou a geração por saldo insuficiente. Recarregue os créditos ou escolha outro motor antes de tentar novamente."
+      : providerError.message === "kie_unauthorized"
+        ? "A Kie.ai recusou a autenticação. Verifique a API key configurada na Vercel."
+        : providerError.message === "kie_validation_failed"
+          ? `A Kie.ai recusou os parâmetros desta geração${providerMessage ? `: ${providerMessage}` : "."}`
+          : providerError.message === "kie_rate_limited"
+            ? "A Kie.ai limitou temporariamente novas requisições. Aguarde um pouco antes de tentar novamente."
+            : providerMessage || "A Kie.ai não aceitou esta geração. Nenhum novo job foi criado.";
+    return Response.json({ ok: false, error: friendlyMessage, code: providerError.message || "studio_scene_production_failed", providerStatus: providerError.status ?? null }, { status: providerError.status === 402 ? 402 : 502 });
   }
 }

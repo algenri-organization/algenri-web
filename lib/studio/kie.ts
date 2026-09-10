@@ -22,8 +22,19 @@ async function kieFetch(path: string, init?: RequestInit) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || (typeof payload?.code === "number" && payload.code !== 200)) {
-    const error = new Error("kie_request_failed") as Error & { status?: number; payload?: unknown };
-    error.status = response.status;
+    const providerCode = Number(payload?.code);
+    const status = response.status || (Number.isFinite(providerCode) ? providerCode : 500);
+    const code = status === 402 || providerCode === 402
+      ? "kie_insufficient_credits"
+      : status === 401 || providerCode === 401
+        ? "kie_unauthorized"
+        : status === 422 || providerCode === 422
+          ? "kie_validation_failed"
+          : status === 429 || providerCode === 429
+            ? "kie_rate_limited"
+            : "kie_request_failed";
+    const error = new Error(code) as Error & { status?: number; payload?: unknown };
+    error.status = status;
     error.payload = payload;
     throw error;
   }

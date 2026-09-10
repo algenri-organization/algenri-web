@@ -1,4 +1,4 @@
-import { BookOpenCheck, Clapperboard, Coins, Image as ImageIcon, Layers3, Mic2, PlugZap, Sparkles, UserRound, WandSparkles } from "lucide-react";
+import { BookOpenCheck, Clapperboard, Coins, FolderKanban, Image as ImageIcon, Layers3, Mic2, PlugZap, Sparkles, UserRound, WandSparkles } from "lucide-react";
 import { productionStages, studioProviders } from "@/lib/studio/providers";
 
 const capabilities = [
@@ -10,7 +10,7 @@ const capabilities = [
 ];
 
 const foundation = [
-  { title: "Projetos", detail: "Cada produção terá briefing, roteiro, storyboard, assets, versões e aprovação.", icon: Layers3 },
+  { title: "Projetos", detail: "Cada produção terá briefing, roteiro, storyboard, assets, versões e aprovação.", href: "/interno/lab/studio/projetos", icon: Layers3 },
   { title: "Provedores & APIs", detail: "Runway, HeyGen, Kie.ai e novos motores entram por adaptadores independentes.", icon: PlugZap },
   { title: "Custos & créditos", detail: "Estimativa antes da geração, teto por projeto e histórico por cena e versão.", icon: Coins },
   { title: "Playbook", detail: "Cursos, documentação, testes e aprendizados convertidos em regras e templates reutilizáveis.", icon: BookOpenCheck },
@@ -19,10 +19,13 @@ const foundation = [
 export default function AlgenriStudioPage() {
   return <main className="min-h-screen bg-[#040c17] px-6 pb-20 pt-28 text-white">
     <div className="mx-auto max-w-6xl">
-      <div className="border-b border-white/10 pb-7">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em] text-cyan-200"><Sparkles className="h-4 w-4"/> ALGENRI Lab · Studio</div>
-        <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">ALGENRI Studio</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Fábrica multimodal da ALGENRI para planejar, gerar, revisar e versionar criações com IA. O Studio cria; Marketing planeja campanhas e distribui os ativos. A arquitetura é agnóstica de fornecedor para escolher o melhor motor por tarefa, qualidade e custo.</p>
+      <div className="flex flex-col gap-5 border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em] text-cyan-200"><Sparkles className="h-4 w-4"/> ALGENRI Lab · Studio</div>
+          <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">ALGENRI Studio</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Fábrica multimodal da ALGENRI para planejar, gerar, revisar e versionar criações com IA. O Studio cria; Marketing planeja campanhas e distribui os ativos. A arquitetura é agnóstica de fornecedor para escolher o melhor motor por tarefa, qualidade e custo.</p>
+        </div>
+        <a href="/interno/lab/studio/projetos" className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/[.12]"><FolderKanban className="h-4 w-4"/> Abrir projetos</a>
       </div>
 
       <section className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -31,7 +34,10 @@ export default function AlgenriStudioPage() {
 
       <section className="mt-7">
         <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-violet-200">Fundação do produto</p><h2 className="mt-2 text-xl font-semibold">Arquitetura antes de consumir créditos</h2></div><span className="rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-3 py-1.5 text-[10px] uppercase tracking-[.12em] text-emerald-200">Fase 1 em construção</span></div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{foundation.map(({title,detail,icon:Icon}) => <article key={title} className="rounded-[22px] border border-white/10 bg-white/[.02] p-5"><Icon className="h-5 w-5 text-violet-200"/><h3 className="mt-4 font-semibold">{title}</h3><p className="mt-2 text-xs leading-5 text-white/40">{detail}</p></article>)}</div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{foundation.map(({title,detail,href,icon:Icon}) => {
+          const content = <><Icon className="h-5 w-5 text-violet-200"/><h3 className="mt-4 font-semibold">{title}</h3><p className="mt-2 text-xs leading-5 text-white/40">{detail}</p></>;
+          return href ? <a key={title} href={href} className="rounded-[22px] border border-white/10 bg-white/[.02] p-5 transition hover:border-violet-300/20 hover:bg-violet-300/[.03]">{content}</a> : <article key={title} className="rounded-[22px] border border-white/10 bg-white/[.02] p-5">{content}</article>;
+        })}</div>
       </section>
 
       <section className="mt-7 rounded-[28px] border border-white/10 bg-white/[.018] p-6">

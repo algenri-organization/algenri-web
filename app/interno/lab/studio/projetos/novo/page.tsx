@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Bot, CheckCircle2, ChevronRight, Coins, Film, Gauge, ImagePlus, Mic2, Palette, PlayCircle, ShieldCheck, SlidersHorizontal, Sparkles, Target, Type, Users, WandSparkles } from "lucide-react";
+import { ArrowLeft, Bot, CheckCircle2, ChevronRight, Coins, Film, Gauge, ImagePlus, Loader2, Mic2, Palette, PlayCircle, ShieldCheck, SlidersHorizontal, Sparkles, Target, TriangleAlert, Type, Users, WandSparkles } from "lucide-react";
+import { firebaseAuth } from "@/lib/firebase/client";
 import { studioDestinations, studioVisualStyles, type StudioAspectRatio, type StudioCreationMode, type StudioPriority, type StudioScriptMode } from "@/lib/studio/projects";
 import { manualStudioEngines, type StudioEngineMode } from "@/lib/studio/providers";
 
@@ -32,6 +33,8 @@ export default function NewStudioProjectPage() {
   const [engineMode, setEngineMode] = useState<StudioEngineMode>("automatic");
   const [manualEngine, setManualEngine] = useState(manualStudioEngines[0]?.id ?? "runway");
   const [budget, setBudget] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const quickReady = idea.trim().length >= 8;
   const advancedReady = objective.trim().length >= 5 && audience.trim().length >= 2;
@@ -60,6 +63,54 @@ export default function NewStudioProjectPage() {
     manualEngine,
     budget,
   }), [name, idea, objective, audience, destination, duration, scriptMode, style, ratio, brand, avatar, voice, pronunciation, requiredScenes, screenText, prohibited, references, priority, engineMode, manualEngine, budget]);
+
+  async function saveAndPrepareStoryboard() {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const user = firebaseAuth.currentUser;
+      if (!user) throw new Error("Sua sessão expirou. Entre novamente na Área Interna.");
+      const token = await user.getIdToken();
+      const response = await fetch("/api/internal/studio/projects", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: projectSummary.name,
+          briefing: {
+            creationMode,
+            objective: projectSummary.objective,
+            audience: projectSummary.audience,
+            destination,
+            durationSeconds: duration,
+            centralIdea: idea || objective,
+            scriptMode,
+            ...(script.trim() ? { script: script.trim() } : {}),
+            visualStyle: style,
+            aspectRatio: ratio,
+            useBrandIdentity: brand,
+            useAvatar: avatar,
+            useVoice: voice,
+            ...(pronunciation.trim() ? { pronunciationNotes: pronunciation.trim() } : {}),
+            ...(requiredScenes.trim() ? { requiredScenes: requiredScenes.trim() } : {}),
+            ...(screenText.trim() ? { requiredOnScreenText: screenText.trim() } : {}),
+            ...(prohibited.trim() ? { prohibitedElements: prohibited.trim() } : {}),
+            ...(references.trim() ? { referenceNotes: references.trim() } : {}),
+            priority,
+            engineMode,
+            ...(engineMode === "manual" ? { manualEngineId: manualEngine } : {}),
+            ...(budget.trim() ? { budgetLimit: Number(budget) } : {}),
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.projectId) throw new Error(payload.error || "Não foi possível salvar o projeto.");
+      window.location.href = `/interno/lab/studio/projetos/${payload.projectId}`;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar o projeto.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return <main className="min-h-screen bg-[#040c17] px-5 pb-24 pt-24 text-white sm:px-6 lg:px-8">
     <div className="mx-auto max-w-6xl">
@@ -114,9 +165,10 @@ export default function NewStudioProjectPage() {
           ["Ideia",projectSummary.idea||"A completar"],["Destino",projectSummary.destination],["Duração",`${projectSummary.duration}s`],["Estilo",projectSummary.style],["Formato",projectSummary.ratio],["Motor",projectSummary.engineMode==="automatic"?"Automático":manualStudioEngines.find(e=>e.id===projectSummary.manualEngine)?.name||projectSummary.manualEngine],["Prioridade",projectSummary.priority],["Avatar",projectSummary.avatar?"Sim":"Não"],["Voz",projectSummary.voice?"Sim":"Não"],
         ].map(([label,value])=><div key={label} className="rounded-2xl border border-white/10 bg-black/15 p-4"><p className="text-[10px] uppercase tracking-[.12em] text-white/25">{label}</p><p className="mt-2 text-sm font-semibold text-white/70">{value}</p></div>)}</div></div>
 
-        <div className="rounded-[26px] border border-emerald-300/15 bg-emerald-300/[.025] p-5"><div className="flex gap-3"><PlayCircle className="mt-0.5 h-5 w-5 text-emerald-200"/><div><h3 className="font-semibold">Próxima automação do Studio</h3><p className="mt-2 text-sm leading-6 text-white/45">Ao salvar, este briefing seguirá para: IA de conceito e roteiro → divisão em cenas → storyboard → prompts técnicos por cena → seleção de motores → estimativa de custo → sua aprovação → geração. Esta tela não dispara nenhuma API paga.</p></div></div></div>
+        <div className="rounded-[26px] border border-emerald-300/15 bg-emerald-300/[.025] p-5"><div className="flex gap-3"><PlayCircle className="mt-0.5 h-5 w-5 text-emerald-200"/><div><h3 className="font-semibold">Preparação automática</h3><p className="mt-2 text-sm leading-6 text-white/45">Ao salvar, o briefing será persistido e o Studio criará a primeira estrutura de storyboard por cenas, com duração, objetivo, direção visual, locução-base e prompt técnico. Nenhuma API paga é acionada neste passo.</p></div></div></div>
 
-        <button disabled className="w-full rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06] px-5 py-4 text-sm font-semibold text-cyan-100/50">Salvar e preparar roteiro/storyboard — próxima etapa técnica</button>
+        {saveError&&<div className="flex gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[.04] p-4"><TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-100"/><div><p className="text-sm font-semibold text-amber-100">Não foi possível salvar</p><p className="mt-1 text-xs text-white/45">{saveError}</p></div></div>}
+        <button type="button" onClick={saveAndPrepareStoryboard} disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.08] px-5 py-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/[.12] disabled:cursor-wait disabled:opacity-50">{saving?<Loader2 className="h-4 w-4 animate-spin"/>:<Sparkles className="h-4 w-4"/>}{saving?"Salvando e preparando storyboard...":"Salvar e preparar roteiro/storyboard"}</button>
       </section>}
 
       <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">

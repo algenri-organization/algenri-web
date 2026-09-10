@@ -11,7 +11,7 @@ const capabilities = [
 
 const foundation = [
   { title: "Projetos", detail: "Cada produção terá briefing, roteiro, storyboard, assets, versões e aprovação.", href: "/interno/lab/studio/projetos", icon: Layers3 },
-  { title: "Provedores & APIs", detail: "Runway, HeyGen, Kie.ai e novos motores entram por adaptadores independentes.", icon: PlugZap },
+  { title: "Provedores & APIs", detail: "Runway, Higgsfield, HeyGen, Remotion, Canva, Kie.ai e outras camadas criativas.", href: "/interno/lab/studio/integracoes", icon: PlugZap },
   { title: "Custos & créditos", detail: "Estimativa antes da geração, teto por projeto e histórico por cena e versão.", icon: Coins },
   { title: "Playbook", detail: "Cursos, documentação, testes e aprendizados convertidos em regras e templates reutilizáveis.", icon: BookOpenCheck },
 ];
@@ -25,7 +25,7 @@ export default function AlgenriStudioPage() {
           <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">ALGENRI Studio</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Fábrica multimodal da ALGENRI para planejar, gerar, revisar e versionar criações com IA. O Studio cria; Marketing planeja campanhas e distribui os ativos. A arquitetura é agnóstica de fornecedor para escolher o melhor motor por tarefa, qualidade e custo.</p>
         </div>
-        <a href="/interno/lab/studio/projetos" className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/[.12]"><FolderKanban className="h-4 w-4"/> Abrir projetos</a>
+        <div className="flex flex-wrap gap-2"><a href="/interno/lab/studio/integracoes" className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-300/20 bg-violet-300/[.06] px-4 py-3 text-sm font-semibold text-violet-100 transition hover:bg-violet-300/[.1]"><PlugZap className="h-4 w-4"/> Integrações</a><a href="/interno/lab/studio/projetos" className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/[.12]"><FolderKanban className="h-4 w-4"/> Abrir projetos</a></div>
       </div>
 
       <section className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -47,9 +47,9 @@ export default function AlgenriStudioPage() {
       </section>
 
       <section className="mt-7">
-        <p className="text-xs font-semibold uppercase tracking-[.16em] text-violet-200">Motores criativos</p>
-        <h2 className="mt-2 text-xl font-semibold">Primeiros provedores previstos</h2>
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">{studioProviders.map(provider=><article key={provider.id} className="rounded-[24px] border border-white/10 bg-white/[.02] p-5"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{provider.name}</h3><span className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[.1em] ${provider.status==="priority"?"border-cyan-300/15 bg-cyan-300/[.05] text-cyan-200":"border-white/10 text-white/30"}`}>{provider.status==="priority"?"prioridade":"planejado"}</span></div><p className="mt-3 text-xs leading-5 text-white/45">{provider.role}</p><div className="mt-4 border-t border-white/10 pt-4"><p className="text-[10px] uppercase tracking-[.12em] text-white/30">Controle de custo</p><p className="mt-2 text-xs leading-5 text-white/40">{provider.costControl}</p></div></article>)}</div>
+        <p className="text-xs font-semibold uppercase tracking-[.16em] text-violet-200">Ecossistema criativo</p>
+        <h2 className="mt-2 text-xl font-semibold">Provedores previstos por função</h2>
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">{studioProviders.map(provider=><article key={provider.id} className="rounded-[24px] border border-white/10 bg-white/[.02] p-5"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{provider.name}</h3><span className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[.1em] ${provider.status==="priority"?"border-cyan-300/15 bg-cyan-300/[.05] text-cyan-200":"border-white/10 text-white/30"}`}>{provider.status==="priority"?"prioridade":provider.status}</span></div><p className="mt-3 text-xs leading-5 text-white/45">{provider.role}</p><div className="mt-4 border-t border-white/10 pt-4"><p className="text-[10px] uppercase tracking-[.12em] text-white/30">Controle de custo</p><p className="mt-2 text-xs leading-5 text-white/40">{provider.costControl}</p></div></article>)}</div>
       </section>
 
       <section className="mt-7 rounded-[28px] border border-amber-300/15 bg-amber-300/[.025] p-6">

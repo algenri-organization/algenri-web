@@ -57,9 +57,9 @@ export async function saveStudioComposition(projectId: string, input: { sceneOve
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
   const storyboardIndices = new Set((Array.isArray(project.storyboard) ? project.storyboard : []).map((scene: any) => Number(scene.index)));
-  const overlays = input.sceneOverlays
+  const overlays: StudioSceneOverlay[] = input.sceneOverlays
     .filter((item) => storyboardIndices.has(Number(item.sceneIndex)))
-    .map((item) => ({
+    .map((item): StudioSceneOverlay => ({
       sceneIndex: Number(item.sceneIndex),
       enabled: Boolean(item.enabled),
       eyebrow: String(item.eyebrow ?? "").slice(0, 80),

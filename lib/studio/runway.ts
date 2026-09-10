@@ -13,6 +13,13 @@ export type RunwayImageToVideoRequest = {
   duration: number;
 };
 
+export type RunwayRouterVideoInput = {
+  promptText: string;
+  aspectRatio: "16:9" | "9:16" | "1:1";
+  duration: number;
+  referenceImageUrl?: string;
+};
+
 export type RunwayTask = {
   id: string;
   status?: string;
@@ -21,10 +28,25 @@ export type RunwayTask = {
   [key: string]: unknown;
 };
 
+export type RunwayRouterDryRun = {
+  routing?: {
+    model?: string;
+    estimatedCost?: number;
+    resolvedSettings?: unknown;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
 export function getRunwayIntegrationStatus() {
+  const configured = Boolean(process.env.RUNWAYML_API_SECRET);
+  const routerConfigured = Boolean(process.env.RUNWAY_MODEL_ROUTER_ID);
   return {
-    configured: Boolean(process.env.RUNWAYML_API_SECRET),
+    configured,
+    routerConfigured,
+    readyForDryRun: configured && routerConfigured,
     environmentVariable: "RUNWAYML_API_SECRET",
+    routerEnvironmentVariable: "RUNWAY_MODEL_ROUTER_ID",
     apiBase: RUNWAY_API_BASE,
     apiVersion: RUNWAY_API_VERSION,
   };
@@ -61,6 +83,33 @@ export async function createRunwayImageToVideo(input: RunwayImageToVideoRequest)
     cache: "no-store",
   });
   return parseRunwayResponse(response) as Promise<RunwayTask>;
+}
+
+export async function dryRunRunwayVideoRouter(input: RunwayRouterVideoInput) {
+  const configId = process.env.RUNWAY_MODEL_ROUTER_ID;
+  if (!configId) throw new Error("runway_router_not_configured");
+
+  const referenceImages = input.referenceImageUrl
+    ? [{ uri: input.referenceImageUrl, role: "first" }]
+    : undefined;
+
+  const response = await fetch(`${RUNWAY_API_BASE}/generate/video`, {
+    method: "POST",
+    headers: runwayHeaders(),
+    body: JSON.stringify({
+      configId,
+      dryRun: true,
+      input: {
+        promptText: input.promptText,
+        aspectRatio: input.aspectRatio,
+        duration: input.duration,
+        ...(referenceImages ? { referenceImages } : {}),
+      },
+    }),
+    cache: "no-store",
+  });
+
+  return parseRunwayResponse(response) as Promise<RunwayRouterDryRun>;
 }
 
 export async function getRunwayTask(taskId: string) {

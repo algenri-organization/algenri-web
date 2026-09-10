@@ -20,6 +20,7 @@ export type StudioStoryboardScene = {
 
 export type StudioSceneGenerationJob = {
   sceneIndex: number;
+  version?: number;
   provider: string;
   model: string | null;
   taskId: string;
@@ -109,7 +110,7 @@ export async function createStudioVideoProject(input: { ownerUid: string; ownerE
     ai: { storyboardState: input.briefing.scriptMode === "ai" ? "pending" : "manual", model: null, generatedAt: null, error: null },
     review: { approvedScenes: 0, totalScenes: storyboard.length, allApproved: false, approvedAt: null },
     routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
-    generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null, sceneJobs: [] },
+    generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null, sceneJobs: [], sceneVersions: [], activeVersionByScene: {} },
     assets: [],
     benchmark: { enabled: true, qualityScore: null, promptAdherenceScore: null, notes: null },
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
@@ -187,19 +188,48 @@ export async function saveStudioRoutingPlan(projectId: string, routing: Record<s
   await db.collection("studioProjects").doc(projectId).set({ routing, generation: { estimatedCredits: (routing as any).totalEstimatedCredits ?? null }, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 }
 
+function assignSceneVersion(history: StudioSceneGenerationJob[], job: StudioSceneGenerationJob) {
+  const sameTask = history.find((item) => item.taskId === job.taskId);
+  if (sameTask?.version) return sameTask.version;
+  const maxVersion = history.filter((item) => item.sceneIndex === job.sceneIndex).reduce((max, item) => Math.max(max, item.version ?? 1), 0);
+  return maxVersion + 1;
+}
+
 export async function upsertStudioSceneGenerationJob(projectId: string, job: StudioSceneGenerationJob) {
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
-  const jobs = Array.isArray(project.generation?.sceneJobs) ? project.generation.sceneJobs as StudioSceneGenerationJob[] : [];
-  const next = [...jobs.filter((item) => item.sceneIndex !== job.sceneIndex), job].sort((a, b) => a.sceneIndex - b.sceneIndex);
-  const actualKnown = next.map((item) => item.actualCredits).filter((value): value is number => typeof value === "number");
-  const allSucceeded = next.length > 0 && next.every((item) => item.status === "succeeded");
+
+  const currentJobs = Array.isArray(project.generation?.sceneJobs) ? project.generation.sceneJobs as StudioSceneGenerationJob[] : [];
+  const storedHistory = Array.isArray(project.generation?.sceneVersions) ? project.generation.sceneVersions as StudioSceneGenerationJob[] : [];
+  const historySeed = storedHistory.length ? storedHistory : currentJobs.map((item) => ({ ...item, version: item.version ?? 1 }));
+  const version = job.version ?? assignSceneVersion(historySeed, job);
+  const versionedJob = { ...job, version };
+  const sameTaskIndex = historySeed.findIndex((item) => item.taskId === job.taskId);
+  const history = sameTaskIndex >= 0
+    ? historySeed.map((item, index) => index === sameTaskIndex ? versionedJob : item)
+    : [...historySeed, versionedJob];
+
+  const activeVersionByScene = { ...(project.generation?.activeVersionByScene ?? {}) } as Record<string, number>;
+  if (sameTaskIndex < 0 || activeVersionByScene[String(job.sceneIndex)] == null) activeVersionByScene[String(job.sceneIndex)] = version;
+
+  const activeJobs = Object.entries(activeVersionByScene).map(([sceneIndex, activeVersion]) => {
+    const index = Number(sceneIndex);
+    return history.find((item) => item.sceneIndex === index && item.version === activeVersion)
+      ?? history.filter((item) => item.sceneIndex === index).sort((a, b) => (b.version ?? 0) - (a.version ?? 0))[0];
+  }).filter(Boolean) as StudioSceneGenerationJob[];
+
+  const next = activeJobs.sort((a, b) => a.sceneIndex - b.sceneIndex);
+  const actualKnown = history.map((item) => item.actualCredits).filter((value): value is number => typeof value === "number");
+  const storyboardIndices = (Array.isArray(project.storyboard) ? project.storyboard : []).map((scene: StudioStoryboardScene) => scene.index);
+  const allSucceeded = storyboardIndices.length > 0 && storyboardIndices.every((index) => next.some((item) => item.sceneIndex === index && item.status === "succeeded"));
   const anyActive = next.some((item) => item.status === "queued" || item.status === "running");
   const state = allSucceeded ? "completed" : anyActive ? "generating" : next.some((item) => item.status === "failed") ? "attention" : "not_started";
-  const assets = next.filter((item) => item.status === "succeeded" && item.storagePath).map((item) => ({
-    id: `scene-${item.sceneIndex}-${item.taskId}`,
+
+  const assets = history.filter((item) => item.status === "succeeded" && item.storagePath).map((item) => ({
+    id: `scene-${item.sceneIndex}-v${item.version ?? 1}-${item.taskId}`,
     kind: "video-scene",
     sceneIndex: item.sceneIndex,
+    version: item.version ?? 1,
     provider: item.provider,
     model: item.model,
     taskId: item.taskId,
@@ -207,8 +237,9 @@ export async function upsertStudioSceneGenerationJob(projectId: string, job: Stu
     contentType: item.contentType ?? "video/mp4",
     sizeBytes: item.sizeBytes ?? null,
     archivedAt: item.archivedAt ?? item.completedAt,
-    filename: `ALGENRI-Studio-Cena-${String(item.sceneIndex).padStart(2, "0")}.mp4`,
+    filename: `ALGENRI-Studio-Cena-${String(item.sceneIndex).padStart(2, "0")}-V${String(item.version ?? 1).padStart(2, "0")}.mp4`,
   }));
+
   const db = await getAdminDb();
   await db.collection("studioProjects").doc(projectId).set({
     status: allSucceeded ? "review" : anyActive ? "generating" : project.status,
@@ -216,6 +247,8 @@ export async function upsertStudioSceneGenerationJob(projectId: string, job: Stu
       ...(project.generation ?? {}),
       state,
       sceneJobs: next,
+      sceneVersions: history.sort((a, b) => a.sceneIndex - b.sceneIndex || (a.version ?? 0) - (b.version ?? 0)),
+      activeVersionByScene,
       actualCredits: actualKnown.length ? actualKnown.reduce((sum, value) => sum + value, 0) : null,
       outputUrl: allSucceeded && next.length === 1 ? next[0].outputUrl : null,
     },
@@ -223,4 +256,24 @@ export async function upsertStudioSceneGenerationJob(projectId: string, job: Stu
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   return next;
+}
+
+export async function selectStudioSceneVersion(projectId: string, sceneIndex: number, version: number) {
+  const project = await getStudioProject(projectId);
+  if (!project) throw new Error("studio_project_not_found");
+  const history = Array.isArray(project.generation?.sceneVersions) ? project.generation.sceneVersions as StudioSceneGenerationJob[] : [];
+  const selected = history.find((item) => item.sceneIndex === sceneIndex && item.version === version && item.status === "succeeded");
+  if (!selected) throw new Error("studio_scene_version_not_selectable");
+
+  const activeVersionByScene = { ...(project.generation?.activeVersionByScene ?? {}), [String(sceneIndex)]: version };
+  const sceneJobs = Object.entries(activeVersionByScene).map(([index, activeVersion]) => history.find((item) => item.sceneIndex === Number(index) && item.version === activeVersion)).filter(Boolean) as StudioSceneGenerationJob[];
+  const storyboardIndices = (Array.isArray(project.storyboard) ? project.storyboard : []).map((scene: StudioStoryboardScene) => scene.index);
+  const allSucceeded = storyboardIndices.length > 0 && storyboardIndices.every((index) => sceneJobs.some((item) => item.sceneIndex === index && item.status === "succeeded"));
+  const db = await getAdminDb();
+  await db.collection("studioProjects").doc(projectId).set({
+    status: allSucceeded ? "review" : project.status,
+    generation: { ...(project.generation ?? {}), sceneJobs: sceneJobs.sort((a, b) => a.sceneIndex - b.sceneIndex), activeVersionByScene, state: allSucceeded ? "completed" : project.generation?.state ?? "not_started" },
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return selected;
 }

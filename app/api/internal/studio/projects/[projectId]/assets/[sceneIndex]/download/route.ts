@@ -16,7 +16,9 @@ export async function GET(request: Request, context: { params: Promise<{ project
 
     const stored = await readStudioArchivedOutput(asset.storagePath);
     const filename = asset.filename || `ALGENRI-Studio-Cena-${String(index).padStart(2, "0")}.mp4`;
-    return new Response(stored.buffer, {
+    const body = new Uint8Array(stored.buffer);
+
+    return new Response(body, {
       headers: {
         "Content-Type": stored.contentType,
         "Content-Length": String(stored.sizeBytes),

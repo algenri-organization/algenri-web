@@ -1,6 +1,7 @@
 import { Cable, CheckCircle2, CircleDashed, KeyRound, Layers3, Route, ShieldCheck } from "lucide-react";
 import { providerLayerLabels, studioProviders, type StudioProviderLayer } from "@/lib/studio/providers";
 import { getRunwayIntegrationStatus } from "@/lib/studio/runway";
+import RunwayDryRunTester from "@/components/studio/runway-dry-run-tester";
 
 const layerOrder: StudioProviderLayer[] = ["generation", "avatar-voice", "composition", "design-finish", "gateway", "intelligence"];
 
@@ -28,8 +29,10 @@ export default function StudioIntegrationsPage() {
       </section>
 
       <section className={`mt-5 rounded-[26px] border p-5 ${runwayStatus.readyForDryRun ? "border-violet-300/20 bg-violet-300/[.025]" : "border-white/10 bg-white/[.015]"}`}>
-        <div className="flex gap-3"><Route className={`mt-0.5 h-5 w-5 shrink-0 ${runwayStatus.readyForDryRun ? "text-violet-200" : "text-white/30"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/35">Modo Automático · Runway</p><h2 className="mt-1 font-semibold">Dry run sem geração</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">Com o API secret e um Model Router configurados, o Studio poderá perguntar ao Runway qual motor seria escolhido e qual o custo estimado sem gerar mídia nem consumir créditos. Esse será o primeiro teste do roteamento automático antes de liberarmos a geração paga.</p><p className="mt-3 text-xs text-white/35">Status: {runwayStatus.readyForDryRun ? "pronto para teste após deploy" : runwayStatus.configured ? "falta configurar RUNWAY_MODEL_ROUTER_ID" : "falta configurar RUNWAYML_API_SECRET e RUNWAY_MODEL_ROUTER_ID"}</p></div></div>
+        <div className="flex gap-3"><Route className={`mt-0.5 h-5 w-5 shrink-0 ${runwayStatus.readyForDryRun ? "text-violet-200" : "text-white/30"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/35">Modo Automático · Runway</p><h2 className="mt-1 font-semibold">Dry run sem geração</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">Com o API secret e um Model Router configurados, o Studio poderá perguntar ao Runway qual motor seria escolhido e qual o custo estimado sem gerar mídia nem consumir créditos. Esse será o primeiro teste do roteamento automático antes de liberarmos a geração paga.</p><p className="mt-3 text-xs text-white/35">Status: {runwayStatus.readyForDryRun ? "pronto para teste" : runwayStatus.configured ? "falta configurar RUNWAY_MODEL_ROUTER_ID" : "falta configurar RUNWAYML_API_SECRET e RUNWAY_MODEL_ROUTER_ID"}</p></div></div>
       </section>
+
+      {runwayStatus.readyForDryRun && <RunwayDryRunTester />}
 
       <div className="mt-8 space-y-8">
         {layerOrder.map(layer => {

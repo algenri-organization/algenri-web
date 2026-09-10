@@ -1,5 +1,9 @@
-import { ArrowLeft, CheckCircle2, Coins, Film, Gauge, Target, Users } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { ArrowLeft, Bot, CheckCircle2, Coins, Film, Gauge, SlidersHorizontal, Target, Users } from "lucide-react";
 import { studioProjectFormats } from "@/lib/studio/projects";
+import { automaticRoutingCriteria, manualStudioEngines, type StudioEngineMode } from "@/lib/studio/providers";
 
 const fields = [
   { label: "Nome do projeto", placeholder: "Ex.: Vídeo institucional ALGENRI Studio" },
@@ -9,6 +13,9 @@ const fields = [
 ];
 
 export default function NewStudioProjectPage() {
+  const [engineMode, setEngineMode] = useState<StudioEngineMode>("automatic");
+  const [manualEngine, setManualEngine] = useState(manualStudioEngines[0]?.id ?? "runway");
+
   return <main className="min-h-screen bg-[#040c17] px-6 pb-20 pt-28 text-white">
     <div className="mx-auto max-w-5xl">
       <a href="/interno/lab/studio/projetos" className="inline-flex items-center gap-2 text-xs text-white/45 transition hover:text-white"><ArrowLeft className="h-4 w-4"/> Voltar aos projetos</a>
@@ -16,7 +23,7 @@ export default function NewStudioProjectPage() {
       <div className="mt-5 border-b border-white/10 pb-7">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em] text-cyan-200"><Film className="h-4 w-4"/> Novo projeto</div>
         <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Abrir projeto no ALGENRI Studio</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Primeiro definimos contexto e limites. Só depois o Studio entra em roteiro, storyboard e geração. Esta tela ainda é a fundação visual; a persistência será conectada na próxima etapa.</p>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Defina contexto, limites e como o motor será escolhido. O Studio poderá decidir automaticamente a melhor IA ou respeitar uma seleção manual do usuário.</p>
       </div>
 
       <section className="mt-7 grid gap-4 md:grid-cols-2">
@@ -28,6 +35,24 @@ export default function NewStudioProjectPage() {
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">{studioProjectFormats.map((item,index)=><label key={item.value} className="cursor-pointer rounded-[20px] border border-white/10 bg-white/[.02] p-4 transition hover:border-violet-300/20"><div className="flex items-center justify-between"><input type="radio" name="format" defaultChecked={index===0} className="accent-cyan-300"/><span className="text-[9px] uppercase tracking-[.12em] text-white/25">{item.value}</span></div><p className="mt-4 text-sm font-semibold">{item.label}</p><p className="mt-2 text-xs leading-5 text-white/35">{item.detail}</p></label>)}</div>
       </section>
 
+      <section className="mt-7 rounded-[26px] border border-violet-300/15 bg-violet-300/[.02] p-5">
+        <div className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-violet-200"/><h2 className="font-semibold">Escolha do motor</h2></div>
+        <p className="mt-2 text-sm leading-6 text-white/45">O usuário não precisa conhecer as diferenças entre as IAs. O modo Automático será o padrão; o modo Manual fica disponível para quem quiser controlar o provedor.</p>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <button type="button" onClick={() => setEngineMode("automatic")} className={`rounded-[20px] border p-4 text-left transition ${engineMode === "automatic" ? "border-cyan-300/25 bg-cyan-300/[.06]" : "border-white/10 bg-white/[.02] hover:border-white/20"}`}>
+            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-sm font-semibold"><Bot className="h-4 w-4 text-cyan-200"/> Automático</span>{engineMode === "automatic" && <CheckCircle2 className="h-4 w-4 text-cyan-200"/>}</div>
+            <p className="mt-2 text-xs leading-5 text-white/40">A ALGENRI seleciona o motor mais adequado para a tarefa e informa o motivo da escolha.</p>
+          </button>
+          <button type="button" onClick={() => setEngineMode("manual")} className={`rounded-[20px] border p-4 text-left transition ${engineMode === "manual" ? "border-violet-300/25 bg-violet-300/[.06]" : "border-white/10 bg-white/[.02] hover:border-white/20"}`}>
+            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-sm font-semibold"><SlidersHorizontal className="h-4 w-4 text-violet-200"/> Manual</span>{engineMode === "manual" && <CheckCircle2 className="h-4 w-4 text-violet-200"/>}</div>
+            <p className="mt-2 text-xs leading-5 text-white/40">O usuário escolhe diretamente o motor desejado entre os provedores disponíveis.</p>
+          </button>
+        </div>
+
+        {engineMode === "automatic" ? <div className="mt-5 rounded-[20px] border border-cyan-300/10 bg-black/15 p-4"><p className="text-xs font-semibold uppercase tracking-[.14em] text-cyan-200">Critérios de roteamento</p><div className="mt-3 grid gap-2 md:grid-cols-2">{automaticRoutingCriteria.map((criterion)=><div key={criterion.key} className="rounded-xl border border-white/10 bg-white/[.02] px-3 py-3"><p className="text-xs font-semibold text-white/65">{criterion.label}</p><p className="mt-1 text-[11px] leading-5 text-white/35">{criterion.detail}</p></div>)}</div></div> : <div className="mt-5 rounded-[20px] border border-violet-300/10 bg-black/15 p-4"><label className="text-xs font-semibold uppercase tracking-[.14em] text-violet-200">Motor selecionado<select value={manualEngine} onChange={(event)=>setManualEngine(event.target.value)} className="mt-3 w-full rounded-xl border border-white/10 bg-[#081522] px-3 py-3 text-sm text-white outline-none focus:border-violet-300/25">{manualStudioEngines.map((engine)=><option key={engine.id} value={engine.id}>{engine.name}</option>)}</select></label><p className="mt-3 text-xs leading-5 text-white/35">A lista inclui Runway, HeyGen, Grok via Kie.ai, Veo, Luma, Seedance, Kling, Higgsfield e poderá crescer sem alterar o fluxo do projeto.</p></div>}
+      </section>
+
       <section className="mt-7 grid gap-4 lg:grid-cols-3">
         <label className="rounded-[20px] border border-white/10 bg-white/[.02] p-4"><span className="flex items-center gap-2 text-xs font-semibold text-white/70"><Gauge className="h-4 w-4"/> Duração estimada</span><input type="number" min="1" placeholder="segundos" className="mt-3 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-cyan-300/25"/></label>
         <label className="rounded-[20px] border border-white/10 bg-white/[.02] p-4"><span className="flex items-center gap-2 text-xs font-semibold text-white/70"><Coins className="h-4 w-4"/> Teto de orçamento</span><input type="number" min="0" step="0.01" placeholder="R$" className="mt-3 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-cyan-300/25"/></label>
@@ -35,7 +60,7 @@ export default function NewStudioProjectPage() {
       </section>
 
       <section className="mt-7 rounded-[24px] border border-cyan-300/15 bg-cyan-300/[.025] p-5">
-        <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 text-cyan-200"/><div><h2 className="font-semibold">Próxima etapa após salvar</h2><p className="mt-2 text-sm leading-6 text-white/45">O projeto abrirá seu workspace próprio com briefing, roteiro, storyboard, assets, voz, custos, provedores, gerações e revisão por cena. A persistência e esse workspace serão implementados na sequência.</p></div></div>
+        <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 text-cyan-200"/><div><h2 className="font-semibold">Fluxo após salvar</h2><p className="mt-2 text-sm leading-6 text-white/45">Projeto → tarefa/cena → escolha automática ou manual do motor → estimativa de custo → confirmação → geração → acompanhamento do job → resultado → custo real → benchmark.</p></div></div>
       </section>
 
       <div className="mt-7 flex justify-end"><button disabled className="rounded-xl border border-white/10 bg-white/[.04] px-5 py-3 text-sm font-semibold text-white/30">Salvar projeto — próxima etapa</button></div>

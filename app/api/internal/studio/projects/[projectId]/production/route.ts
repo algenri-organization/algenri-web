@@ -50,12 +50,7 @@ function buildBrandSafeVisualPrompt(scene: any, project: any) {
   const visualDirection = String(scene?.visualDirection ?? "").trim();
   const objective = String(scene?.objective ?? "").trim();
   const visualStyle = String(project?.briefing?.visualStyle ?? "").trim();
-  const base = [
-    visualDirection,
-    objective ? `Creative objective: ${objective}` : "",
-    visualStyle ? `Visual style: ${visualStyle}` : "",
-  ].filter(Boolean).join("\n");
-
+  const base = [visualDirection, objective ? `Creative objective: ${objective}` : "", visualStyle ? `Visual style: ${visualStyle}` : ""].filter(Boolean).join("\n");
   return `${base}\n\nCRITICAL GENERATION RULES:\n- Generate ONLY the cinematic visual plate/background for this scene.\n- Do NOT render any logo, brand mark, company name, slogan, word, letter, number, caption, UI label, watermark or readable typography.\n- Do NOT invent or approximate a corporate logo or symbol.\n- Leave clean negative space when branding or copy will be added later.\n- Exact ALGENRI branding, logos and text are added after generation in the controlled composition layer.\n- Preserve the requested camera movement, lighting, environment, action and premium visual language without textual elements.`;
 }
 
@@ -92,22 +87,16 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const existing = (project.generation?.sceneJobs ?? []).find((item: any) => item.sceneIndex === scene.index) as StudioSceneGenerationJob | undefined;
 
     if (parsed.data.action === "start_scene") {
-      if (existing && ["queued", "running", "succeeded"].includes(existing.status)) return Response.json({ ok: false, error: "scene_generation_already_exists", job: existing }, { status: 409 });
+      if (existing && ["queued", "running"].includes(existing.status)) return Response.json({ ok: false, error: "scene_generation_in_progress", job: existing }, { status: 409 });
 
       const knownCost = typeof route.estimatedCredits === "number" && Number.isFinite(route.estimatedCredits) && route.estimatedCredits > 0;
       const unknownKieCost = route.selectedProviderId === "kie-ai" && !knownCost;
-      if (!knownCost && !unknownKieCost) {
-        return Response.json({ ok: false, error: "cost_estimate_required_before_generation", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
-      }
-      if (unknownKieCost && parsed.data.confirmUnknownCost !== true) {
-        return Response.json({ ok: false, error: "unknown_cost_confirmation_required", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
-      }
+      if (!knownCost && !unknownKieCost) return Response.json({ ok: false, error: "cost_estimate_required_before_generation", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
+      if (unknownKieCost && parsed.data.confirmUnknownCost !== true) return Response.json({ ok: false, error: "unknown_cost_confirmation_required", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
 
       const budgetLimit = Number(project.briefing?.budgetLimit ?? 0);
       const totalEstimated = project.routing?.totalEstimatedCredits;
-      if (budgetLimit > 0 && typeof totalEstimated === "number" && totalEstimated > budgetLimit) {
-        return Response.json({ ok: false, error: "budget_limit_exceeded", budgetLimit, totalEstimatedCredits: totalEstimated }, { status: 409 });
-      }
+      if (budgetLimit > 0 && typeof totalEstimated === "number" && totalEstimated > budgetLimit) return Response.json({ ok: false, error: "budget_limit_exceeded", budgetLimit, totalEstimatedCredits: totalEstimated }, { status: 409 });
 
       const providerPrompt = buildBrandSafeVisualPrompt(scene, project);
 
@@ -118,7 +107,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         const task = await createKieKling26TextToVideo({ prompt: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
         const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: knownCost ? route.estimatedCredits : null, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
         await upsertStudioSceneGenerationJob(projectId, job);
-        return Response.json({ ok: true, job, balanceBefore: balance, unknownCostAccepted: unknownKieCost }, { status: 201 });
+        return Response.json({ ok: true, job, balanceBefore: balance, unknownCostAccepted: unknownKieCost, replacesTaskId: existing?.taskId ?? null }, { status: 201 });
       }
 
       const task = await generateRunwayVideoRouter({ promptText: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), duration: Math.min(30, Math.max(1, scene.durationSeconds)) });
@@ -128,7 +117,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       const estimatedCredits = extractRunwayRoutingCost(routing) ?? route.estimatedCredits;
       const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "runway", model: routing?.model ?? routing?.selectedModel ?? routing?.modelId ?? route.selectedModel ?? null, taskId, status: "queued", estimatedCredits, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
       await upsertStudioSceneGenerationJob(projectId, job);
-      return Response.json({ ok: true, job }, { status: 201 });
+      return Response.json({ ok: true, job, replacesTaskId: existing?.taskId ?? null }, { status: 201 });
     }
 
     if (!existing?.taskId) return Response.json({ ok: false, error: "scene_generation_not_started" }, { status: 409 });

@@ -1,12 +1,23 @@
 export type StudioProjectStatus = "draft" | "planning" | "generating" | "review" | "approved" | "archived";
-
 export type StudioProjectFormat = "video" | "image" | "avatar" | "voice" | "mixed";
-
 export type StudioCreationMode = "quick" | "advanced";
 export type StudioScriptMode = "ai" | "manual";
 export type StudioEngineMode = "automatic" | "manual";
 export type StudioPriority = "quality" | "cost" | "speed" | "balanced";
 export type StudioAspectRatio = "16:9" | "9:16" | "1:1" | "4:5";
+export type StudioProjectOrigin = "internal" | "client";
+
+export type StudioCommercialLink = {
+  origin: StudioProjectOrigin;
+  clientId?: string;
+  clientName?: string;
+  commercialProjectId?: string;
+  commercialProjectName?: string;
+  proposalId?: string;
+  proposalNumber?: string;
+  contractId?: string;
+  contractNumber?: string;
+};
 
 export type StudioVideoBriefing = {
   creationMode: StudioCreationMode;
@@ -46,18 +57,14 @@ export type StudioProject = {
   status: StudioProjectStatus;
   budgetLimit?: number;
   preferredProviderIds?: string[];
+  commercialLink?: StudioCommercialLink;
   videoBriefing?: StudioVideoBriefing;
   createdAt: string;
   updatedAt: string;
 };
 
 export const studioProjectStatusLabel: Record<StudioProjectStatus, string> = {
-  draft: "Rascunho",
-  planning: "Planejamento",
-  generating: "Em geração",
-  review: "Em revisão",
-  approved: "Aprovado",
-  archived: "Arquivado",
+  draft: "Rascunho", planning: "Planejamento", generating: "Em geração", review: "Em revisão", approved: "Aprovado", archived: "Arquivado",
 };
 
 export const studioProjectFormats: { value: StudioProjectFormat; label: string; detail: string }[] = [
@@ -69,5 +76,4 @@ export const studioProjectFormats: { value: StudioProjectFormat; label: string; 
 ];
 
 export const studioDestinations = ["Instagram Reels", "Instagram Story", "YouTube", "Site", "Apresentação", "Anúncio", "Institucional", "Outro"] as const;
-
 export const studioVisualStyles = ["Cinematográfico", "Tecnológico", "Corporativo premium", "Minimalista", "Humano e emocional", "Futurista", "Editorial", "Personalizado"] as const;

@@ -5,10 +5,11 @@ import { ArrowLeft, CheckCircle2, Clock3, Film, Loader2, Pencil, RefreshCw, Save
 import { firebaseAuth } from "@/lib/firebase/client";
 import StudioRoutingPanel from "@/components/studio/studio-routing-panel";
 import StudioProductionPanel from "@/components/studio/studio-production-panel";
-import StudioCompositionPanel from "@/components/studio/studio-composition-panel";
+import StudioCompositionPanel, { type StudioCompositionClient } from "@/components/studio/studio-composition-panel";
+import StudioFinalRenderPanel from "@/components/studio/studio-final-render-panel";
 
 type Scene = { index:number; title:string; durationSeconds:number; objective:string; narration:string; visualDirection:string; technicalPrompt:string; status:"draft"|"approved" };
-type Project = { id:string; name:string; status:string; briefing?:{ destination?:string; durationSeconds?:number; visualStyle?:string; aspectRatio?:string; engineMode?:string; priority?:string; budgetLimit?:number }; storyboard?:Scene[]; commercialLink?:{ origin?:string; clientName?:string; commercialProjectName?:string; proposalNumber?:string; contractNumber?:string }; ai?:{ storyboardState?:string; model?:string }; review?:{ approvedScenes?:number; totalScenes?:number; allApproved?:boolean }; routing?:any; generation?:any };
+type Project = { id:string; name:string; status:string; briefing?:{ destination?:string; durationSeconds?:number; visualStyle?:string; aspectRatio?:string; engineMode?:string; priority?:string; budgetLimit?:number }; storyboard?:Scene[]; commercialLink?:{ origin?:string; clientName?:string; commercialProjectName?:string; proposalNumber?:string; contractNumber?:string }; ai?:{ storyboardState?:string; model?:string }; review?:{ approvedScenes?:number; totalScenes?:number; allApproved?:boolean }; routing?:any; generation?:any; composition?:StudioCompositionClient|null; finalRender?:any };
 
 export default function StudioProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
   const [projectId,setProjectId]=useState("");
@@ -64,7 +65,8 @@ export default function StudioProjectPage({ params }: { params: Promise<{ projec
 
       <StudioRoutingPanel projectId={projectId} allApproved={allApproved} initialRouting={project.routing} />
       {project.routing?.routes?.length>0&&<StudioProductionPanel projectId={projectId} routing={project.routing} budgetLimit={project.briefing?.budgetLimit??null} initialGeneration={project.generation} />}
-      <StudioCompositionPanel projectId={projectId} storyboard={project.storyboard??[]} generation={project.generation} />
+      <StudioCompositionPanel projectId={projectId} storyboard={project.storyboard??[]} generation={project.generation} onCompositionChange={composition=>setProject(current=>current?{...current,composition}:current)} />
+      <StudioFinalRenderPanel projectId={projectId} composition={project.composition} initialFinalRender={project.finalRender??null} />
     </>}
   </div></main>;
 }

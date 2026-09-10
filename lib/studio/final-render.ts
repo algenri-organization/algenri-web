@@ -23,9 +23,13 @@ export type StudioFinalRenderManifest = {
   scenes: StudioFinalRenderScene[];
   totalDurationSeconds: number;
   preparedAt: string;
-  renderEngine: "pending";
+  renderEngine: "pending" | "ffmpeg-static";
+  startedAt?: string | null;
+  completedAt?: string | null;
   outputStoragePath: string | null;
   outputUrl: string | null;
+  contentType?: string | null;
+  sizeBytes?: number | null;
   error: string | null;
 };
 
@@ -73,8 +77,12 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
     totalDurationSeconds: scenes.reduce((sum, item) => sum + item.durationSeconds, 0),
     preparedAt,
     renderEngine: "pending",
+    startedAt: null,
+    completedAt: null,
     outputStoragePath: null,
     outputUrl: null,
+    contentType: null,
+    sizeBytes: null,
     error: null,
   };
 

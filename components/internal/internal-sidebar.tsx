@@ -36,6 +36,8 @@ const groups: Group[] = [
     { label: "Calendário de conteúdo", href: "/interno/marketing/calendario", icon: CalendarDays },
     { label: "Campanhas", icon: Megaphone, disabled: true },
     { label: "Redes sociais & crescimento", href: "/interno/marketing/redes-sociais", icon: Instagram },
+    { label: "Cases & Build in Public", href: "/interno/marketing/cases", icon: FolderKanban },
+    { label: "Aquisição & Diagnóstico Digital", href: "/interno/marketing/aquisicao", icon: Target },
     { label: "Métricas", icon: BarChart3, disabled: true },
   ]},
   { label: "ALGENRI Lab", icon: FlaskConical, items: [

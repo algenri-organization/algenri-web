@@ -18,6 +18,20 @@ export type StudioStoryboardScene = {
   status: "draft" | "approved";
 };
 
+export type StudioSceneGenerationJob = {
+  sceneIndex: number;
+  provider: string;
+  model: string | null;
+  taskId: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  estimatedCredits: number | null;
+  actualCredits: number | null;
+  outputUrl: string | null;
+  failure: unknown | null;
+  startedAt: string;
+  completedAt: string | null;
+};
+
 function splitDuration(total: number, parts: number) {
   const safeTotal = Math.max(parts, Math.round(total));
   const base = Math.floor(safeTotal / parts);
@@ -88,7 +102,7 @@ export async function createStudioVideoProject(input: { ownerUid: string; ownerE
     commercialLink, briefing: input.briefing, storyboard,
     ai: { storyboardState: input.briefing.scriptMode === "ai" ? "pending" : "manual", model: null, generatedAt: null, error: null },
     routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
-    generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null },
+    generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null, sceneJobs: [] },
     benchmark: { enabled: true, qualityScore: null, promptAdherenceScore: null, notes: null },
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   });
@@ -114,5 +128,29 @@ export async function markStudioAiStoryboardFailure(projectId: string, error: st
 
 export async function saveStudioRoutingPlan(projectId: string, routing: Record<string, unknown>) {
   const db = await getAdminDb();
-  await db.collection("studioProjects").doc(projectId).set({ routing, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await db.collection("studioProjects").doc(projectId).set({ routing, generation: { estimatedCredits: (routing as any).totalEstimatedCredits ?? null }, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+
+export async function upsertStudioSceneGenerationJob(projectId: string, job: StudioSceneGenerationJob) {
+  const project = await getStudioProject(projectId);
+  if (!project) throw new Error("studio_project_not_found");
+  const jobs = Array.isArray(project.generation?.sceneJobs) ? project.generation.sceneJobs as StudioSceneGenerationJob[] : [];
+  const next = [...jobs.filter((item) => item.sceneIndex !== job.sceneIndex), job].sort((a, b) => a.sceneIndex - b.sceneIndex);
+  const actualKnown = next.map((item) => item.actualCredits).filter((value): value is number => typeof value === "number");
+  const allSucceeded = next.length > 0 && next.every((item) => item.status === "succeeded");
+  const anyActive = next.some((item) => item.status === "queued" || item.status === "running");
+  const state = allSucceeded ? "completed" : anyActive ? "generating" : next.some((item) => item.status === "failed") ? "attention" : "not_started";
+  const db = await getAdminDb();
+  await db.collection("studioProjects").doc(projectId).set({
+    status: allSucceeded ? "review" : anyActive ? "generating" : project.status,
+    generation: {
+      ...(project.generation ?? {}),
+      state,
+      sceneJobs: next,
+      actualCredits: actualKnown.length ? actualKnown.reduce((sum, value) => sum + value, 0) : null,
+      outputUrl: allSucceeded && next.length === 1 ? next[0].outputUrl : null,
+    },
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return next;
 }

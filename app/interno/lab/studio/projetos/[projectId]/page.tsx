@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, Clock3, Film, Loader2, Pencil, RefreshCw, Save, Sparkles, TriangleAlert } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase/client";
 import StudioRoutingPanel from "@/components/studio/studio-routing-panel";
+import StudioProductionPanel from "@/components/studio/studio-production-panel";
 
 type Scene = { index:number; title:string; durationSeconds:number; objective:string; narration:string; visualDirection:string; technicalPrompt:string; status:"draft"|"approved" };
-type Project = { id:string; name:string; status:string; briefing?:{ destination?:string; durationSeconds?:number; visualStyle?:string; aspectRatio?:string; engineMode?:string; priority?:string }; storyboard?:Scene[]; commercialLink?:{ origin?:string; clientName?:string; commercialProjectName?:string; proposalNumber?:string; contractNumber?:string }; ai?:{ storyboardState?:string; model?:string }; review?:{ approvedScenes?:number; totalScenes?:number; allApproved?:boolean }; routing?:any };
+type Project = { id:string; name:string; status:string; briefing?:{ destination?:string; durationSeconds?:number; visualStyle?:string; aspectRatio?:string; engineMode?:string; priority?:string; budgetLimit?:number }; storyboard?:Scene[]; commercialLink?:{ origin?:string; clientName?:string; commercialProjectName?:string; proposalNumber?:string; contractNumber?:string }; ai?:{ storyboardState?:string; model?:string }; review?:{ approvedScenes?:number; totalScenes?:number; allApproved?:boolean }; routing?:any; generation?:any };
 
 export default function StudioProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
   const [projectId,setProjectId]=useState("");
@@ -61,6 +62,7 @@ export default function StudioProjectPage({ params }: { params: Promise<{ projec
       <section className={`mt-8 rounded-[26px] border p-5 ${allApproved?"border-emerald-300/20 bg-emerald-300/[.035]":"border-white/10 bg-white/[.02]"}`}><div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-200"/><div><h2 className="font-semibold">{allApproved?"Storyboard aprovado para roteamento":"Revisão criativa em andamento"}</h2><p className="mt-2 text-sm leading-6 text-white/45">{allApproved?"Todas as cenas estão aprovadas. O Studio já pode calcular o melhor motor e o custo estimado por cena antes de qualquer geração paga.":"Edite, regenere ou aprove as cenas individualmente. O Studio mantém o histórico do projeto sem gastar créditos de vídeo."}</p></div></div></section>
 
       <StudioRoutingPanel projectId={projectId} allApproved={allApproved} initialRouting={project.routing} />
+      {project.routing?.routes?.length>0&&<StudioProductionPanel projectId={projectId} routing={project.routing} budgetLimit={project.briefing?.budgetLimit??null} initialGeneration={project.generation} />}
     </>}
   </div></main>;
 }

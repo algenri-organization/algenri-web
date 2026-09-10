@@ -2,6 +2,7 @@ import { z } from "zod";
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
 import { getRunwayTask, generateRunwayVideoRouter, extractRunwayRoutingCost } from "@/lib/studio/runway";
 import { getStudioProject, upsertStudioSceneGenerationJob, type StudioSceneGenerationJob } from "@/lib/studio/project-store";
+import { archiveStudioOutput } from "@/lib/studio/output-storage";
 
 const startSchema = z.object({ action: z.literal("start_scene"), sceneIndex: z.number().int().min(1), confirmSpend: z.literal(true) });
 const refreshSchema = z.object({ action: z.literal("refresh_scene"), sceneIndex: z.number().int().min(1) });
@@ -81,6 +82,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         estimatedCredits,
         actualCredits: null,
         outputUrl: null,
+        storagePath: null,
+        storageStatus: null,
         failure: null,
         startedAt: new Date().toISOString(),
         completedAt: null,
@@ -95,8 +98,37 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const outputUrl = firstOutputUrl(task.output) ?? existing.outputUrl;
     const completed = status === "succeeded" || status === "failed";
     const actualCredits = typeof (task as any).costCredits === "number" ? (task as any).costCredits : typeof (task as any).creditsUsed === "number" ? (task as any).creditsUsed : existing.actualCredits;
+    let storageFields: Partial<StudioSceneGenerationJob> = {};
+
+    if (status === "succeeded" && outputUrl && !existing.storagePath) {
+      try {
+        const archived = await archiveStudioOutput({
+          projectId,
+          sceneIndex: scene.index,
+          provider: existing.provider,
+          taskId: existing.taskId,
+          outputUrl,
+        });
+        storageFields = {
+          storagePath: archived.storagePath,
+          storageStatus: "archived",
+          storageError: null,
+          contentType: archived.contentType,
+          sizeBytes: archived.sizeBytes,
+          archivedAt: archived.archivedAt,
+        };
+      } catch (archiveError) {
+        storageFields = {
+          storageStatus: "failed",
+          storageError: archiveError instanceof Error ? archiveError.message : "studio_output_archive_failed",
+        };
+        console.error("studio_output_archive_failed", archiveError);
+      }
+    }
+
     const job: StudioSceneGenerationJob = {
       ...existing,
+      ...storageFields,
       status,
       outputUrl,
       failure: task.failure ?? null,

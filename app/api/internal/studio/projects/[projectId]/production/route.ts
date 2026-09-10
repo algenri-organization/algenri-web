@@ -5,7 +5,12 @@ import { createKieKling26TextToVideo, getKieCreditBalance, getKieTaskDetails, KI
 import { getStudioProject, upsertStudioSceneGenerationJob, type StudioSceneGenerationJob } from "@/lib/studio/project-store";
 import { archiveStudioOutput } from "@/lib/studio/output-storage";
 
-const startSchema = z.object({ action: z.literal("start_scene"), sceneIndex: z.number().int().min(1), confirmSpend: z.literal(true) });
+const startSchema = z.object({
+  action: z.literal("start_scene"),
+  sceneIndex: z.number().int().min(1),
+  confirmSpend: z.literal(true),
+  confirmUnknownCost: z.boolean().optional(),
+});
 const refreshSchema = z.object({ action: z.literal("refresh_scene"), sceneIndex: z.number().int().min(1) });
 const requestSchema = z.discriminatedUnion("action", [startSchema, refreshSchema]);
 
@@ -76,8 +81,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     if (parsed.data.action === "start_scene") {
       if (existing && ["queued", "running", "succeeded"].includes(existing.status)) return Response.json({ ok: false, error: "scene_generation_already_exists", job: existing }, { status: 409 });
 
-      if (typeof route.estimatedCredits !== "number" || !Number.isFinite(route.estimatedCredits) || route.estimatedCredits <= 0) {
+      const knownCost = typeof route.estimatedCredits === "number" && Number.isFinite(route.estimatedCredits) && route.estimatedCredits > 0;
+      const unknownKieCost = route.selectedProviderId === "kie-ai" && !knownCost;
+      if (!knownCost && !unknownKieCost) {
         return Response.json({ ok: false, error: "cost_estimate_required_before_generation", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
+      }
+      if (unknownKieCost && parsed.data.confirmUnknownCost !== true) {
+        return Response.json({ ok: false, error: "unknown_cost_confirmation_required", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
       }
 
       const budgetLimit = Number(project.briefing?.budgetLimit ?? 0);
@@ -88,11 +98,12 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
       if (route.selectedProviderId === "kie-ai") {
         const balance = await getKieCreditBalance();
-        if (balance === null || balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
+        if (balance === null || balance <= 0) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: knownCost ? route.estimatedCredits : null }, { status: 409 });
+        if (knownCost && balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
         const task = await createKieKling26TextToVideo({ prompt: scene.technicalPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
-        const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: route.estimatedCredits, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
+        const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: knownCost ? route.estimatedCredits : null, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
         await upsertStudioSceneGenerationJob(projectId, job);
-        return Response.json({ ok: true, job, balanceBefore: balance }, { status: 201 });
+        return Response.json({ ok: true, job, balanceBefore: balance, unknownCostAccepted: unknownKieCost }, { status: 201 });
       }
 
       const task = await generateRunwayVideoRouter({ promptText: scene.technicalPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), duration: Math.min(30, Math.max(1, scene.durationSeconds)) });

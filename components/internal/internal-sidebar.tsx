@@ -32,8 +32,8 @@ const groups: Group[] = [
   ]},
   { label: "Marketing", icon: Rocket, items: [
     { label: "Visão geral", href: "/interno/marketing", icon: Rocket },
-    { label: "Planejamento", icon: Target, disabled: true },
-    { label: "Calendário de conteúdo", icon: CalendarDays, disabled: true },
+    { label: "Planejamento", href: "/interno/marketing/planejamento", icon: Target },
+    { label: "Calendário de conteúdo", href: "/interno/marketing/calendario", icon: CalendarDays },
     { label: "Campanhas", icon: Megaphone, disabled: true },
     { label: "Redes sociais & crescimento", href: "/interno/marketing/redes-sociais", icon: Instagram },
     { label: "Métricas", icon: BarChart3, disabled: true },
@@ -86,6 +86,7 @@ export default function InternalSidebar() {
     return can(group.module)?group:null;
   }).filter(Boolean) as Group[],[access]);
   const activeGroup = useMemo(() => visibleGroups.find((group) => group.items.some((item) => item.href && pathname.startsWith(item.href.split("#")[0]))), [pathname,visibleGroups]);
+  useEffect(()=>{if(activeGroup)setOpenGroups((current)=>current[activeGroup.label]?current:{...current,[activeGroup.label]:true});},[activeGroup]);
   function toggleGroup(label: string) { setOpenGroups((current) => ({ ...current, [label]: !current[label] })); }
   async function logout() { await signOut(firebaseAuth); window.location.href = "/interno"; }
 

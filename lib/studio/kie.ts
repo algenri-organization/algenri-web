@@ -1,5 +1,6 @@
 import "server-only";
 
+// Build marker: forces a real Vercel production build after the Pro upgrade.
 const KIE_API_BASE = "https://api.kie.ai";
 export const KIE_STUDIO_VIDEO_MODEL = "kling-2.6/text-to-video";
 

@@ -1,4 +1,4 @@
-import { Cable, CheckCircle2, CircleDashed, KeyRound, Layers3, ShieldCheck } from "lucide-react";
+import { Cable, CheckCircle2, CircleDashed, KeyRound, Layers3, Route, ShieldCheck } from "lucide-react";
 import { providerLayerLabels, studioProviders, type StudioProviderLayer } from "@/lib/studio/providers";
 import { getRunwayIntegrationStatus } from "@/lib/studio/runway";
 
@@ -21,10 +21,14 @@ export default function StudioIntegrationsPage() {
 
       <section className={`mt-5 rounded-[26px] border p-5 ${runwayStatus.configured ? "border-cyan-300/20 bg-cyan-300/[.03]" : "border-amber-300/20 bg-amber-300/[.025]"}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-3"><KeyRound className={`mt-0.5 h-5 w-5 shrink-0 ${runwayStatus.configured ? "text-cyan-200" : "text-amber-100"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/40">Primeira integração real</p><h2 className="mt-1 font-semibold">Runway Dev API</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">O adaptador server-side já está preparado para autenticação, criação de image-to-video, consulta de job e estimativa inicial de créditos. Falta apenas a credencial própria do projeto ALGENRI no ambiente da Vercel para testar a conexão sem expor a chave.</p></div></div>
+          <div className="flex gap-3"><KeyRound className={`mt-0.5 h-5 w-5 shrink-0 ${runwayStatus.configured ? "text-cyan-200" : "text-amber-100"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/40">Primeira integração real</p><h2 className="mt-1 font-semibold">Runway Dev API</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">O adaptador server-side já cobre autenticação, image-to-video, consulta de job e agora também o Model Router em dry run, permitindo validar a escolha automática e o custo estimado antes de gastar créditos.</p></div></div>
           <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.12em] ${runwayStatus.configured ? "border-emerald-300/20 bg-emerald-300/[.06] text-emerald-200" : "border-amber-300/20 bg-amber-300/[.06] text-amber-100"}`}>{runwayStatus.configured ? "credencial configurada" : "aguardando API secret"}</span>
         </div>
-        <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 md:grid-cols-3"><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Variável</p><p className="mt-1 text-xs text-white/55">{runwayStatus.environmentVariable}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">API version</p><p className="mt-1 text-xs text-white/55">{runwayStatus.apiVersion}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Execução</p><p className="mt-1 text-xs text-white/55">Somente server-side</p></div></div>
+        <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 md:grid-cols-4"><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">API secret</p><p className="mt-1 text-xs text-white/55">{runwayStatus.environmentVariable}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Model Router</p><p className="mt-1 text-xs text-white/55">{runwayStatus.routerEnvironmentVariable}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">API version</p><p className="mt-1 text-xs text-white/55">{runwayStatus.apiVersion}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Execução</p><p className="mt-1 text-xs text-white/55">Somente server-side</p></div></div>
+      </section>
+
+      <section className={`mt-5 rounded-[26px] border p-5 ${runwayStatus.readyForDryRun ? "border-violet-300/20 bg-violet-300/[.025]" : "border-white/10 bg-white/[.015]"}`}>
+        <div className="flex gap-3"><Route className={`mt-0.5 h-5 w-5 shrink-0 ${runwayStatus.readyForDryRun ? "text-violet-200" : "text-white/30"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/35">Modo Automático · Runway</p><h2 className="mt-1 font-semibold">Dry run sem geração</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">Com o API secret e um Model Router configurados, o Studio poderá perguntar ao Runway qual motor seria escolhido e qual o custo estimado sem gerar mídia nem consumir créditos. Esse será o primeiro teste do roteamento automático antes de liberarmos a geração paga.</p><p className="mt-3 text-xs text-white/35">Status: {runwayStatus.readyForDryRun ? "pronto para teste após deploy" : runwayStatus.configured ? "falta configurar RUNWAY_MODEL_ROUTER_ID" : "falta configurar RUNWAYML_API_SECRET e RUNWAY_MODEL_ROUTER_ID"}</p></div></div>
       </section>
 
       <div className="mt-8 space-y-8">
@@ -48,7 +52,7 @@ export default function StudioIntegrationsPage() {
       <section className="mt-8 rounded-[28px] border border-cyan-300/15 bg-cyan-300/[.025] p-6">
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-cyan-200">Ordem de integração</p>
         <h2 className="mt-2 text-xl font-semibold">Primeiro conectar, depois sofisticar</h2>
-        <p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">A primeira conexão real vai provar o ciclo completo: autenticar → estimar → gerar um preview ou clipe curto → acompanhar o job → receber o resultado → registrar custo. Depois replicamos o mesmo contrato para os demais provedores.</p>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">A primeira conexão real vai provar o ciclo completo: autenticar → dry run de roteamento → estimar → gerar um preview ou clipe curto → acompanhar o job → receber o resultado → registrar custo. Depois replicamos o mesmo contrato para os demais provedores.</p>
       </section>
     </div>
   </main>;

@@ -59,7 +59,7 @@ async function resolveFontFile(bold = false) {
   ]);
 }
 
-function drawTextFilter(input: string, output: string, textPath: string, opts: { x: string; y: string; size: number; bold?: boolean; box?: boolean; lineSpacing?: number }, fontFile: string | null) {
+function drawTextFilter(input: string, output: string, textPath: string, opts: { x: string; y: string; size: number; box?: boolean; lineSpacing?: number }, fontFile: string | null) {
   const font = fontFile ? `fontfile='${fontFile}':` : "font='Sans':";
   const box = opts.box === false ? "box=0:" : "box=1:boxcolor=black@0.42:boxborderw=18:";
   return `${input}drawtext=${font}textfile='${textPath}':fontcolor=white:fontsize=${opts.size}:${box}x=${opts.x}:y=${opts.y}:line_spacing=${opts.lineSpacing ?? 8}${output}`;
@@ -145,13 +145,13 @@ export async function renderStudioFinalVideo(projectId: string) {
           const textPath = path.join(workdir, `scene-${scene.sceneIndex}-${field.key}.txt`);
           await writeFile(textPath, wrapText(field.text, field.wrap), "utf8");
           const next = `[s${i}t${stage}]`;
-          filters.push(drawTextFilter(current, next, textPath, { x, y: field.y, size: field.size, bold: field.bold, box: true, lineSpacing: Math.round(height * 0.008) }, field.bold ? boldFont : regularFont));
+          filters.push(drawTextFilter(current, next, textPath, { x, y: field.y, size: field.size, box: true, lineSpacing: Math.round(height * 0.008) }, field.bold ? boldFont : regularFont));
           current = next;
           stage += 1;
         }
       }
       const finalLabel = `[scene${i}]`;
-      filters.push(`${current}copy${finalLabel}`);
+      filters.push(`${current}null${finalLabel}`);
       sceneOutputs.push(finalLabel);
     }
 

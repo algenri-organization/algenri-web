@@ -41,36 +41,14 @@ function ratio(value: unknown): "16:9" | "9:16" | "1:1" {
   return value === "1:1" ? "1:1" : value === "9:16" || value === "4:5" ? "9:16" : "16:9";
 }
 
-async function archiveIfNeeded(input: {
-  projectId: string;
-  sceneIndex: number;
-  job: StudioSceneGenerationJob;
-  outputUrl: string | null;
-  status: StudioSceneGenerationJob["status"];
-}) {
+async function archiveIfNeeded(input: { projectId: string; sceneIndex: number; job: StudioSceneGenerationJob; outputUrl: string | null; status: StudioSceneGenerationJob["status"] }) {
   if (input.status !== "succeeded" || !input.outputUrl || input.job.storagePath) return {} as Partial<StudioSceneGenerationJob>;
   try {
-    const archived = await archiveStudioOutput({
-      projectId: input.projectId,
-      sceneIndex: input.sceneIndex,
-      provider: input.job.provider,
-      taskId: input.job.taskId,
-      outputUrl: input.outputUrl,
-    });
-    return {
-      storagePath: archived.storagePath,
-      storageStatus: "archived" as const,
-      storageError: null,
-      contentType: archived.contentType,
-      sizeBytes: archived.sizeBytes,
-      archivedAt: archived.archivedAt,
-    };
+    const archived = await archiveStudioOutput({ projectId: input.projectId, sceneIndex: input.sceneIndex, provider: input.job.provider, taskId: input.job.taskId, outputUrl: input.outputUrl });
+    return { storagePath: archived.storagePath, storageStatus: "archived" as const, storageError: null, contentType: archived.contentType, sizeBytes: archived.sizeBytes, archivedAt: archived.archivedAt };
   } catch (archiveError) {
     console.error("studio_output_archive_failed", archiveError);
-    return {
-      storageStatus: "failed" as const,
-      storageError: archiveError instanceof Error ? archiveError.message : "studio_output_archive_failed",
-    };
+    return { storageStatus: "failed" as const, storageError: archiveError instanceof Error ? archiveError.message : "studio_output_archive_failed" };
   }
 }
 
@@ -91,15 +69,15 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     const route = (project.routing?.routes ?? []).find((item: any) => item.sceneIndex === scene.index);
     if (!route) return Response.json({ ok: false, error: "scene_not_routed" }, { status: 409 });
-    if (!route.executable || !["runway", "kie-ai"].includes(route.selectedProviderId)) {
-      return Response.json({ ok: false, error: "provider_not_executable" }, { status: 409 });
-    }
+    if (!route.executable || !["runway", "kie-ai"].includes(route.selectedProviderId)) return Response.json({ ok: false, error: "provider_not_executable" }, { status: 409 });
 
     const existing = (project.generation?.sceneJobs ?? []).find((item: any) => item.sceneIndex === scene.index) as StudioSceneGenerationJob | undefined;
 
     if (parsed.data.action === "start_scene") {
-      if (existing && ["queued", "running", "succeeded"].includes(existing.status)) {
-        return Response.json({ ok: false, error: "scene_generation_already_exists", job: existing }, { status: 409 });
+      if (existing && ["queued", "running", "succeeded"].includes(existing.status)) return Response.json({ ok: false, error: "scene_generation_already_exists", job: existing }, { status: 409 });
+
+      if (typeof route.estimatedCredits !== "number" || !Number.isFinite(route.estimatedCredits) || route.estimatedCredits <= 0) {
+        return Response.json({ ok: false, error: "cost_estimate_required_before_generation", provider: route.selectedProviderId, model: route.selectedModel ?? null }, { status: 409 });
       }
 
       const budgetLimit = Number(project.briefing?.budgetLimit ?? 0);
@@ -110,56 +88,19 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
       if (route.selectedProviderId === "kie-ai") {
         const balance = await getKieCreditBalance();
-        if (balance === null || balance <= 0) return Response.json({ ok: false, error: "kie_insufficient_credits", balance }, { status: 409 });
-        const task = await createKieKling26TextToVideo({
-          prompt: scene.technicalPrompt,
-          aspectRatio: ratio(project.briefing?.aspectRatio),
-          durationSeconds: scene.durationSeconds,
-          sound: false,
-        });
-        const job: StudioSceneGenerationJob = {
-          sceneIndex: scene.index,
-          provider: "kie-ai",
-          model: KIE_STUDIO_VIDEO_MODEL,
-          taskId: task.taskId,
-          status: "queued",
-          estimatedCredits: route.estimatedCredits ?? null,
-          actualCredits: null,
-          outputUrl: null,
-          storagePath: null,
-          storageStatus: null,
-          failure: null,
-          startedAt: new Date().toISOString(),
-          completedAt: null,
-        };
+        if (balance === null || balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
+        const task = await createKieKling26TextToVideo({ prompt: scene.technicalPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
+        const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: route.estimatedCredits, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
         await upsertStudioSceneGenerationJob(projectId, job);
         return Response.json({ ok: true, job, balanceBefore: balance }, { status: 201 });
       }
 
-      const task = await generateRunwayVideoRouter({
-        promptText: scene.technicalPrompt,
-        aspectRatio: ratio(project.briefing?.aspectRatio),
-        duration: Math.min(30, Math.max(1, scene.durationSeconds)),
-      });
+      const task = await generateRunwayVideoRouter({ promptText: scene.technicalPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), duration: Math.min(30, Math.max(1, scene.durationSeconds)) });
       const taskId = task.id ?? task.taskId ?? null;
       if (!taskId) return Response.json({ ok: false, error: "runway_missing_task_id", providerPayload: task }, { status: 502 });
       const routing = task.routing ?? null;
-      const estimatedCredits = extractRunwayRoutingCost(routing) ?? route.estimatedCredits ?? null;
-      const job: StudioSceneGenerationJob = {
-        sceneIndex: scene.index,
-        provider: "runway",
-        model: routing?.model ?? routing?.selectedModel ?? routing?.modelId ?? route.selectedModel ?? null,
-        taskId,
-        status: "queued",
-        estimatedCredits,
-        actualCredits: null,
-        outputUrl: null,
-        storagePath: null,
-        storageStatus: null,
-        failure: null,
-        startedAt: new Date().toISOString(),
-        completedAt: null,
-      };
+      const estimatedCredits = extractRunwayRoutingCost(routing) ?? route.estimatedCredits;
+      const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "runway", model: routing?.model ?? routing?.selectedModel ?? routing?.modelId ?? route.selectedModel ?? null, taskId, status: "queued", estimatedCredits, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
       await upsertStudioSceneGenerationJob(projectId, job);
       return Response.json({ ok: true, job }, { status: 201 });
     }
@@ -172,16 +113,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       const outputUrl = task.resultUrls[0] ?? existing.outputUrl;
       const completed = status === "succeeded" || status === "failed";
       const storageFields = await archiveIfNeeded({ projectId, sceneIndex: scene.index, job: existing, outputUrl, status });
-      const job: StudioSceneGenerationJob = {
-        ...existing,
-        ...storageFields,
-        model: task.model ?? existing.model,
-        status,
-        outputUrl,
-        failure: task.failMsg ?? task.failCode ?? null,
-        actualCredits: task.creditsConsumed ?? existing.actualCredits ?? null,
-        completedAt: completed ? (existing.completedAt ?? new Date().toISOString()) : null,
-      };
+      const job: StudioSceneGenerationJob = { ...existing, ...storageFields, model: task.model ?? existing.model, status, outputUrl, failure: task.failMsg ?? task.failCode ?? null, actualCredits: task.creditsConsumed ?? existing.actualCredits ?? null, completedAt: completed ? (existing.completedAt ?? new Date().toISOString()) : null };
       await upsertStudioSceneGenerationJob(projectId, job);
       return Response.json({ ok: true, job, progress: task.progress });
     }
@@ -192,15 +124,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const completed = status === "succeeded" || status === "failed";
     const actualCredits = typeof (task as any).costCredits === "number" ? (task as any).costCredits : typeof (task as any).creditsUsed === "number" ? (task as any).creditsUsed : existing.actualCredits;
     const storageFields = await archiveIfNeeded({ projectId, sceneIndex: scene.index, job: existing, outputUrl, status });
-    const job: StudioSceneGenerationJob = {
-      ...existing,
-      ...storageFields,
-      status,
-      outputUrl,
-      failure: task.failure ?? null,
-      actualCredits: actualCredits ?? null,
-      completedAt: completed ? (existing.completedAt ?? new Date().toISOString()) : null,
-    };
+    const job: StudioSceneGenerationJob = { ...existing, ...storageFields, status, outputUrl, failure: task.failure ?? null, actualCredits: actualCredits ?? null, completedAt: completed ? (existing.completedAt ?? new Date().toISOString()) : null };
     await upsertStudioSceneGenerationJob(projectId, job);
     return Response.json({ ok: true, job });
   } catch (error) {

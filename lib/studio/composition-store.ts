@@ -79,6 +79,10 @@ export async function saveStudioComposition(projectId: string, input: { sceneOve
     updatedAt: now,
   };
   const db = await getAdminDb();
-  await db.collection("studioProjects").doc(projectId).set({ composition, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await db.collection("studioProjects").doc(projectId).set({
+    composition,
+    finalRender: null,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
   return composition;
 }

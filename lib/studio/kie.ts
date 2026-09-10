@@ -36,6 +36,7 @@ export function getKieIntegrationStatus() {
     apiBase: KIE_API_BASE,
     supportsBalanceCheck: true,
     supportsUnifiedJobs: true,
+    supportsTaskStatus: true,
   };
 }
 
@@ -77,4 +78,37 @@ export async function createKieVideoTask(input: KieVideoTaskInput) {
   const taskId = payload?.data?.taskId ?? null;
   if (!taskId) throw new Error("kie_missing_task_id");
   return { taskId: String(taskId), payload };
+}
+
+export type KieTaskDetails = {
+  taskId: string;
+  model: string | null;
+  state: string;
+  progress: number | null;
+  resultUrls: string[];
+  failCode: string | null;
+  failMsg: string | null;
+  creditsConsumed: number | null;
+};
+
+export async function getKieTaskDetails(taskId: string): Promise<KieTaskDetails> {
+  const payload = await kieFetch(`/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, { method: "GET" });
+  const data = payload?.data ?? {};
+  let resultUrls: string[] = [];
+  try {
+    const result = typeof data.resultJson === "string" ? JSON.parse(data.resultJson) : data.resultJson;
+    if (Array.isArray(result?.resultUrls)) resultUrls = result.resultUrls.filter((value: unknown): value is string => typeof value === "string");
+  } catch {
+    resultUrls = [];
+  }
+  return {
+    taskId: String(data.taskId ?? taskId),
+    model: typeof data.model === "string" ? data.model : null,
+    state: String(data.state ?? "waiting"),
+    progress: Number.isFinite(Number(data.progress)) ? Number(data.progress) : null,
+    resultUrls,
+    failCode: typeof data.failCode === "string" && data.failCode ? data.failCode : null,
+    failMsg: typeof data.failMsg === "string" && data.failMsg ? data.failMsg : null,
+    creditsConsumed: Number.isFinite(Number(data.creditsConsumed)) ? Number(data.creditsConsumed) : null,
+  };
 }

@@ -39,6 +39,10 @@ export default function StudioRoutingPanel({projectId,allApproved,initialRouting
       const payload=await response.json().catch(()=>({}));
       if(!response.ok||!payload.routing)throw new Error(payload.error||"Não foi possível calcular o roteamento.");
       setRouting(payload.routing);
+      // O plano de roteamento também alimenta o painel de produção no componente pai.
+      // Recarregar garante que o projeto seja lido novamente do Firestore e que os
+      // controles de confirmação/geração apareçam imediatamente após o cálculo.
+      window.location.reload();
     }catch(e){setError(e instanceof Error?e.message:"Não foi possível calcular o roteamento.");}
     finally{setLoading(false);}
   }

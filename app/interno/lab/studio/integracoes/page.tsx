@@ -2,6 +2,8 @@ import { Cable, CheckCircle2, CircleDashed, Coins, KeyRound, Layers3, Route, Shi
 import { providerLayerLabels, studioProviders, type StudioProviderLayer } from "@/lib/studio/providers";
 import { getRunwayIntegrationStatus } from "@/lib/studio/runway";
 import { getKieCreditBalance, getKieIntegrationStatus } from "@/lib/studio/kie";
+import { getHeyGenIntegrationStatus } from "@/lib/studio/heygen";
+import { getHiggsfieldIntegrationStatus } from "@/lib/studio/higgsfield";
 import RunwayDryRunTester from "@/components/studio/runway-dry-run-tester";
 
 const layerOrder: StudioProviderLayer[] = ["generation", "avatar-voice", "composition", "design-finish", "gateway", "intelligence"];
@@ -9,6 +11,8 @@ const layerOrder: StudioProviderLayer[] = ["generation", "avatar-voice", "compos
 export default async function StudioIntegrationsPage() {
   const runwayStatus = getRunwayIntegrationStatus();
   const kieStatus = getKieIntegrationStatus();
+  const heyGenStatus = getHeyGenIntegrationStatus();
+  const higgsfieldStatus = getHiggsfieldIntegrationStatus();
   let kieCredits: number | null = null;
   let kieCreditCheckOk = false;
   if (kieStatus.configured) {
@@ -42,11 +46,23 @@ export default async function StudioIntegrationsPage() {
 
       <section className={`mt-5 rounded-[26px] border p-5 ${kieStatus.configured && kieCreditCheckOk ? "border-emerald-300/20 bg-emerald-300/[.025]" : "border-violet-300/15 bg-violet-300/[.02]"}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-3"><Coins className={`mt-0.5 h-5 w-5 shrink-0 ${kieStatus.configured ? "text-emerald-200" : "text-violet-200"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/40">Gateway multimodelo</p><h2 className="mt-1 font-semibold">Kie.ai</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">A base do adapter já está pronta para consultar saldo e criar jobs na API unificada. O Studio poderá usar o gateway para testar modelos de menor custo ou créditos disponíveis antes de recorrer a opções premium.</p></div></div>
+          <div className="flex gap-3"><Coins className={`mt-0.5 h-5 w-5 shrink-0 ${kieStatus.configured ? "text-emerald-200" : "text-violet-200"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/40">Gateway multimodelo</p><h2 className="mt-1 font-semibold">Kie.ai</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">A base do adapter consulta saldo, cria jobs e acompanha resultados da API unificada. O Studio pode priorizar créditos disponíveis e opções de menor custo antes de recorrer a motores premium.</p></div></div>
           <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.12em] ${kieStatus.configured && kieCreditCheckOk ? "border-emerald-300/20 bg-emerald-300/[.06] text-emerald-200" : kieStatus.configured ? "border-amber-300/20 bg-amber-300/[.06] text-amber-100" : "border-violet-300/20 bg-violet-300/[.06] text-violet-100"}`}>{kieStatus.configured ? kieCreditCheckOk ? "conexão validada" : "credencial configurada · validar" : "aguardando API key"}</span>
         </div>
         <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 md:grid-cols-4"><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Variável</p><p className="mt-1 text-xs text-white/55">{kieStatus.environmentVariable}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Saldo</p><p className="mt-1 text-xs text-white/55">{kieCreditCheckOk ? `${kieCredits ?? 0} créditos` : kieStatus.configured ? "não foi possível consultar" : "—"}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Jobs</p><p className="mt-1 text-xs text-white/55">API unificada</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Estratégia</p><p className="mt-1 text-xs text-white/55">créditos disponíveis → menor custo → premium</p></div></div>
       </section>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <section className={`rounded-[26px] border p-5 ${heyGenStatus.configured ? "border-emerald-300/20 bg-emerald-300/[.025]" : "border-white/10 bg-white/[.015]"}`}>
+          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/40">Avatar & voz</p><h2 className="mt-1 font-semibold">HeyGen</h2><p className="mt-2 text-sm leading-6 text-white/45">Preparado para presenter, avatar autorizado, voz e lip-sync. A próxima etapa será validar a credencial contra a API antes de liberar geração.</p></div><span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.12em] ${heyGenStatus.configured ? "border-emerald-300/20 bg-emerald-300/[.06] text-emerald-200" : "border-white/10 text-white/35"}`}>{heyGenStatus.configured ? "credencial configurada" : "aguardando chave"}</span></div>
+          <div className="mt-4 border-t border-white/10 pt-4"><p className="text-[10px] uppercase tracking-[.12em] text-white/25">Variável</p><p className="mt-1 text-xs text-white/55">{heyGenStatus.environmentVariable}</p></div>
+        </section>
+
+        <section className={`rounded-[26px] border p-5 ${higgsfieldStatus.configured ? "border-emerald-300/20 bg-emerald-300/[.025]" : "border-white/10 bg-white/[.015]"}`}>
+          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/40">Motor cinematográfico</p><h2 className="mt-1 font-semibold">Higgsfield</h2><p className="mt-2 text-sm leading-6 text-white/45">Credencial estruturada como par Key ID + Secret. O adapter só considera a integração pronta quando os dois valores estão presentes no servidor.</p></div><span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.12em] ${higgsfieldStatus.configured ? "border-emerald-300/20 bg-emerald-300/[.06] text-emerald-200" : "border-white/10 text-white/35"}`}>{higgsfieldStatus.configured ? "par configurado" : "aguardando credenciais"}</span></div>
+          <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">API Key ID</p><p className="mt-1 text-xs text-white/55">{higgsfieldStatus.keyIdEnvironmentVariable}</p></div><div><p className="text-[10px] uppercase tracking-[.12em] text-white/25">API Key Secret</p><p className="mt-1 text-xs text-white/55">{higgsfieldStatus.keySecretEnvironmentVariable}</p></div></div>
+        </section>
+      </div>
 
       <section className={`mt-5 rounded-[26px] border p-5 ${runwayStatus.readyForDryRun ? "border-violet-300/20 bg-violet-300/[.025]" : "border-white/10 bg-white/[.015]"}`}>
         <div className="flex gap-3"><Route className={`mt-0.5 h-5 w-5 shrink-0 ${runwayStatus.readyForDryRun ? "text-violet-200" : "text-white/30"}`}/><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-white/35">Modo Automático · Runway</p><h2 className="mt-1 font-semibold">Dry run sem geração</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">Com o API secret e um Model Router configurados, o Studio consulta qual motor seria escolhido e o custo estimado sem gerar mídia.</p><p className="mt-3 text-xs text-white/35">Status: {runwayStatus.readyForDryRun ? "pronto para teste" : runwayStatus.configured ? "falta configurar RUNWAY_MODEL_ROUTER_ID" : "falta configurar RUNWAYML_API_SECRET e RUNWAY_MODEL_ROUTER_ID"}</p></div></div>
@@ -72,7 +88,7 @@ export default async function StudioIntegrationsPage() {
         })}
       </div>
 
-      <section className="mt-8 rounded-[28px] border border-cyan-300/15 bg-cyan-300/[.025] p-6"><p className="text-xs font-semibold uppercase tracking-[.16em] text-cyan-200">Estratégia multimotor</p><h2 className="mt-2 text-xl font-semibold">Validar barato antes de renderizar caro</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">Runway permanece como motor validado. Kie.ai entra como gateway de cobertura e economia; depois conectamos HeyGen, Higgsfield e Remotion. Plataformas sem API estável podem permanecer como opções assistidas, sem quebrar o fluxo automatizado do Studio.</p></section>
+      <section className="mt-8 rounded-[28px] border border-cyan-300/15 bg-cyan-300/[.025] p-6"><p className="text-xs font-semibold uppercase tracking-[.16em] text-cyan-200">Estratégia multimotor</p><h2 className="mt-2 text-xl font-semibold">Validar barato antes de renderizar caro</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-white/45">Runway e Kie.ai já formam a primeira camada produtiva. HeyGen e Higgsfield entram agora na etapa de validação de credenciais e, depois, benchmark controlado antes de receberem peso no roteamento automático.</p></section>
     </div>
   </main>;
 }

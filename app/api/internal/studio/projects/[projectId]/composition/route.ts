@@ -21,19 +21,27 @@ const patchSchema = z.object({
   approve: z.boolean().optional(),
 });
 
-async function authorize(request: Request, projectId: string) {
+type AuthorizationResult =
+  | { ok: true; project: NonNullable<Awaited<ReturnType<typeof getStudioProject>>> }
+  | { ok: false; response: Response };
+
+async function authorize(request: Request, projectId: string): Promise<AuthorizationResult> {
   const user = await requireAlgenriInternalUser(request);
   const project = await getStudioProject(projectId);
-  if (!project) return { response: Response.json({ ok: false, error: "not_found" }, { status: 404 }) };
-  if (project.ownerUid && project.ownerUid !== user.uid) return { response: Response.json({ ok: false, error: "forbidden" }, { status: 403 }) };
-  return { project };
+  if (!project) {
+    return { ok: false, response: Response.json({ ok: false, error: "not_found" }, { status: 404 }) };
+  }
+  if (project.ownerUid && project.ownerUid !== user.uid) {
+    return { ok: false, response: Response.json({ ok: false, error: "forbidden" }, { status: 403 }) };
+  }
+  return { ok: true, project };
 }
 
 export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {
   try {
     const { projectId } = await context.params;
     const auth = await authorize(request, projectId);
-    if (auth.response) return auth.response;
+    if (!auth.ok) return auth.response;
     return Response.json({ ok: true, composition: await getStudioComposition(projectId) });
   } catch (error) {
     const auth = internalAuthResponse(error);
@@ -46,9 +54,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
   try {
     const { projectId } = await context.params;
     const auth = await authorize(request, projectId);
-    if (auth.response) return auth.response;
+    if (!auth.ok) return auth.response;
     const parsed = patchSchema.safeParse(await request.json());
-    if (!parsed.success) return Response.json({ ok: false, error: "invalid_request", issues: parsed.error.issues }, { status: 400 });
+    if (!parsed.success) {
+      return Response.json({ ok: false, error: "invalid_request", issues: parsed.error.issues }, { status: 400 });
+    }
     const composition = await saveStudioComposition(projectId, parsed.data);
     return Response.json({ ok: true, composition });
   } catch (error) {

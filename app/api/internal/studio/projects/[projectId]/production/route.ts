@@ -46,6 +46,19 @@ function ratio(value: unknown): "16:9" | "9:16" | "1:1" {
   return value === "1:1" ? "1:1" : value === "9:16" || value === "4:5" ? "9:16" : "16:9";
 }
 
+function buildBrandSafeVisualPrompt(scene: any, project: any) {
+  const visualDirection = String(scene?.visualDirection ?? "").trim();
+  const objective = String(scene?.objective ?? "").trim();
+  const visualStyle = String(project?.briefing?.visualStyle ?? "").trim();
+  const base = [
+    visualDirection,
+    objective ? `Creative objective: ${objective}` : "",
+    visualStyle ? `Visual style: ${visualStyle}` : "",
+  ].filter(Boolean).join("\n");
+
+  return `${base}\n\nCRITICAL GENERATION RULES:\n- Generate ONLY the cinematic visual plate/background for this scene.\n- Do NOT render any logo, brand mark, company name, slogan, word, letter, number, caption, UI label, watermark or readable typography.\n- Do NOT invent or approximate a corporate logo or symbol.\n- Leave clean negative space when branding or copy will be added later.\n- Exact ALGENRI branding, logos and text are added after generation in the controlled composition layer.\n- Preserve the requested camera movement, lighting, environment, action and premium visual language without textual elements.`;
+}
+
 async function archiveIfNeeded(input: { projectId: string; sceneIndex: number; job: StudioSceneGenerationJob; outputUrl: string | null; status: StudioSceneGenerationJob["status"] }) {
   if (input.status !== "succeeded" || !input.outputUrl || input.job.storagePath) return {} as Partial<StudioSceneGenerationJob>;
   try {
@@ -96,17 +109,19 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         return Response.json({ ok: false, error: "budget_limit_exceeded", budgetLimit, totalEstimatedCredits: totalEstimated }, { status: 409 });
       }
 
+      const providerPrompt = buildBrandSafeVisualPrompt(scene, project);
+
       if (route.selectedProviderId === "kie-ai") {
         const balance = await getKieCreditBalance();
         if (balance === null || balance <= 0) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: knownCost ? route.estimatedCredits : null }, { status: 409 });
         if (knownCost && balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
-        const task = await createKieKling26TextToVideo({ prompt: scene.technicalPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
+        const task = await createKieKling26TextToVideo({ prompt: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
         const job: StudioSceneGenerationJob = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: knownCost ? route.estimatedCredits : null, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null };
         await upsertStudioSceneGenerationJob(projectId, job);
         return Response.json({ ok: true, job, balanceBefore: balance, unknownCostAccepted: unknownKieCost }, { status: 201 });
       }
 
-      const task = await generateRunwayVideoRouter({ promptText: scene.technicalPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), duration: Math.min(30, Math.max(1, scene.durationSeconds)) });
+      const task = await generateRunwayVideoRouter({ promptText: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), duration: Math.min(30, Math.max(1, scene.durationSeconds)) });
       const taskId = task.id ?? task.taskId ?? null;
       if (!taskId) return Response.json({ ok: false, error: "runway_missing_task_id", providerPayload: task }, { status: 502 });
       const routing = task.routing ?? null;

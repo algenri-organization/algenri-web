@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, Clock3, Film, Loader2, Pencil, RefreshCw, Save
 import { firebaseAuth } from "@/lib/firebase/client";
 import StudioRoutingPanel from "@/components/studio/studio-routing-panel";
 import StudioProductionPanel from "@/components/studio/studio-production-panel";
+import StudioCompositionPanel from "@/components/studio/studio-composition-panel";
 
 type Scene = { index:number; title:string; durationSeconds:number; objective:string; narration:string; visualDirection:string; technicalPrompt:string; status:"draft"|"approved" };
 type Project = { id:string; name:string; status:string; briefing?:{ destination?:string; durationSeconds?:number; visualStyle?:string; aspectRatio?:string; engineMode?:string; priority?:string; budgetLimit?:number }; storyboard?:Scene[]; commercialLink?:{ origin?:string; clientName?:string; commercialProjectName?:string; proposalNumber?:string; contractNumber?:string }; ai?:{ storyboardState?:string; model?:string }; review?:{ approvedScenes?:number; totalScenes?:number; allApproved?:boolean }; routing?:any; generation?:any };
@@ -41,7 +42,7 @@ export default function StudioProjectPage({ params }: { params: Promise<{ projec
     {error&&<div className="mt-6 flex gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[.04] p-5"><TriangleAlert className="h-5 w-5 text-amber-100"/><p className="text-sm text-amber-50">{error}</p></div>}
 
     {project&&<>
-      <div className="mt-5 border-b border-white/10 pb-7"><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em] text-cyan-200"><Film className="h-4 w-4"/> ALGENRI Studio · Storyboard</div><h1 className="mt-3 text-3xl font-semibold tracking-[-.03em] sm:text-4xl">{project.name}</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Revise cada cena, edite manualmente, peça uma nova versão à IA e aprove somente quando estiver pronta. Nenhuma geração de vídeo é disparada aqui.</p></div>
+      <div className="mt-5 border-b border-white/10 pb-7"><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em] text-cyan-200"><Film className="h-4 w-4"/> ALGENRI Studio · Produção</div><h1 className="mt-3 text-3xl font-semibold tracking-[-.03em] sm:text-4xl">{project.name}</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/50">Do storyboard à geração por cenas e à composição controlada. As mídias generativas formam a base visual; textos, marca e CTA são tratados em camadas exatas antes da montagem final.</p></div>
 
       {project.commercialLink?.origin==="client"&&<section className="mt-6 rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-4"><p className="text-[10px] uppercase tracking-[.14em] text-sky-200/70">Vínculo comercial</p><p className="mt-2 text-sm text-white/65">{[project.commercialLink.clientName,project.commercialLink.commercialProjectName,project.commercialLink.proposalNumber,project.commercialLink.contractNumber].filter(Boolean).join(" · ")}</p></section>}
 
@@ -63,6 +64,7 @@ export default function StudioProjectPage({ params }: { params: Promise<{ projec
 
       <StudioRoutingPanel projectId={projectId} allApproved={allApproved} initialRouting={project.routing} />
       {project.routing?.routes?.length>0&&<StudioProductionPanel projectId={projectId} routing={project.routing} budgetLimit={project.briefing?.budgetLimit??null} initialGeneration={project.generation} />}
+      <StudioCompositionPanel projectId={projectId} storyboard={project.storyboard??[]} generation={project.generation} />
     </>}
   </div></main>;
 }

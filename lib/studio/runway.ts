@@ -64,17 +64,43 @@ function runwayHeaders() {
   };
 }
 
+function extractRunwayErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== "object") return null;
+  const value = payload as Record<string, unknown>;
+  const direct = [value.message, value.msg, value.error, value.detail, value.details];
+  for (const item of direct) {
+    if (typeof item === "string" && item.trim()) return item.trim();
+    if (item && typeof item === "object") {
+      const nested = item as Record<string, unknown>;
+      for (const candidate of [nested.message, nested.msg, nested.detail, nested.reason]) {
+        if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+      }
+    }
+  }
+  return null;
+}
+
 async function parseRunwayResponse(response: Response) {
   const text = await response.text();
   let payload: unknown = null;
   try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }
   if (!response.ok) {
-    const error = new Error(`runway_api_${response.status}`) as Error & { status?: number; payload?: unknown };
+    const detail = extractRunwayErrorMessage(payload);
+    const code = `runway_api_${response.status}`;
+    const error = new Error(detail ? `${code}: ${detail}` : code) as Error & { status?: number; payload?: unknown; code?: string };
     error.status = response.status;
     error.payload = payload;
+    error.code = code;
     throw error;
   }
   return payload;
+}
+
+export function normalizeRunwayRouterDuration(seconds: number) {
+  const duration = Math.max(1, Math.round(seconds));
+  if (duration <= 5) return 5;
+  if (duration <= 10) return 10;
+  return duration;
 }
 
 function routerPayload(input: RunwayRouterVideoInput, dryRun: boolean) {
@@ -87,7 +113,7 @@ function routerPayload(input: RunwayRouterVideoInput, dryRun: boolean) {
     input: {
       promptText: input.promptText,
       aspectRatio: input.aspectRatio,
-      duration: input.duration,
+      duration: normalizeRunwayRouterDuration(input.duration),
       ...(referenceImages ? { referenceImages } : {}),
     },
   };

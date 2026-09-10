@@ -52,6 +52,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       studio_ffmpeg_unavailable: "O motor de renderização MP4 não está disponível neste ambiente.",
       studio_composition_not_approved: "A composição precisa estar aprovada antes da montagem final.",
     };
-    return Response.json({ ok: false, error: code, message: human[code] ?? "Não foi possível concluir a renderização final." }, { status: 409 });
+    const knownMessage = human[code];
+    const technicalDetail = error instanceof Error ? error.message.slice(0, 700) : "studio_final_render_failed";
+    return Response.json({
+      ok: false,
+      error: code,
+      message: knownMessage ?? "Não foi possível concluir a renderização final.",
+      technicalDetail,
+    }, { status: 409 });
   }
 }

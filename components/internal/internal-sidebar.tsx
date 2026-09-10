@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { BadgeCheck, Bell, BriefcaseBusiness, Building2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FlaskConical, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, Library, LogOut, Menu, MessageSquareText, PlugZap, Settings2, Shapes, Sparkles, Users, X } from "lucide-react";
+import { BadgeCheck, BarChart3, Bell, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FlaskConical, FolderKanban, Gauge, Home, Inbox, Instagram, LayoutDashboard, Library, LogOut, Megaphone, Menu, MessageSquareText, PlugZap, Rocket, Settings2, Shapes, Sparkles, Target, Users, X } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase/client";
 
 type ModuleKey="commercial"|"operation"|"finance"|"settings";
@@ -29,6 +29,14 @@ const groups: Group[] = [
   { label: "Financeiro", module:"finance", icon: CircleDollarSign, items: [
     { label: "Cobranças", href: "/interno/financeiro#cobrancas", icon: CircleDollarSign },
     { label: "Recebimentos", href: "/interno/financeiro#recebimentos", icon: CircleDollarSign },
+  ]},
+  { label: "Marketing", icon: Rocket, items: [
+    { label: "Visão geral", href: "/interno/marketing", icon: Rocket },
+    { label: "Planejamento", icon: Target, disabled: true },
+    { label: "Calendário de conteúdo", icon: CalendarDays, disabled: true },
+    { label: "Campanhas", icon: Megaphone, disabled: true },
+    { label: "Redes sociais & crescimento", href: "/interno/marketing/redes-sociais", icon: Instagram },
+    { label: "Métricas", icon: BarChart3, disabled: true },
   ]},
   { label: "ALGENRI Lab", icon: FlaskConical, items: [
     { label: "Visão geral", href: "/interno/lab", icon: FlaskConical },

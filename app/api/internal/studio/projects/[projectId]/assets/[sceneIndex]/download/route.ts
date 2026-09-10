@@ -11,11 +11,18 @@ export async function GET(request: Request, context: { params: Promise<{ project
     if (project.ownerUid && project.ownerUid !== user.uid) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
 
     const index = Number(sceneIndex);
-    const asset = Array.isArray(project.assets) ? project.assets.find((item: any) => item.sceneIndex === index && item.storagePath) : null;
+    const requestedVersion = Number(new URL(request.url).searchParams.get("version") ?? 0);
+    const assets = Array.isArray(project.assets) ? project.assets.filter((item: any) => item.sceneIndex === index && item.storagePath) : [];
+    const activeVersion = Number(project.generation?.activeVersionByScene?.[String(index)] ?? 0);
+    const targetVersion = requestedVersion > 0 ? requestedVersion : activeVersion;
+    const asset = targetVersion > 0
+      ? assets.find((item: any) => Number(item.version ?? 1) === targetVersion)
+      : assets.sort((a: any, b: any) => Number(b.version ?? 1) - Number(a.version ?? 1))[0];
     if (!asset?.storagePath) return Response.json({ ok: false, error: "asset_not_found" }, { status: 404 });
 
     const stored = await readStudioArchivedOutput(asset.storagePath);
-    const filename = asset.filename || `ALGENRI-Studio-Cena-${String(index).padStart(2, "0")}.mp4`;
+    const version = Number(asset.version ?? 1);
+    const filename = asset.filename || `ALGENRI-Studio-Cena-${String(index).padStart(2, "0")}-V${String(version).padStart(2, "0")}.mp4`;
     const body = new Uint8Array(stored.buffer);
 
     return new Response(body, {

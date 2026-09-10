@@ -101,6 +101,7 @@ export async function createStudioVideoProject(input: { ownerUid: string; ownerE
     name: input.name, format: "video", status: "planning", ownerUid: input.ownerUid, ownerEmail: input.ownerEmail ?? null,
     commercialLink, briefing: input.briefing, storyboard,
     ai: { storyboardState: input.briefing.scriptMode === "ai" ? "pending" : "manual", model: null, generatedAt: null, error: null },
+    review: { approvedScenes: 0, totalScenes: storyboard.length, allApproved: false, approvedAt: null },
     routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
     generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null, sceneJobs: [] },
     benchmark: { enabled: true, qualityScore: null, promptAdherenceScore: null, notes: null },
@@ -118,12 +119,60 @@ export async function getStudioProject(projectId: string) {
 
 export async function applyStudioAiStoryboard(projectId: string, storyboard: StudioStoryboardScene[], model: string) {
   const db = await getAdminDb();
-  await db.collection("studioProjects").doc(projectId).set({ storyboard, ai: { storyboardState: "generated", model, generatedAt: new Date().toISOString(), error: null }, routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null }, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await db.collection("studioProjects").doc(projectId).set({
+    storyboard,
+    ai: { storyboardState: "generated", model, generatedAt: new Date().toISOString(), error: null },
+    review: { approvedScenes: 0, totalScenes: storyboard.length, allApproved: false, approvedAt: null },
+    routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
 }
 
 export async function markStudioAiStoryboardFailure(projectId: string, error: string) {
   const db = await getAdminDb();
   await db.collection("studioProjects").doc(projectId).set({ ai: { storyboardState: "fallback", model: null, generatedAt: null, error }, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+
+export async function updateStudioStoryboardScene(projectId: string, sceneIndex: number, patch: Partial<StudioStoryboardScene>) {
+  const project = await getStudioProject(projectId);
+  if (!project) return null;
+  const storyboard = Array.isArray(project.storyboard) ? project.storyboard as StudioStoryboardScene[] : [];
+  const position = storyboard.findIndex((scene) => scene.index === sceneIndex);
+  if (position < 0) return null;
+  const current = storyboard[position];
+  storyboard[position] = {
+    ...current,
+    ...patch,
+    index: current.index,
+    durationSeconds: Math.max(1, Math.round(Number(patch.durationSeconds ?? current.durationSeconds))),
+    status: patch.status === "approved" ? "approved" : patch.status === "draft" ? "draft" : current.status,
+  };
+  const approvedScenes = storyboard.filter((scene) => scene.status === "approved").length;
+  const allApproved = storyboard.length > 0 && approvedScenes === storyboard.length;
+  const db = await getAdminDb();
+  await db.collection("studioProjects").doc(projectId).set({
+    storyboard,
+    status: allApproved ? "review" : "planning",
+    review: { approvedScenes, totalScenes: storyboard.length, allApproved, approvedAt: allApproved ? new Date().toISOString() : null },
+    routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return storyboard[position];
+}
+
+export async function approveAllStudioStoryboardScenes(projectId: string) {
+  const project = await getStudioProject(projectId);
+  if (!project) return null;
+  const storyboard = (Array.isArray(project.storyboard) ? project.storyboard : []).map((scene: StudioStoryboardScene) => ({ ...scene, status: "approved" as const }));
+  const db = await getAdminDb();
+  await db.collection("studioProjects").doc(projectId).set({
+    storyboard,
+    status: storyboard.length ? "review" : "planning",
+    review: { approvedScenes: storyboard.length, totalScenes: storyboard.length, allApproved: storyboard.length > 0, approvedAt: storyboard.length ? new Date().toISOString() : null },
+    routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return storyboard;
 }
 
 export async function saveStudioRoutingPlan(projectId: string, routing: Record<string, unknown>) {

@@ -27,6 +27,12 @@ export type StudioSceneGenerationJob = {
   estimatedCredits: number | null;
   actualCredits: number | null;
   outputUrl: string | null;
+  storagePath?: string | null;
+  storageStatus?: "pending" | "archived" | "failed" | null;
+  storageError?: string | null;
+  contentType?: string | null;
+  sizeBytes?: number | null;
+  archivedAt?: string | null;
   failure: unknown | null;
   startedAt: string;
   completedAt: string | null;
@@ -104,6 +110,7 @@ export async function createStudioVideoProject(input: { ownerUid: string; ownerE
     review: { approvedScenes: 0, totalScenes: storyboard.length, allApproved: false, approvedAt: null },
     routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
     generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null, sceneJobs: [] },
+    assets: [],
     benchmark: { enabled: true, qualityScore: null, promptAdherenceScore: null, notes: null },
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   });
@@ -189,6 +196,19 @@ export async function upsertStudioSceneGenerationJob(projectId: string, job: Stu
   const allSucceeded = next.length > 0 && next.every((item) => item.status === "succeeded");
   const anyActive = next.some((item) => item.status === "queued" || item.status === "running");
   const state = allSucceeded ? "completed" : anyActive ? "generating" : next.some((item) => item.status === "failed") ? "attention" : "not_started";
+  const assets = next.filter((item) => item.status === "succeeded" && item.storagePath).map((item) => ({
+    id: `scene-${item.sceneIndex}-${item.taskId}`,
+    kind: "video-scene",
+    sceneIndex: item.sceneIndex,
+    provider: item.provider,
+    model: item.model,
+    taskId: item.taskId,
+    storagePath: item.storagePath,
+    contentType: item.contentType ?? "video/mp4",
+    sizeBytes: item.sizeBytes ?? null,
+    archivedAt: item.archivedAt ?? item.completedAt,
+    filename: `ALGENRI-Studio-Cena-${String(item.sceneIndex).padStart(2, "0")}.mp4`,
+  }));
   const db = await getAdminDb();
   await db.collection("studioProjects").doc(projectId).set({
     status: allSucceeded ? "review" : anyActive ? "generating" : project.status,
@@ -199,6 +219,7 @@ export async function upsertStudioSceneGenerationJob(projectId: string, job: Stu
       actualCredits: actualKnown.length ? actualKnown.reduce((sum, value) => sum + value, 0) : null,
       outputUrl: allSucceeded && next.length === 1 ? next[0].outputUrl : null,
     },
+    assets,
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   return next;

@@ -3,12 +3,12 @@
 import { useMemo, useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { BadgeCheck, Bell, BriefcaseBusiness, Building2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, LogOut, Menu, MessageSquareText, PlugZap, Settings2, Users, X } from "lucide-react";
+import { BadgeCheck, Bell, BriefcaseBusiness, Building2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, FileSignature, FileText, FlaskConical, FolderKanban, Gauge, Home, Inbox, LayoutDashboard, Library, LogOut, Menu, MessageSquareText, PlugZap, Settings2, Shapes, Sparkles, Users, X } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase/client";
 
 type ModuleKey="commercial"|"operation"|"finance"|"settings";
 type Item = { label: string; href?: string; icon: React.ElementType; disabled?: boolean; always?:boolean };
-type Group = { label: string; icon: React.ElementType; module:ModuleKey; items: Item[] };
+type Group = { label: string; icon: React.ElementType; module?:ModuleKey; items: Item[] };
 type ChargeSummary = { dueDate:string; status:string };
 type Access={role:"admin"|"member";permissions:ModuleKey[]};
 type NotificationPreferences={financeOverdueInApp:boolean};
@@ -29,6 +29,15 @@ const groups: Group[] = [
   { label: "Financeiro", module:"finance", icon: CircleDollarSign, items: [
     { label: "Cobranças", href: "/interno/financeiro#cobrancas", icon: CircleDollarSign },
     { label: "Recebimentos", href: "/interno/financeiro#recebimentos", icon: CircleDollarSign },
+  ]},
+  { label: "ALGENRI Lab", icon: FlaskConical, items: [
+    { label: "Visão geral", href: "/interno/lab", icon: FlaskConical },
+    { label: "ALGENRI Studio", href: "/interno/lab/studio", icon: Sparkles },
+    { label: "Projetos experimentais", icon: FolderKanban, disabled: true },
+    { label: "Apps & Toys", icon: Shapes, disabled: true },
+    { label: "Biblioteca", icon: Library, disabled: true },
+    { label: "Benchmarks de IA", icon: Gauge, disabled: true },
+    { label: "Integrações criativas", icon: PlugZap, disabled: true },
   ]},
   { label: "Configurações", module:"settings", icon: Settings2, items: [
     { label: "Visão geral", href: "/interno/configuracoes", icon: Settings2 },
@@ -52,7 +61,7 @@ export default function InternalSidebar() {
   const [overdueCount,setOverdueCount]=useState(0);
   const [financeAlertEnabled,setFinanceAlertEnabled]=useState(true);
   const [access,setAccess]=useState<Access|null>(null);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map((group) => [group.label, true])));
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map((group) => [group.label, false])));
 
   useEffect(() => onAuthStateChanged(firebaseAuth, setUser), []);
   useEffect(()=>{if(!user){setAccess(null);return;}let cancelled=false;(async()=>{try{const token=await user.getIdToken();const r=await fetch("/api/internal/access",{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)return;const p=await r.json();if(!cancelled)setAccess(p);}catch{}})();return()=>{cancelled=true};},[user,pathname]);
@@ -65,6 +74,7 @@ export default function InternalSidebar() {
       const items=can("settings")?group.items:group.items.filter(item=>item.always);
       return items.length?{...group,items}:null;
     }
+    if(!group.module)return group;
     return can(group.module)?group:null;
   }).filter(Boolean) as Group[],[access]);
   const activeGroup = useMemo(() => visibleGroups.find((group) => group.items.some((item) => item.href && pathname.startsWith(item.href.split("#")[0]))), [pathname,visibleGroups]);

@@ -3,6 +3,11 @@ import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing
 import { getStudioProject } from "@/lib/studio/project-store";
 import { getStudioComposition, saveStudioComposition } from "@/lib/studio/composition-store";
 
+const brandSchema = z.object({
+  mode: z.enum(["algenri", "text", "none"]),
+  name: z.string().max(80),
+});
+
 const overlaySchema = z.object({
   sceneIndex: z.number().int().min(1),
   enabled: z.boolean(),
@@ -16,6 +21,7 @@ const overlaySchema = z.object({
 });
 
 const patchSchema = z.object({
+  brand: brandSchema.optional(),
   sceneOverlays: z.array(overlaySchema),
   transition: z.enum(["cut", "fade"]),
   approve: z.boolean().optional(),

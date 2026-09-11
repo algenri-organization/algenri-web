@@ -82,7 +82,10 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     "  FFMPEG=/tmp/ffmpeg-dist/bin/ffmpeg",
     "fi",
     "sudo dnf install -y dejavu-sans-fonts >>/tmp/bootstrap.log 2>&1 || true",
+    "FFPROBE=\"$(dirname \"$FFMPEG\")/ffprobe\"",
+    "if [ ! -x \"$FFPROBE\" ]; then FFPROBE=$(command -v ffprobe || true); fi",
     "test -x \"$FFMPEG\"",
+    "test -x \"$FFPROBE\"",
     "test -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
     "STEP=verify_ffmpeg",
     "\"$FFMPEG\" -hide_banner -filters > /tmp/filters.txt 2>/tmp/render.log",
@@ -90,12 +93,22 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
   ];
 
   sceneUrls.forEach((url, index) => {
+    const duration = Math.max(1, Number(manifest.scenes[index]?.durationSeconds || 1));
     lines.push(`STEP=download_scene_${index}`);
     lines.push(`curl -fsSL --retry 3 ${shQuote(url)} -o ${shQuote(`scene-${index}.mp4`)}`);
+    lines.push(`STEP=prepare_audio_${index}`);
+    lines.push(`\"$FFPROBE\" -v error -select_streams a:0 -show_entries stream=index -of csv=p=0 ${shQuote(`/tmp/scene-${index}.mp4`)} > ${shQuote(`/tmp/audio-probe-${index}.txt`)} 2>/tmp/render.log || true`);
+    lines.push(`if grep -q . ${shQuote(`/tmp/audio-probe-${index}.txt`)}; then`);
+    lines.push(`  \"$FFMPEG\" -hide_banner -loglevel error -y -i ${shQuote(`/tmp/scene-${index}.mp4`)} -map 0:a:0 -vn -ac 2 -ar 48000 -af ${shQuote(`atrim=duration=${duration},asetpts=PTS-STARTPTS`)} ${shQuote(`/tmp/audio-${index}.wav`)} 2>>/tmp/render.log`);
+    lines.push("else");
+    lines.push(`  \"$FFMPEG\" -hide_banner -loglevel error -y -f lavfi -i anullsrc=r=48000:cl=stereo -t ${duration} -c:a pcm_s16le ${shQuote(`/tmp/audio-${index}.wav`)} 2>>/tmp/render.log`);
+    lines.push("fi");
   });
 
   const filters: string[] = [];
   const sceneOutputs: string[] = [];
+  const audioOutputs: string[] = [];
+  const sceneCount = manifest.scenes.length;
 
   manifest.scenes.forEach((scene, index) => {
     const duration = Math.max(1, Number(scene.durationSeconds || 1));
@@ -130,13 +143,20 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
       filters.push(`${current}null${finalLabel}`);
     }
     sceneOutputs.push(finalLabel);
+
+    const audioLabel = `[audio${index}]`;
+    filters.push(`[${sceneCount + index}:a]atrim=duration=${duration},asetpts=PTS-STARTPTS${audioLabel}`);
+    audioOutputs.push(audioLabel);
   });
 
   filters.push(`${sceneOutputs.join("")}concat=n=${sceneOutputs.length}:v=1:a=0[outv]`);
-  const inputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/scene-${index}.mp4`)}`).join(" ");
+  filters.push(`${audioOutputs.join("")}concat=n=${audioOutputs.length}:v=0:a=1[outa]`);
+  const videoInputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/scene-${index}.mp4`)}`).join(" ");
+  const audioInputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/audio-${index}.wav`)}`).join(" ");
+  const inputs = `${videoInputs} ${audioInputs}`;
   lines.push(
     "STEP=ffmpeg_render",
-    `\"$FFMPEG\" -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -an -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -movflags +faststart /tmp/final.mp4 2>/tmp/render.log`,
+    `\"$FFMPEG\" -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -map '[outa]' -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 -movflags +faststart /tmp/final.mp4 2>/tmp/render.log`,
     "STEP=upload_output",
     `curl -fsS --retry 3 -X PUT -H 'Content-Type: video/mp4' --upload-file /tmp/final.mp4 ${shQuote(outputUrl)}`,
     "STEP=complete_status",

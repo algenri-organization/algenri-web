@@ -91,11 +91,16 @@ async function parseRunwayResponse(response: Response) {
   try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }
   if (!response.ok) {
     const detail = extractRunwayErrorMessage(payload);
+    const creditError = isRunwayCreditError(detail);
     const apiCode = `runway_api_${response.status}`;
-    const structuredCode = isRunwayCreditError(detail) ? "runway_insufficient_credits" : apiCode;
+    const structuredCode = creditError ? "runway_insufficient_credits" : apiCode;
+    const friendlyCreditMessage = "O Runway recusou a geração por saldo insuficiente na organização da API. Verifique os créditos/autobilling no Runway Dev ou escolha outro motor disponível.";
+    const errorPayload = creditError
+      ? { ...(payload && typeof payload === "object" ? payload as Record<string, unknown> : {}), msg: friendlyCreditMessage, providerMessage: detail }
+      : payload;
     const error = new Error(structuredCode) as Error & { status?: number; payload?: unknown; code?: string; providerMessage?: string | null };
-    error.status = isRunwayCreditError(detail) ? 402 : response.status;
-    error.payload = payload;
+    error.status = creditError ? 402 : response.status;
+    error.payload = errorPayload;
     error.code = structuredCode;
     error.providerMessage = detail;
     throw error;

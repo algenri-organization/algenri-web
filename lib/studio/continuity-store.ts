@@ -5,6 +5,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { getStudioProject } from "@/lib/studio/project-store";
 
 export type StudioContinuityMode = "independent" | "coherent" | "strict";
+export type StudioContinuityReferencePurpose = "character" | "scene-frame" | "environment";
 export type StudioContinuityConfig = {
   mode: StudioContinuityMode;
   characters: string;
@@ -12,6 +13,8 @@ export type StudioContinuityConfig = {
   wardrobe: string;
   visualRules: string;
   chainPreviousScene: boolean;
+  referencePurpose: StudioContinuityReferencePurpose;
+  referenceSubject: string;
   referenceImageStoragePath?: string | null;
   referenceImageContentType?: string | null;
   updatedAt: string;
@@ -19,6 +22,7 @@ export type StudioContinuityConfig = {
 
 export function normalizeStudioContinuity(value: any): StudioContinuityConfig {
   const mode: StudioContinuityMode = value?.mode === "independent" || value?.mode === "strict" ? value.mode : "coherent";
+  const referencePurpose: StudioContinuityReferencePurpose = value?.referencePurpose === "scene-frame" || value?.referencePurpose === "environment" ? value.referencePurpose : "character";
   return {
     mode,
     characters: String(value?.characters ?? "").slice(0, 1800),
@@ -26,6 +30,8 @@ export function normalizeStudioContinuity(value: any): StudioContinuityConfig {
     wardrobe: String(value?.wardrobe ?? "").slice(0, 1200),
     visualRules: String(value?.visualRules ?? "").slice(0, 1800),
     chainPreviousScene: value?.chainPreviousScene !== false,
+    referencePurpose,
+    referenceSubject: String(value?.referenceSubject ?? "").slice(0, 900),
     referenceImageStoragePath: value?.referenceImageStoragePath ? String(value.referenceImageStoragePath).slice(0, 500) : null,
     referenceImageContentType: value?.referenceImageContentType ? String(value.referenceImageContentType).slice(0, 120) : null,
     updatedAt: String(value?.updatedAt || new Date().toISOString()),

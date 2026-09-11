@@ -43,10 +43,6 @@ function wrapText(value: string, maxChars: number, maxLines: number) {
     }
   }
   if (lines.length < maxLines && line) lines.push(line);
-  const consumed = lines.join(" ").replace(/…$/g, "").length;
-  if (lines.length === maxLines && value.trim().length > consumed) {
-    lines[lines.length - 1] = `${lines[lines.length - 1].replace(/[\s.,;:!?…-]+$/g, "").slice(0, Math.max(1, maxChars - 1))}…`;
-  }
   return lines.join("\n");
 }
 
@@ -77,7 +73,7 @@ function safeLayout(scene: StudioFinalRenderScene, aspectRatio: StudioFinalRende
     : scene.overlay.position === "bottom"
       ? (vertical ? 0.57 : 0.59)
       : (vertical ? 0.33 : 0.34);
-  return { x, baseY, safeX, vertical, square };
+  return { x, baseY, safeX, vertical };
 }
 
 function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: string[], brandLogoUrl: string, outputUrl: string, statusUrl: string) {
@@ -143,20 +139,22 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     let current = `[base${index}]`;
     filters.push(`[${index}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},fps=30,format=yuv420p,trim=duration=${duration},setpts=PTS-STARTPTS[base${index}]`);
 
+    const { x, baseY, safeX, vertical } = safeLayout(scene, manifest.aspectRatio);
     if (scene.overlay.enabled) {
-      const { x, baseY, safeX, vertical } = safeLayout(scene, manifest.aspectRatio);
       const panelY = Math.max(0.07, baseY - 0.025);
       const panelHeight = vertical ? 0.31 : 0.30;
       const panelStart = `[panel${index}]`;
       const accent = `[accent${index}]`;
-      filters.push(`${current}drawbox=x=w*${safeX}:y=h*${panelY.toFixed(4)}:w=w*${(1 - (safeX * 2)).toFixed(4)}:h=h*${panelHeight}:color=0x061522@0.58:t=fill${panelStart}`);
-      filters.push(`${panelStart}drawbox=x=w*${safeX}:y=h*${panelY.toFixed(4)}:w=w*0.008:h=h*${panelHeight}:color=0x22d3ee@0.90:t=fill${accent}`);
+      filters.push(`${current}drawbox=x=iw*${safeX}:y=ih*${panelY.toFixed(4)}:w=iw*${(1 - (safeX * 2)).toFixed(4)}:h=ih*${panelHeight}:color=0x061522@0.58:t=fill${panelStart}`);
+      filters.push(`${panelStart}drawbox=x=iw*${safeX}:y=ih*${panelY.toFixed(4)}:w=iw*0.008:h=ih*${panelHeight}:color=0x22d3ee@0.90:t=fill${accent}`);
       current = accent;
 
       if (scene.overlay.showBrand) {
         const branded = `[brand${index}]`;
-        filters.push(`${current}[logo${index}]overlay=x=w*${safeX}:y=h*${vertical ? 0.055 : 0.045}:format=auto:shortest=1${branded}`);
+        filters.push(`${current}[logo${index}]overlay=x=main_w*${safeX}:y=main_h*${vertical ? 0.055 : 0.045}:format=auto:shortest=1${branded}`);
         current = branded;
+      } else {
+        filters.push(`[logo${index}]null[branddrain${index}]`);
       }
 
       const duplicateBrand = normalizeComparable(scene.overlay.eyebrow || "") === "algenri" || normalizeComparable(scene.overlay.headline || "") === "algenri";
@@ -205,8 +203,7 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
         stage += 1;
       }
     } else {
-      const drained = `[branddrain${index}]`;
-      filters.push(`[logo${index}]null${drained}`);
+      filters.push(`[logo${index}]null[branddrain${index}]`);
     }
 
     const finalLabel = `[scene${index}]`;
@@ -226,8 +223,7 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
   filters.push(`${audioOutputs.join("")}concat=n=${audioOutputs.length}:v=0:a=1[outa]`);
   const videoInputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/scene-${index}.mp4`)}`).join(" ");
   const audioInputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/audio-${index}.wav`)}`).join(" ");
-  const brandInput = `-loop 1 -i /tmp/algenri-logo.webp`;
-  const inputs = `${videoInputs} ${audioInputs} ${brandInput}`;
+  const inputs = `${videoInputs} ${audioInputs} -loop 1 -i /tmp/algenri-logo.webp`;
   lines.push(
     "STEP=ffmpeg_render",
     `\"$FFMPEG\" -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -map '[outa]' -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 -movflags +faststart /tmp/final.mp4 2>/tmp/render.log`,
@@ -238,19 +234,15 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     "trap - ERR",
     "echo ALGENRI_RENDER_OK",
   );
-
   return lines.join("\n");
 }
 
 async function persist(projectId: string, manifest: StudioFinalRenderManifest) {
   const db = await getAdminDb();
-  await db.collection("studioProjects").doc(projectId).set({
-    finalRender: manifest,
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+  await db.collection("studioProjects").doc(projectId).set({ finalRender: manifest, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 }
 
-async function ensureBrandLogo(bucket: ReturnType<Awaited<ReturnType<typeof getAdminStorage>>["bucket"]>) {
+async function ensureBrandLogo(bucket: any) {
   const file = bucket.file(BRAND_LOGO_STORAGE_PATH);
   const [exists] = await file.exists();
   if (!exists) {
@@ -265,72 +257,42 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
   if (!project) throw new Error("studio_project_not_found");
   const manifest = project.finalRender as StudioFinalRenderManifest | undefined;
   if (!manifest || manifest.state !== "prepared") throw new Error("studio_final_render_not_prepared");
-
   const storage = await getAdminStorage();
   const bucket = storage.bucket();
   const expires = Date.now() + SIGNED_URL_TTL_MS;
-
   const sceneUrls = await Promise.all(manifest.scenes.map(async (scene) => {
     const [url] = await bucket.file(scene.storagePath).getSignedUrl({ version: "v4", action: "read", expires });
     return url;
   }));
   const brandLogoFile = await ensureBrandLogo(bucket);
   const [brandLogoUrl] = await brandLogoFile.getSignedUrl({ version: "v4", action: "read", expires });
-
   const outputStoragePath = `studio/projects/${projectId}/final/ALGENRI-Studio-Final.mp4`;
   const statusStoragePath = `studio/projects/${projectId}/final/render-status.txt`;
   await Promise.all([
     bucket.file(outputStoragePath).delete({ ignoreNotFound: true }).catch(() => undefined),
     bucket.file(statusStoragePath).delete({ ignoreNotFound: true }).catch(() => undefined),
   ]);
-
-  const [outputUploadUrl] = await bucket.file(outputStoragePath).getSignedUrl({
-    version: "v4",
-    action: "write",
-    expires,
-    contentType: "video/mp4",
-  });
-  const [statusUploadUrl] = await bucket.file(statusStoragePath).getSignedUrl({
-    version: "v4",
-    action: "write",
-    expires,
-    contentType: "text/plain",
-  });
-
+  const [outputUploadUrl] = await bucket.file(outputStoragePath).getSignedUrl({ version: "v4", action: "write", expires, contentType: "video/mp4" });
+  const [statusUploadUrl] = await bucket.file(statusStoragePath).getSignedUrl({ version: "v4", action: "write", expires, contentType: "text/plain" });
   const startedAt = new Date().toISOString();
   let sandbox: Sandbox;
   try {
-    sandbox = await Sandbox.create({
-      name: `algenri-render-${projectId.slice(0, 8)}-${Date.now()}`,
-      runtime: "node24",
-      resources: { vcpus: 2 },
-      timeout: RENDER_TIMEOUT_MS,
-      persistent: false,
-      tags: { app: "algenri-studio", project: projectId.slice(0, 50) },
-    });
+    sandbox = await Sandbox.create({ name: `algenri-render-${projectId.slice(0, 8)}-${Date.now()}`, runtime: "node24", resources: { vcpus: 2 }, timeout: RENDER_TIMEOUT_MS, persistent: false, tags: { app: "algenri-studio", project: projectId.slice(0, 50) } });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`studio_sandbox_create_failed: ${message.slice(0, 900)}`);
   }
-
   const script = buildRenderScript(manifest, sceneUrls, brandLogoUrl, outputUploadUrl, statusUploadUrl);
   let commandId = "";
   try {
-    const command = await sandbox.runCommand({
-      cmd: "bash",
-      args: ["-lc", script],
-      cwd: "/tmp",
-      detached: true,
-    });
+    const command = await sandbox.runCommand({ cmd: "bash", args: ["-lc", script], cwd: "/tmp", detached: true });
     commandId = command.cmdId;
   } catch (error) {
     await sandbox.stop().catch(() => undefined);
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`studio_sandbox_command_start_failed: ${message.slice(0, 900)}`);
   }
-
   if (!commandId) throw new Error("studio_sandbox_command_id_missing");
-
   const rendering: StudioFinalRenderManifest = {
     ...manifest,
     state: "rendering",
@@ -342,13 +304,7 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
     sizeBytes: null,
     contentType: "video/mp4",
     error: null,
-    worker: {
-      provider: "vercel-sandbox",
-      sandboxName: sandbox.name,
-      commandId,
-      statusStoragePath,
-      startedAt,
-    },
+    worker: { provider: "vercel-sandbox", sandboxName: sandbox.name, commandId, statusStoragePath, startedAt },
   };
   await persist(projectId, rendering);
   return rendering;
@@ -358,65 +314,36 @@ export async function refreshStudioSandboxRender(projectId: string): Promise<Stu
   const project = await getStudioProject(projectId);
   if (!project) return null;
   const manifest = project.finalRender as StudioFinalRenderManifest | undefined;
-  if (!manifest || manifest.state !== "rendering" || manifest.renderEngine !== "vercel-sandbox" || !manifest.worker?.statusStoragePath) {
-    return manifest ?? null;
-  }
-
+  if (!manifest || manifest.state !== "rendering" || manifest.renderEngine !== "vercel-sandbox" || !manifest.worker?.statusStoragePath) return manifest ?? null;
   const storage = await getAdminStorage();
   const bucket = storage.bucket();
   const statusFile = bucket.file(manifest.worker.statusStoragePath);
   const [statusExists] = await statusFile.exists();
-
   if (statusExists) {
     const [statusBuffer] = await statusFile.download();
     const status = statusBuffer.toString("utf8").trim();
     const finishedAt = new Date().toISOString();
-
     if (status.startsWith("failed")) {
-      const failed: StudioFinalRenderManifest = {
-        ...manifest,
-        state: "failed",
-        completedAt: finishedAt,
-        error: `studio_sandbox_render_${status}`.slice(0, 3200),
-        worker: { ...manifest.worker, exitCode: status.split(":")[1] || "1", finishedAt },
-      };
+      const failed: StudioFinalRenderManifest = { ...manifest, state: "failed", completedAt: finishedAt, error: `studio_sandbox_render_${status}`.slice(0, 3200), worker: { ...manifest.worker, exitCode: status.split(":")[1] || "1", finishedAt } };
       await persist(projectId, failed);
       return failed;
     }
-
     if (status === "completed") {
       const outputFile = bucket.file(manifest.outputStoragePath || `studio/projects/${projectId}/final/ALGENRI-Studio-Final.mp4`);
       const [exists] = await outputFile.exists();
       if (!exists) return manifest;
       const [metadata] = await outputFile.getMetadata();
-      const completed: StudioFinalRenderManifest = {
-        ...manifest,
-        state: "completed",
-        completedAt: finishedAt,
-        outputUrl: `/api/internal/studio/projects/${projectId}/final-render/download`,
-        contentType: metadata.contentType || "video/mp4",
-        sizeBytes: Number(metadata.size || 0) || null,
-        error: null,
-        worker: { ...manifest.worker, exitCode: "0", finishedAt },
-      };
+      const completed: StudioFinalRenderManifest = { ...manifest, state: "completed", completedAt: finishedAt, outputUrl: `/api/internal/studio/projects/${projectId}/final-render/download`, contentType: metadata.contentType || "video/mp4", sizeBytes: Number(metadata.size || 0) || null, error: null, worker: { ...manifest.worker, exitCode: "0", finishedAt } };
       await persist(projectId, completed);
       return completed;
     }
   }
-
   const startedMs = Date.parse(manifest.startedAt || manifest.worker.startedAt || "");
   if (Number.isFinite(startedMs) && Date.now() - startedMs > FAILURE_GRACE_MS) {
     const finishedAt = new Date().toISOString();
-    const failed: StudioFinalRenderManifest = {
-      ...manifest,
-      state: "failed",
-      completedAt: finishedAt,
-      error: "studio_sandbox_render_timeout_no_status",
-      worker: { ...manifest.worker, exitCode: "timeout", finishedAt },
-    };
+    const failed: StudioFinalRenderManifest = { ...manifest, state: "failed", completedAt: finishedAt, error: "studio_sandbox_render_timeout_no_status", worker: { ...manifest.worker, exitCode: "timeout", finishedAt } };
     await persist(projectId, failed);
     return failed;
   }
-
   return manifest;
 }

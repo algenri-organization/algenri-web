@@ -50,6 +50,35 @@ function normalizeAspectRatio(value: unknown): "16:9" | "9:16" | "1:1" {
   return "16:9";
 }
 
+function resolveActiveSceneJob(project: Record<string, any>, sceneIndex: number): StudioSceneGenerationJob | null {
+  const history = Array.isArray(project.generation?.sceneVersions)
+    ? project.generation.sceneVersions as StudioSceneGenerationJob[]
+    : [];
+  const activeJobs = Array.isArray(project.generation?.sceneJobs)
+    ? project.generation.sceneJobs as StudioSceneGenerationJob[]
+    : [];
+  const activeVersionRaw = project.generation?.activeVersionByScene?.[String(sceneIndex)];
+  const activeVersion = Number(activeVersionRaw);
+
+  if (Number.isFinite(activeVersion) && activeVersion > 0) {
+    const selected = history.find((item) =>
+      item.sceneIndex === sceneIndex &&
+      Number(item.version ?? 1) === activeVersion &&
+      item.status === "succeeded"
+    );
+    if (selected) return selected;
+    throw new Error(`studio_scene_${sceneIndex}_active_version_not_ready`);
+  }
+
+  const current = activeJobs.find((item) => item.sceneIndex === sceneIndex && item.status === "succeeded");
+  if (current) return current;
+
+  const latestSucceeded = history
+    .filter((item) => item.sceneIndex === sceneIndex && item.status === "succeeded")
+    .sort((a, b) => Number(b.version ?? 1) - Number(a.version ?? 1))[0];
+  return latestSucceeded ?? null;
+}
+
 export async function prepareStudioFinalRender(projectId: string): Promise<StudioFinalRenderManifest> {
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
@@ -58,25 +87,40 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
   if (!composition || composition.state !== "approved") throw new Error("studio_composition_not_approved");
 
   const storyboard = Array.isArray(project.storyboard) ? project.storyboard : [];
-  const activeJobs = Array.isArray(project.generation?.sceneJobs) ? project.generation.sceneJobs as StudioSceneGenerationJob[] : [];
-  const overlayByScene = new Map(composition.sceneOverlays.map((item) => [item.sceneIndex, item]));
+  if (!storyboard.length) throw new Error("studio_storyboard_empty");
 
-  const scenes: StudioFinalRenderScene[] = storyboard.map((scene: any) => {
-    const job = activeJobs.find((item) => item.sceneIndex === Number(scene.index) && item.status === "succeeded");
-    if (!job) throw new Error(`studio_scene_${scene.index}_not_ready`);
-    if (!job.storagePath) throw new Error(`studio_scene_${scene.index}_not_archived`);
-    const overlay = overlayByScene.get(Number(scene.index));
-    if (!overlay) throw new Error(`studio_scene_${scene.index}_overlay_missing`);
-    return {
-      sceneIndex: Number(scene.index),
-      version: job.version ?? 1,
-      provider: job.provider,
-      model: job.model ?? null,
-      storagePath: job.storagePath,
-      durationSeconds: Math.max(1, Math.round(Number(scene.durationSeconds ?? 1))),
-      overlay,
-    };
-  });
+  const overlayByScene = new Map(composition.sceneOverlays.map((item) => [item.sceneIndex, item]));
+  const seen = new Set<number>();
+
+  const scenes: StudioFinalRenderScene[] = storyboard
+    .map((scene: any) => {
+      const sceneIndex = Number(scene.index);
+      if (!Number.isFinite(sceneIndex) || sceneIndex <= 0) throw new Error("studio_scene_index_invalid");
+      if (seen.has(sceneIndex)) throw new Error(`studio_scene_${sceneIndex}_duplicated`);
+      seen.add(sceneIndex);
+
+      const job = resolveActiveSceneJob(project, sceneIndex);
+      if (!job) throw new Error(`studio_scene_${sceneIndex}_not_ready`);
+      if (!job.storagePath) throw new Error(`studio_scene_${sceneIndex}_not_archived`);
+      const overlay = overlayByScene.get(sceneIndex);
+      if (!overlay) throw new Error(`studio_scene_${sceneIndex}_overlay_missing`);
+
+      return {
+        sceneIndex,
+        version: Number(job.version ?? 1),
+        provider: job.provider,
+        model: job.model ?? null,
+        storagePath: job.storagePath,
+        durationSeconds: Math.max(1, Math.round(Number(scene.durationSeconds ?? 1))),
+        overlay,
+      };
+    })
+    .sort((a, b) => a.sceneIndex - b.sceneIndex);
+
+  if (scenes.length !== storyboard.length) throw new Error("studio_final_render_scene_count_mismatch");
+
+  const totalDurationSeconds = scenes.reduce((sum, item) => sum + item.durationSeconds, 0);
+  if (totalDurationSeconds <= 0) throw new Error("studio_final_render_duration_invalid");
 
   const preparedAt = new Date().toISOString();
   const manifest: StudioFinalRenderManifest = {
@@ -85,7 +129,7 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
     aspectRatio: normalizeAspectRatio(project.briefing?.aspectRatio),
     transition: composition.transition,
     scenes,
-    totalDurationSeconds: scenes.reduce((sum, item) => sum + item.durationSeconds, 0),
+    totalDurationSeconds,
     preparedAt,
     renderEngine: "pending",
     startedAt: null,

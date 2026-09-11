@@ -7,6 +7,7 @@ import StudioContinuityPanel from "@/components/studio/studio-continuity-panel";
 import StudioRoutingPanel from "@/components/studio/studio-routing-panel";
 import StudioProductionPanel from "@/components/studio/studio-production-panel";
 import StudioCompositionPanel, { type StudioCompositionClient } from "@/components/studio/studio-composition-panel";
+import StudioPreflightPanel from "@/components/studio/studio-preflight-panel";
 import StudioFinalRenderPanel from "@/components/studio/studio-final-render-panel";
 
 type Scene = { index:number; title:string; durationSeconds:number; objective:string; narration:string; visualDirection:string; technicalPrompt:string; continuityNotes?:string; transitionFromPrevious?:string; status:"draft"|"approved" };
@@ -47,6 +48,7 @@ export default function StudioProjectPage({ params }: { params: Promise<{ projec
       <StudioRoutingPanel projectId={projectId} allApproved={allApproved} initialRouting={project.routing} />
       {project.routing?.routes?.length>0&&<StudioProductionPanel projectId={projectId} routing={project.routing} budgetLimit={project.briefing?.budgetLimit??null} initialGeneration={project.generation} />}
       <StudioCompositionPanel projectId={projectId} storyboard={project.storyboard??[]} generation={project.generation} aspectRatio={project.briefing?.aspectRatio} onCompositionChange={composition=>setProject(current=>current?{...current,composition}:current)} />
+      <StudioPreflightPanel projectId={projectId} enabled={project.composition?.state==="approved"} />
       <StudioFinalRenderPanel projectId={projectId} composition={project.composition} initialFinalRender={project.finalRender??null} />
     </>}
   </div></main>;

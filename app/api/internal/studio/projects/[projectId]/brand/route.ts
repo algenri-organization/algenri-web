@@ -21,7 +21,8 @@ export async function GET(request: Request, context: { params: Promise<{ project
     const asset = auth.project?.brandAsset;
     if (!asset?.storagePath) return Response.json({ ok: false, error: "brand_asset_not_found" }, { status: 404 });
     const [buffer] = await (await getAdminStorage()).bucket().file(asset.storagePath).download();
-    return new Response(buffer, { headers: { "Content-Type": asset.contentType || "image/png", "Cache-Control": "private, max-age=300" } });
+    const body = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    return new Response(body, { headers: { "Content-Type": asset.contentType || "image/png", "Cache-Control": "private, max-age=300" } });
   } catch (error) {
     const auth = internalAuthResponse(error); if (auth) return auth;
     return Response.json({ ok: false, error: "brand_asset_load_failed" }, { status: 500 });

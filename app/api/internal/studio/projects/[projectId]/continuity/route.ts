@@ -14,6 +14,8 @@ const patchSchema = z.object({
   wardrobe: z.string().max(1200),
   visualRules: z.string().max(1800),
   chainPreviousScene: z.boolean().default(true),
+  referencePurpose: z.enum(["character", "scene-frame", "environment"]).default("character"),
+  referenceSubject: z.string().max(900).default(""),
 });
 
 async function authorize(request: Request, projectId: string) {
@@ -49,6 +51,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     const auth = await authorize(request, projectId); if (auth.response) return auth.response;
     const parsed = patchSchema.safeParse(await request.json());
     if (!parsed.success) return Response.json({ ok: false, error: "invalid_request", issues: parsed.error.issues }, { status: 400 });
+    if (parsed.data.referencePurpose === "character" && auth.project?.continuity?.referenceImageStoragePath && !parsed.data.referenceSubject.trim()) {
+      return Response.json({ ok: false, error: "character_reference_subject_required", message: "Descreva exatamente qual pessoa da imagem deve permanecer nas cenas. Para melhor consistência, prefira uma imagem com apenas essa pessoa." }, { status: 409 });
+    }
     return Response.json({ ok: true, continuity: await saveStudioContinuity(projectId, parsed.data) });
   } catch (error) {
     const auth = internalAuthResponse(error); if (auth) return auth;
@@ -84,7 +89,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ proj
     const { projectId } = await context.params;
     const auth = await authorize(request, projectId); if (auth.response) return auth.response;
     await (await getAdminStorage()).bucket().deleteFiles({ prefix: `studio/projects/${projectId}/continuity/` }).catch(() => undefined);
-    const continuity = await saveStudioContinuity(projectId, { referenceImageStoragePath: null, referenceImageContentType: null });
+    const continuity = await saveStudioContinuity(projectId, { referenceImageStoragePath: null, referenceImageContentType: null, referenceSubject: "" });
     await (await getAdminDb()).collection("studioProjects").doc(projectId).set({ updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     return Response.json({ ok: true, continuity });
   } catch (error) {

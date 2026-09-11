@@ -6,76 +6,238 @@ import { createKieKling26TextToVideo, getKieCreditBalance, getKieTaskDetails, KI
 import { getStudioProject, selectStudioSceneVersion, upsertStudioSceneGenerationJob, type StudioSceneGenerationJob } from "@/lib/studio/project-store";
 import { archiveStudioOutput, ensureStudioContinuityFrame } from "@/lib/studio/output-storage";
 
-const startSchema=z.object({action:z.literal("start_scene"),sceneIndex:z.number().int().min(1),confirmSpend:z.literal(true),confirmUnknownCost:z.boolean().optional(),providerOverride:z.enum(["runway","kie-ai"]).optional()});
-const refreshSchema=z.object({action:z.literal("refresh_scene"),sceneIndex:z.number().int().min(1)});
-const selectVersionSchema=z.object({action:z.literal("select_version"),sceneIndex:z.number().int().min(1),version:z.number().int().min(1)});
-const requestSchema=z.discriminatedUnion("action",[startSchema,refreshSchema,selectVersionSchema]);
+const startSchema = z.object({
+  action: z.literal("start_scene"),
+  sceneIndex: z.number().int().min(1),
+  confirmSpend: z.literal(true),
+  confirmUnknownCost: z.boolean().optional(),
+  providerOverride: z.enum(["runway", "kie-ai"]).optional(),
+  economyValidation: z.boolean().optional().default(false),
+});
+const refreshSchema = z.object({ action: z.literal("refresh_scene"), sceneIndex: z.number().int().min(1) });
+const selectVersionSchema = z.object({ action: z.literal("select_version"), sceneIndex: z.number().int().min(1), version: z.number().int().min(1) });
+const requestSchema = z.discriminatedUnion("action", [startSchema, refreshSchema, selectVersionSchema]);
 
-type ExtendedJob=StudioSceneGenerationJob&{continuityFrameStoragePath?:string|null;continuityFrameContentType?:string|null;continuityFrameError?:string|null;continuityReferenceType?:"previous-scene-frame"|"uploaded-reference"|"none";continuityReferenceSceneIndex?:number|null};
+type ExtendedJob = StudioSceneGenerationJob & {
+  continuityFrameStoragePath?: string | null;
+  continuityFrameContentType?: string | null;
+  continuityFrameError?: string | null;
+  continuityReferenceType?: "previous-scene-frame" | "uploaded-reference" | "identity-description" | "none";
+  continuityReferenceSceneIndex?: number | null;
+  economyValidation?: boolean;
+  renderedDurationSeconds?: number | null;
+};
 
-function normalizeRunwayStatus(value:unknown):StudioSceneGenerationJob["status"]{const status=String(value??"").toUpperCase();if(["SUCCEEDED","SUCCESS","COMPLETED","DONE"].includes(status))return"succeeded";if(["FAILED","CANCELLED","CANCELED"].includes(status))return"failed";if(["RUNNING","PROCESSING","IN_PROGRESS","INPROGRESS"].includes(status))return"running";return"queued";}
-function normalizeKieStatus(value:unknown):StudioSceneGenerationJob["status"]{const status=String(value??"").toLowerCase();if(status==="success")return"succeeded";if(status==="fail")return"failed";if(status==="generating")return"running";return"queued";}
-function firstOutputUrl(output:unknown){if(!Array.isArray(output))return null;for(const item of output){if(typeof item==="string"&&/^https?:\/\//.test(item))return item;if(item&&typeof item==="object"){const value=(item as any).url??(item as any).uri;if(typeof value==="string"&&/^https?:\/\//.test(value))return value;}}return null;}
-function ratio(value:unknown):"16:9"|"9:16"|"1:1"{return value==="1:1"?"1:1":value==="9:16"||value==="4:5"?"9:16":"16:9";}
-
-function buildContinuityPrompt(scene:any,project:any){
- const continuity=project?.continuity??{};const mode=String(continuity.mode||"coherent");
- const anchors=[continuity.characters?`Recurring characters: ${continuity.characters}`:"",continuity.environment?`Recurring environment: ${continuity.environment}`:"",continuity.wardrobe?`Wardrobe and appearance continuity: ${continuity.wardrobe}`:"",continuity.visualRules?`Global visual/camera rules: ${continuity.visualRules}`:"",scene?.continuityNotes?`This scene continuity requirements: ${scene.continuityNotes}`:"",scene?.transitionFromPrevious?`Transition from previous scene: ${scene.transitionFromPrevious}`:""].filter(Boolean).join("\n");
- if(mode==="independent"||!anchors)return"";
- return `\n\nCONTINUITY BIBLE (${mode.toUpperCase()}):\n${anchors}\n- Treat recurring people as the SAME individuals across scenes, preserving face, hair, approximate age appearance, wardrobe and accessories unless explicitly changed above.\n- Treat recurring locations as the SAME place, preserving architecture, materials, palette, time of day and light direction unless explicitly changed.\n- Continue the visual story rather than inventing a disconnected new commercial.\n- Do not introduce a new protagonist or a new location merely for variety.`;
+function normalizeRunwayStatus(value: unknown): StudioSceneGenerationJob["status"] {
+  const status = String(value ?? "").toUpperCase();
+  if (["SUCCEEDED", "SUCCESS", "COMPLETED", "DONE"].includes(status)) return "succeeded";
+  if (["FAILED", "CANCELLED", "CANCELED"].includes(status)) return "failed";
+  if (["RUNNING", "PROCESSING", "IN_PROGRESS", "INPROGRESS"].includes(status)) return "running";
+  return "queued";
 }
-function buildBrandSafeVisualPrompt(scene:any,project:any){const visualDirection=String(scene?.visualDirection??"").trim();const objective=String(scene?.objective??"").trim();const visualStyle=String(project?.briefing?.visualStyle??"").trim();const technical=String(scene?.technicalPrompt??"").trim();const base=[technical,visualDirection,objective?`Creative objective: ${objective}`:"",visualStyle?`Visual style: ${visualStyle}`:""].filter(Boolean).join("\n");return `${base}${buildContinuityPrompt(scene,project)}\n\nCRITICAL GENERATION RULES:\n- Generate ONLY the cinematic visual plate/background for this scene.\n- Do NOT render any logo, brand mark, company name, slogan, word, letter, number, caption, UI label, watermark or readable typography.\n- Do NOT invent or approximate a corporate logo or symbol.\n- Leave clean negative space when branding or copy will be added later.\n- Branding, logos and exact text are added after generation in the controlled composition layer.\n- Preserve requested camera movement, lighting, environment and action without textual elements.`;}
-
-function activeSceneJob(project:any,sceneIndex:number):ExtendedJob|null{
- const history=Array.isArray(project?.generation?.sceneVersions)?project.generation.sceneVersions as ExtendedJob[]:[];const activeJobs=Array.isArray(project?.generation?.sceneJobs)?project.generation.sceneJobs as ExtendedJob[]:[];const activeVersion=Number(project?.generation?.activeVersionByScene?.[String(sceneIndex)]);
- if(Number.isFinite(activeVersion)&&activeVersion>0)return history.find(item=>item.sceneIndex===sceneIndex&&Number(item.version??1)===activeVersion)??activeJobs.find(item=>item.sceneIndex===sceneIndex)??null;
- return activeJobs.find(item=>item.sceneIndex===sceneIndex)??history.filter(item=>item.sceneIndex===sceneIndex).sort((a,b)=>Number(b.version??1)-Number(a.version??1))[0]??null;
+function normalizeKieStatus(value: unknown): StudioSceneGenerationJob["status"] {
+  const status = String(value ?? "").toLowerCase();
+  if (status === "success") return "succeeded";
+  if (status === "fail") return "failed";
+  if (status === "generating") return "running";
+  return "queued";
 }
-async function signedImageUrl(storagePath:string){const file=(await getAdminStorage()).bucket().file(storagePath);const[exists]=await file.exists();if(!exists)return null;const[url]=await file.getSignedUrl({version:"v4",action:"read",expires:Date.now()+25*60*1000});return url;}
-async function continuityReference(project:any,projectId:string,sceneIndex:number){
- const continuity=project?.continuity??{};if(continuity.mode==="independent")return{url:undefined,source:"none" as const,sourceSceneIndex:null};
- if(continuity.chainPreviousScene!==false&&sceneIndex>1){
-  const previous=activeSceneJob(project,sceneIndex-1);
-  if(previous?.status==="succeeded"&&previous.storagePath){
-   const frame=await ensureStudioContinuityFrame({projectId,sceneIndex:sceneIndex-1,taskId:previous.taskId,storagePath:previous.storagePath,existingFrameStoragePath:previous.continuityFrameStoragePath});
-   if(frame.continuityFrameStoragePath){
-    const enhanced:ExtendedJob={...previous,...frame};await upsertStudioSceneGenerationJob(projectId,enhanced);
-    const url=await signedImageUrl(frame.continuityFrameStoragePath);if(url)return{url,source:"previous-scene-frame" as const,sourceSceneIndex:sceneIndex-1};
-   }
+function firstOutputUrl(output: unknown) {
+  if (!Array.isArray(output)) return null;
+  for (const item of output) {
+    if (typeof item === "string" && /^https?:\/\//.test(item)) return item;
+    if (item && typeof item === "object") {
+      const value = (item as any).url ?? (item as any).uri;
+      if (typeof value === "string" && /^https?:\/\//.test(value)) return value;
+    }
   }
- }
- const path=continuity.referenceImageStoragePath;if(path){const url=await signedImageUrl(path);if(url)return{url,source:"uploaded-reference" as const,sourceSceneIndex:null};}
- return{url:undefined,source:"none" as const,sourceSceneIndex:null};
+  return null;
 }
-async function archiveIfNeeded(input:{projectId:string;sceneIndex:number;job:ExtendedJob;outputUrl:string|null;status:StudioSceneGenerationJob["status"]}){if(input.status!=="succeeded"||!input.outputUrl||input.job.storagePath)return{} as Record<string,unknown>;try{const archived=await archiveStudioOutput({projectId:input.projectId,sceneIndex:input.sceneIndex,provider:input.job.provider,taskId:input.job.taskId,outputUrl:input.outputUrl});return{storagePath:archived.storagePath,storageStatus:"archived" as const,storageError:null,contentType:archived.contentType,sizeBytes:archived.sizeBytes,archivedAt:archived.archivedAt,continuityFrameStoragePath:archived.continuityFrameStoragePath??null,continuityFrameContentType:archived.continuityFrameContentType??null,continuityFrameError:archived.continuityFrameError??null};}catch(archiveError){console.error("studio_output_archive_failed",archiveError);return{storageStatus:"failed" as const,storageError:archiveError instanceof Error?archiveError.message:"studio_output_archive_failed"};}}
+function ratio(value: unknown): "16:9" | "9:16" | "1:1" {
+  return value === "1:1" ? "1:1" : value === "9:16" || value === "4:5" ? "9:16" : "16:9";
+}
 
-export async function POST(request:Request,context:{params:Promise<{projectId:string}>}){
- try{
-  const user=await requireAlgenriInternalUser(request);const{projectId}=await context.params;const parsed=requestSchema.safeParse(await request.json());if(!parsed.success)return Response.json({ok:false,error:"invalid_request",issues:parsed.error.issues},{status:400});
-  const project=await getStudioProject(projectId);if(!project)return Response.json({ok:false,error:"not_found"},{status:404});if(project.ownerUid&&project.ownerUid!==user.uid)return Response.json({ok:false,error:"forbidden"},{status:403});
-  const scene=(project.storyboard??[]).find((item:any)=>item.index===parsed.data.sceneIndex);if(!scene)return Response.json({ok:false,error:"scene_not_found"},{status:404});if(scene.status!=="approved")return Response.json({ok:false,error:"scene_not_approved"},{status:409});
-  if(parsed.data.action==="select_version"){const selected=await selectStudioSceneVersion(projectId,scene.index,parsed.data.version);const refreshed=await getStudioProject(projectId);return Response.json({ok:true,job:selected,generation:refreshed?.generation??null});}
-  const route=(project.routing?.routes??[]).find((item:any)=>item.sceneIndex===scene.index);if(!route)return Response.json({ok:false,error:"scene_not_routed"},{status:409});
-  const existing=activeSceneJob(project,scene.index)??undefined;
-  if(parsed.data.action==="start_scene"){
-   if(existing&&["queued","running"].includes(existing.status))return Response.json({ok:false,error:"scene_generation_in_progress",job:existing},{status:409});
-   const continuity=project.continuity??{};const sequential=continuity.mode!=="independent"&&continuity.chainPreviousScene!==false&&scene.index>1;
-   if(sequential){const previous=activeSceneJob(project,scene.index-1);if(!previous||previous.status!=="succeeded"||!previous.storagePath)return Response.json({ok:false,error:"previous_scene_not_ready",message:`Conclua e arquive a Cena ${scene.index-1} antes de gerar a Cena ${scene.index}, pois o encadeamento visual está ativo.`,previousSceneIndex:scene.index-1},{status:409});}
-   const providerId=parsed.data.providerOverride??route.selectedProviderId;if(!["runway","kie-ai"].includes(providerId))return Response.json({ok:false,error:"provider_not_executable"},{status:409});
-   const providerPrompt=buildBrandSafeVisualPrompt(scene,project);const budgetLimit=Number(project.briefing?.budgetLimit??0);
-   if(providerId==="kie-ai"){
-    const knownCost=typeof route.estimatedCredits==="number"&&Number.isFinite(route.estimatedCredits)&&route.estimatedCredits>0&&route.selectedProviderId==="kie-ai";
-    if(!knownCost&&parsed.data.confirmUnknownCost!==true)return Response.json({ok:false,error:"unknown_cost_confirmation_required",provider:providerId,model:KIE_STUDIO_VIDEO_MODEL},{status:409});
-    const balance=await getKieCreditBalance();if(balance===null||balance<=0)return Response.json({ok:false,error:"kie_insufficient_credits",message:"Saldo Kie.ai insuficiente para iniciar uma nova geração.",balance,estimatedCredits:knownCost?route.estimatedCredits:null},{status:409});if(knownCost&&balance<route.estimatedCredits)return Response.json({ok:false,error:"kie_insufficient_credits",message:`Saldo Kie.ai insuficiente. Disponível: ${balance} créditos; estimado: ${route.estimatedCredits}.`,balance,estimatedCredits:route.estimatedCredits},{status:409});
-    const task=await createKieKling26TextToVideo({prompt:providerPrompt,aspectRatio:ratio(project.briefing?.aspectRatio),durationSeconds:scene.durationSeconds,sound:false});const job={sceneIndex:scene.index,provider:"kie-ai",model:KIE_STUDIO_VIDEO_MODEL,taskId:task.taskId,status:"queued",estimatedCredits:knownCost?route.estimatedCredits:null,actualCredits:null,outputUrl:null,storagePath:null,storageStatus:null,failure:null,startedAt:new Date().toISOString(),completedAt:null,continuityReferenceType:"none",continuityReferenceSceneIndex:null} as ExtendedJob;const jobs=await upsertStudioSceneGenerationJob(projectId,job);const saved=jobs.find(item=>item.sceneIndex===scene.index)??job;return Response.json({ok:true,job:saved,balanceBefore:balance,unknownCostAccepted:!knownCost,replacesTaskId:existing?.taskId??null,providerOverride:parsed.data.providerOverride??null,continuityMode:project.continuity?.mode??"coherent",frameChainingSupported:false},{status:201});
-   }
-   const reference=await continuityReference(project,projectId,scene.index);
-   const runwayInput={promptText:providerPrompt,aspectRatio:ratio(project.briefing?.aspectRatio),duration:Math.min(30,Math.max(1,scene.durationSeconds)),...(reference.url?{referenceImageUrl:reference.url}:{})};
-   const dryRun=await dryRunRunwayVideoRouter(runwayInput);const dryRouting:any=dryRun.routing??null;const preflightCredits=extractRunwayRoutingCost(dryRouting);if(typeof preflightCredits!=="number")return Response.json({ok:false,error:"runway_cost_estimate_unavailable",message:"O Runway não retornou estimativa de créditos para esta cena. A geração foi bloqueada antes de qualquer consumo."},{status:409});if(budgetLimit>0&&preflightCredits>budgetLimit)return Response.json({ok:false,error:"budget_limit_exceeded",budgetLimit,estimatedCredits:preflightCredits},{status:409});
-   const task=await generateRunwayVideoRouter(runwayInput);const taskId=task.id??task.taskId??null;if(!taskId)return Response.json({ok:false,error:"runway_missing_task_id",providerPayload:task},{status:502});const routing:any=task.routing??dryRouting;const estimatedCredits=extractRunwayRoutingCost(routing)??preflightCredits;const job={sceneIndex:scene.index,provider:"runway",model:routing?.model??routing?.selectedModel??routing?.modelId??null,taskId,status:"queued",estimatedCredits,actualCredits:null,outputUrl:null,storagePath:null,storageStatus:null,failure:null,startedAt:new Date().toISOString(),completedAt:null,continuityReferenceType:reference.source,continuityReferenceSceneIndex:reference.sourceSceneIndex} as ExtendedJob;const jobs=await upsertStudioSceneGenerationJob(projectId,job);const saved=jobs.find(item=>item.sceneIndex===scene.index)??job;return Response.json({ok:true,job:saved,replacesTaskId:existing?.taskId??null,providerOverride:parsed.data.providerOverride??null,continuityMode:project.continuity?.mode??"coherent",referenceImageApplied:Boolean(reference.url),continuityReferenceType:reference.source,continuityReferenceSceneIndex:reference.sourceSceneIndex,frameChainingSupported:true},{status:201});
+function buildContinuityPrompt(scene: any, project: any) {
+  const continuity = project?.continuity ?? {};
+  const mode = String(continuity.mode || "coherent");
+  const anchors = [
+    continuity.characters ? `Recurring characters: ${continuity.characters}` : "",
+    continuity.referencePurpose === "character" && continuity.referenceSubject ? `IDENTITY TARGET: ${continuity.referenceSubject}` : "",
+    continuity.environment ? `Recurring environment: ${continuity.environment}` : "",
+    continuity.wardrobe ? `Wardrobe and appearance continuity: ${continuity.wardrobe}` : "",
+    continuity.visualRules ? `Global visual/camera rules: ${continuity.visualRules}` : "",
+    scene?.continuityNotes ? `This scene continuity requirements: ${scene.continuityNotes}` : "",
+    scene?.transitionFromPrevious ? `Transition from previous scene: ${scene.transitionFromPrevious}` : "",
+  ].filter(Boolean).join("\n");
+  if (mode === "independent" || !anchors) return "";
+  return `\n\nCONTINUITY BIBLE (${mode.toUpperCase()}):\n${anchors}\n- Treat recurring people as the SAME individuals across scenes, preserving face, hair, approximate age appearance, wardrobe and accessories unless explicitly changed above.\n- If an IDENTITY TARGET is defined, include exactly ONE instance of that person in a shot unless the scene explicitly asks for duplicates. Never clone, mirror, repeat or create look-alike copies of the target person inside the same frame.\n- Any background people must be visibly distinct individuals and must not reuse the target person's face, hair or wardrobe.\n- Treat recurring locations as the SAME place, preserving architecture, materials, palette, time of day and light direction unless explicitly changed.\n- Continue the visual story rather than inventing a disconnected new commercial.\n- Do not introduce a new protagonist or a new location merely for variety.`;
+}
+
+function buildBrandSafeVisualPrompt(scene: any, project: any) {
+  const visualDirection = String(scene?.visualDirection ?? "").trim();
+  const objective = String(scene?.objective ?? "").trim();
+  const visualStyle = String(project?.briefing?.visualStyle ?? "").trim();
+  const technical = String(scene?.technicalPrompt ?? "").trim();
+  const base = [technical, visualDirection, objective ? `Creative objective: ${objective}` : "", visualStyle ? `Visual style: ${visualStyle}` : ""].filter(Boolean).join("\n");
+  return `${base}${buildContinuityPrompt(scene, project)}\n\nCRITICAL GENERATION RULES:\n- Generate ONLY the cinematic visual plate/background for this scene.\n- Do NOT render any logo, brand mark, company name, slogan, word, letter, number, caption, UI label, watermark or readable typography.\n- Do NOT invent or approximate a corporate logo or symbol.\n- Leave clean negative space when branding or copy will be added later.\n- Branding, logos and exact text are added after generation in the controlled composition layer.\n- Preserve requested camera movement, lighting, environment and action without textual elements.`;
+}
+
+function activeSceneJob(project: any, sceneIndex: number): ExtendedJob | null {
+  const history = Array.isArray(project?.generation?.sceneVersions) ? project.generation.sceneVersions as ExtendedJob[] : [];
+  const activeJobs = Array.isArray(project?.generation?.sceneJobs) ? project.generation.sceneJobs as ExtendedJob[] : [];
+  const activeVersion = Number(project?.generation?.activeVersionByScene?.[String(sceneIndex)]);
+  if (Number.isFinite(activeVersion) && activeVersion > 0) return history.find(item => item.sceneIndex === sceneIndex && Number(item.version ?? 1) === activeVersion) ?? activeJobs.find(item => item.sceneIndex === sceneIndex) ?? null;
+  return activeJobs.find(item => item.sceneIndex === sceneIndex) ?? history.filter(item => item.sceneIndex === sceneIndex).sort((a, b) => Number(b.version ?? 1) - Number(a.version ?? 1))[0] ?? null;
+}
+
+async function signedImageUrl(storagePath: string) {
+  const file = (await getAdminStorage()).bucket().file(storagePath);
+  const [exists] = await file.exists();
+  if (!exists) return null;
+  const [url] = await file.getSignedUrl({ version: "v4", action: "read", expires: Date.now() + 25 * 60 * 1000 });
+  return url;
+}
+
+async function continuityReference(project: any, projectId: string, sceneIndex: number) {
+  const continuity = project?.continuity ?? {};
+  if (continuity.mode === "independent") return { url: undefined, source: "none" as const, sourceSceneIndex: null };
+
+  if (continuity.chainPreviousScene !== false && sceneIndex > 1) {
+    const previous = activeSceneJob(project, sceneIndex - 1);
+    if (previous?.status === "succeeded" && previous.storagePath) {
+      const frame = await ensureStudioContinuityFrame({ projectId, sceneIndex: sceneIndex - 1, taskId: previous.taskId, storagePath: previous.storagePath, existingFrameStoragePath: previous.continuityFrameStoragePath });
+      if (frame.continuityFrameStoragePath) {
+        const enhanced: ExtendedJob = { ...previous, ...frame };
+        await upsertStudioSceneGenerationJob(projectId, enhanced);
+        const url = await signedImageUrl(frame.continuityFrameStoragePath);
+        if (url) return { url, source: "previous-scene-frame" as const, sourceSceneIndex: sceneIndex - 1 };
+      }
+    }
   }
-  if(!existing?.taskId)return Response.json({ok:false,error:"scene_generation_not_started"},{status:409});
-  if(existing.provider==="kie-ai"){const task=await getKieTaskDetails(existing.taskId);const status=normalizeKieStatus(task.state);const outputUrl=task.resultUrls[0]??existing.outputUrl;const completed=status==="succeeded"||status==="failed";const storageFields=await archiveIfNeeded({projectId,sceneIndex:scene.index,job:existing,outputUrl,status});const job={...existing,...storageFields,model:task.model??existing.model,status,outputUrl,failure:task.failMsg??task.failCode??null,actualCredits:task.creditsConsumed??existing.actualCredits??null,completedAt:completed?(existing.completedAt??new Date().toISOString()):null} as ExtendedJob;const jobs=await upsertStudioSceneGenerationJob(projectId,job);return Response.json({ok:true,job:jobs.find(item=>item.sceneIndex===scene.index)??job,progress:task.progress});}
-  const task=await getRunwayTask(existing.taskId);const status=normalizeRunwayStatus(task.status);const outputUrl=firstOutputUrl(task.output)??existing.outputUrl;const completed=status==="succeeded"||status==="failed";const actualCredits=typeof(task as any).costCredits==="number"?(task as any).costCredits:typeof(task as any).creditsUsed==="number"?(task as any).creditsUsed:existing.actualCredits;const storageFields=await archiveIfNeeded({projectId,sceneIndex:scene.index,job:existing,outputUrl,status});const job={...existing,...storageFields,status,outputUrl,failure:task.failure??null,actualCredits:actualCredits??null,completedAt:completed?(existing.completedAt??new Date().toISOString()):null} as ExtendedJob;const jobs=await upsertStudioSceneGenerationJob(projectId,job);return Response.json({ok:true,job:jobs.find(item=>item.sceneIndex===scene.index)??job});
- }catch(error){const auth=internalAuthResponse(error);if(auth)return auth;const providerError=error as Error&{status?:number;payload?:any};console.error("studio_scene_production_failed",error);const providerMessage=typeof providerError.payload?.msg==="string"?providerError.payload.msg:null;const friendlyMessage=providerError.message==="kie_insufficient_credits"?"A Kie.ai recusou a geração por saldo insuficiente. Recarregue os créditos ou escolha outro motor antes de tentar novamente.":providerError.message==="kie_unauthorized"?"A Kie.ai recusou a autenticação. Verifique a API key configurada na Vercel.":providerError.message==="kie_validation_failed"?`A Kie.ai recusou os parâmetros desta geração${providerMessage?`: ${providerMessage}`:"."}`:providerError.message==="kie_rate_limited"?"A Kie.ai limitou temporariamente novas requisições. Aguarde um pouco antes de tentar novamente.":providerError.message==="studio_scene_version_not_selectable"?"Esta versão não pode ser selecionada. Apenas versões concluídas com sucesso podem se tornar ativas.":providerMessage||providerError.message||"Falha ao iniciar a geração.";return Response.json({ok:false,error:friendlyMessage,code:providerError.message||"studio_scene_production_failed",providerStatus:providerError.status??null},{status:providerError.status===402?402:502});}
+
+  // Uploaded character/environment references are deliberately NOT sent as a first frame.
+  // The current Model Router adapter only expresses image references as role:first; doing so with
+  // a group/person reference can clone subjects or lock the entire source composition.
+  if (continuity.referenceImageStoragePath && continuity.referencePurpose === "scene-frame") {
+    const url = await signedImageUrl(continuity.referenceImageStoragePath);
+    if (url) return { url, source: "uploaded-reference" as const, sourceSceneIndex: null };
+  }
+  if (continuity.referenceImageStoragePath && continuity.referencePurpose === "character") {
+    return { url: undefined, source: "identity-description" as const, sourceSceneIndex: null };
+  }
+  return { url: undefined, source: "none" as const, sourceSceneIndex: null };
+}
+
+async function archiveIfNeeded(input: { projectId: string; sceneIndex: number; job: ExtendedJob; outputUrl: string | null; status: StudioSceneGenerationJob["status"] }) {
+  if (input.status !== "succeeded" || !input.outputUrl || input.job.storagePath) return {} as Record<string, unknown>;
+  try {
+    const archived = await archiveStudioOutput({ projectId: input.projectId, sceneIndex: input.sceneIndex, provider: input.job.provider, taskId: input.job.taskId, outputUrl: input.outputUrl });
+    return { storagePath: archived.storagePath, storageStatus: "archived" as const, storageError: null, contentType: archived.contentType, sizeBytes: archived.sizeBytes, archivedAt: archived.archivedAt, continuityFrameStoragePath: archived.continuityFrameStoragePath ?? null, continuityFrameContentType: archived.continuityFrameContentType ?? null, continuityFrameError: archived.continuityFrameError ?? null };
+  } catch (archiveError) {
+    console.error("studio_output_archive_failed", archiveError);
+    return { storageStatus: "failed" as const, storageError: archiveError instanceof Error ? archiveError.message : "studio_output_archive_failed" };
+  }
+}
+
+export async function POST(request: Request, context: { params: Promise<{ projectId: string }> }) {
+  try {
+    const user = await requireAlgenriInternalUser(request);
+    const { projectId } = await context.params;
+    const parsed = requestSchema.safeParse(await request.json());
+    if (!parsed.success) return Response.json({ ok: false, error: "invalid_request", issues: parsed.error.issues }, { status: 400 });
+
+    const project = await getStudioProject(projectId);
+    if (!project) return Response.json({ ok: false, error: "not_found" }, { status: 404 });
+    if (project.ownerUid && project.ownerUid !== user.uid) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+    const scene = (project.storyboard ?? []).find((item: any) => item.index === parsed.data.sceneIndex);
+    if (!scene) return Response.json({ ok: false, error: "scene_not_found" }, { status: 404 });
+    if (scene.status !== "approved") return Response.json({ ok: false, error: "scene_not_approved" }, { status: 409 });
+
+    if (parsed.data.action === "select_version") {
+      const selected = await selectStudioSceneVersion(projectId, scene.index, parsed.data.version);
+      const refreshed = await getStudioProject(projectId);
+      return Response.json({ ok: true, job: selected, generation: refreshed?.generation ?? null });
+    }
+
+    const route = (project.routing?.routes ?? []).find((item: any) => item.sceneIndex === scene.index);
+    if (!route) return Response.json({ ok: false, error: "scene_not_routed" }, { status: 409 });
+    const existing = activeSceneJob(project, scene.index) ?? undefined;
+
+    if (parsed.data.action === "start_scene") {
+      if (existing && ["queued", "running"].includes(existing.status)) return Response.json({ ok: false, error: "scene_generation_in_progress", job: existing }, { status: 409 });
+      const continuity = project.continuity ?? {};
+      const sequential = continuity.mode !== "independent" && continuity.chainPreviousScene !== false && scene.index > 1;
+      if (sequential) {
+        const previous = activeSceneJob(project, scene.index - 1);
+        if (!previous || previous.status !== "succeeded" || !previous.storagePath) return Response.json({ ok: false, error: "previous_scene_not_ready", message: `Conclua e arquive a Cena ${scene.index - 1} antes de gerar a Cena ${scene.index}, pois o encadeamento visual está ativo.`, previousSceneIndex: scene.index - 1 }, { status: 409 });
+      }
+
+      const providerId = parsed.data.providerOverride ?? route.selectedProviderId;
+      if (!["runway", "kie-ai"].includes(providerId)) return Response.json({ ok: false, error: "provider_not_executable" }, { status: 409 });
+      const providerPrompt = buildBrandSafeVisualPrompt(scene, project);
+      const budgetLimit = Number(project.briefing?.budgetLimit ?? 0);
+
+      if (providerId === "kie-ai") {
+        const knownCost = typeof route.estimatedCredits === "number" && Number.isFinite(route.estimatedCredits) && route.estimatedCredits > 0 && route.selectedProviderId === "kie-ai";
+        if (!knownCost && parsed.data.confirmUnknownCost !== true) return Response.json({ ok: false, error: "unknown_cost_confirmation_required", provider: providerId, model: KIE_STUDIO_VIDEO_MODEL }, { status: 409 });
+        const balance = await getKieCreditBalance();
+        if (balance === null || balance <= 0) return Response.json({ ok: false, error: "kie_insufficient_credits", message: "Saldo Kie.ai insuficiente para iniciar uma nova geração.", balance, estimatedCredits: knownCost ? route.estimatedCredits : null }, { status: 409 });
+        if (knownCost && balance < route.estimatedCredits) return Response.json({ ok: false, error: "kie_insufficient_credits", message: `Saldo Kie.ai insuficiente. Disponível: ${balance} créditos; estimado: ${route.estimatedCredits}.`, balance, estimatedCredits: route.estimatedCredits }, { status: 409 });
+        const task = await createKieKling26TextToVideo({ prompt: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), durationSeconds: scene.durationSeconds, sound: false });
+        const job = { sceneIndex: scene.index, provider: "kie-ai", model: KIE_STUDIO_VIDEO_MODEL, taskId: task.taskId, status: "queued", estimatedCredits: knownCost ? route.estimatedCredits : null, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null, continuityReferenceType: "none", continuityReferenceSceneIndex: null, economyValidation: false, renderedDurationSeconds: scene.durationSeconds } as ExtendedJob;
+        const jobs = await upsertStudioSceneGenerationJob(projectId, job);
+        const saved = jobs.find(item => item.sceneIndex === scene.index) ?? job;
+        return Response.json({ ok: true, job: saved, balanceBefore: balance, unknownCostAccepted: !knownCost, replacesTaskId: existing?.taskId ?? null, providerOverride: parsed.data.providerOverride ?? null, continuityMode: project.continuity?.mode ?? "coherent", frameChainingSupported: false }, { status: 201 });
+      }
+
+      const reference = await continuityReference(project, projectId, scene.index);
+      const renderDuration = parsed.data.economyValidation ? Math.min(5, Math.max(1, scene.durationSeconds)) : Math.min(30, Math.max(1, scene.durationSeconds));
+      const runwayInput = { promptText: providerPrompt, aspectRatio: ratio(project.briefing?.aspectRatio), duration: renderDuration, ...(reference.url ? { referenceImageUrl: reference.url } : {}) };
+      const dryRun = await dryRunRunwayVideoRouter(runwayInput);
+      const dryRouting: any = dryRun.routing ?? null;
+      const preflightCredits = extractRunwayRoutingCost(dryRouting);
+      if (typeof preflightCredits !== "number") return Response.json({ ok: false, error: "runway_cost_estimate_unavailable", message: "O Runway não retornou estimativa de créditos para esta cena. A geração foi bloqueada antes de qualquer consumo." }, { status: 409 });
+      if (budgetLimit > 0 && preflightCredits > budgetLimit) return Response.json({ ok: false, error: "budget_limit_exceeded", budgetLimit, estimatedCredits: preflightCredits }, { status: 409 });
+
+      const task = await generateRunwayVideoRouter(runwayInput);
+      const taskId = task.id ?? task.taskId ?? null;
+      if (!taskId) return Response.json({ ok: false, error: "runway_missing_task_id", providerPayload: task }, { status: 502 });
+      const routing: any = task.routing ?? dryRouting;
+      const estimatedCredits = extractRunwayRoutingCost(routing) ?? preflightCredits;
+      const job = { sceneIndex: scene.index, provider: "runway", model: routing?.model ?? routing?.selectedModel ?? routing?.modelId ?? null, taskId, status: "queued", estimatedCredits, actualCredits: null, outputUrl: null, storagePath: null, storageStatus: null, failure: null, startedAt: new Date().toISOString(), completedAt: null, continuityReferenceType: reference.source, continuityReferenceSceneIndex: reference.sourceSceneIndex, economyValidation: parsed.data.economyValidation, renderedDurationSeconds: renderDuration } as ExtendedJob;
+      const jobs = await upsertStudioSceneGenerationJob(projectId, job);
+      const saved = jobs.find(item => item.sceneIndex === scene.index) ?? job;
+      return Response.json({ ok: true, job: saved, replacesTaskId: existing?.taskId ?? null, providerOverride: parsed.data.providerOverride ?? null, continuityMode: project.continuity?.mode ?? "coherent", referenceImageApplied: Boolean(reference.url), continuityReferenceType: reference.source, continuityReferenceSceneIndex: reference.sourceSceneIndex, frameChainingSupported: true, economyValidation: parsed.data.economyValidation, renderDuration, preflightCredits }, { status: 201 });
+    }
+
+    if (!existing?.taskId) return Response.json({ ok: false, error: "scene_generation_not_started" }, { status: 409 });
+    if (existing.provider === "kie-ai") {
+      const task = await getKieTaskDetails(existing.taskId);
+      const status = normalizeKieStatus(task.state);
+      const outputUrl = task.resultUrls[0] ?? existing.outputUrl;
+      const completed = status === "succeeded" || status === "failed";
+      const storageFields = await archiveIfNeeded({ projectId, sceneIndex: scene.index, job: existing, outputUrl, status });
+      const job = { ...existing, ...storageFields, model: task.model ?? existing.model, status, outputUrl, failure: task.failMsg ?? task.failCode ?? null, actualCredits: task.creditsConsumed ?? existing.actualCredits ?? null, completedAt: completed ? (existing.completedAt ?? new Date().toISOString()) : null } as ExtendedJob;
+      const jobs = await upsertStudioSceneGenerationJob(projectId, job);
+      return Response.json({ ok: true, job: jobs.find(item => item.sceneIndex === scene.index) ?? job, progress: task.progress });
+    }
+
+    const task = await getRunwayTask(existing.taskId);
+    const status = normalizeRunwayStatus(task.status);
+    const outputUrl = firstOutputUrl(task.output) ?? existing.outputUrl;
+    const completed = status === "succeeded" || status === "failed";
+    const actualCredits = typeof (task as any).costCredits === "number" ? (task as any).costCredits : typeof (task as any).creditsUsed === "number" ? (task as any).creditsUsed : existing.actualCredits;
+    const storageFields = await archiveIfNeeded({ projectId, sceneIndex: scene.index, job: existing, outputUrl, status });
+    const job = { ...existing, ...storageFields, status, outputUrl, failure: task.failure ?? null, actualCredits: actualCredits ?? null, completedAt: completed ? (existing.completedAt ?? new Date().toISOString()) : null } as ExtendedJob;
+    const jobs = await upsertStudioSceneGenerationJob(projectId, job);
+    return Response.json({ ok: true, job: jobs.find(item => item.sceneIndex === scene.index) ?? job });
+  } catch (error) {
+    const auth = internalAuthResponse(error); if (auth) return auth;
+    const providerError = error as Error & { status?: number; payload?: any; code?: string };
+    console.error("studio_scene_production_failed", error);
+    const providerMessage = typeof providerError.payload?.msg === "string" ? providerError.payload.msg : null;
+    const isRunwayCreditError = providerError.code === "runway_insufficient_credits" || providerError.message === "runway_insufficient_credits" || /not enough credits|insufficient credits/i.test(`${providerError.message} ${providerMessage ?? ""}`);
+    const friendlyMessage = isRunwayCreditError ? "A organização da API Runway não possui créditos suficientes para esta geração. Verifique o saldo/autobilling no Runway Dev ou selecione outro motor disponível; o Studio não fará troca automática." : providerError.message === "kie_insufficient_credits" ? "A Kie.ai recusou a geração por saldo insuficiente. Recarregue os créditos ou escolha outro motor antes de tentar novamente." : providerError.message === "kie_unauthorized" ? "A Kie.ai recusou a autenticação. Verifique a API key configurada na Vercel." : providerError.message === "kie_validation_failed" ? `A Kie.ai recusou os parâmetros desta geração${providerMessage ? `: ${providerMessage}` : "."}` : providerError.message === "kie_rate_limited" ? "A Kie.ai limitou temporariamente novas requisições. Aguarde um pouco antes de tentar novamente." : providerError.message === "studio_scene_version_not_selectable" ? "Esta versão não pode ser selecionada. Apenas versões concluídas com sucesso podem se tornar ativas." : providerMessage || providerError.message || "Falha ao iniciar a geração.";
+    return Response.json({ ok: false, error: friendlyMessage, code: isRunwayCreditError ? "runway_insufficient_credits" : providerError.message || "studio_scene_production_failed", providerStatus: providerError.status ?? null }, { status: isRunwayCreditError || providerError.status === 402 ? 402 : 502 });
+  }
 }

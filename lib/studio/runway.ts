@@ -80,17 +80,29 @@ function extractRunwayErrorMessage(payload: unknown) {
   return null;
 }
 
+function isRunwayCreditError(detail: string | null) {
+  if (!detail) return false;
+  return /not enough credits|insufficient credits|insufficient credit|credit balance/i.test(detail);
+}
+
 async function parseRunwayResponse(response: Response) {
   const text = await response.text();
   let payload: unknown = null;
   try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }
   if (!response.ok) {
     const detail = extractRunwayErrorMessage(payload);
-    const code = `runway_api_${response.status}`;
-    const error = new Error(detail ? `${code}: ${detail}` : code) as Error & { status?: number; payload?: unknown; code?: string };
-    error.status = response.status;
-    error.payload = payload;
-    error.code = code;
+    const creditError = isRunwayCreditError(detail);
+    const apiCode = `runway_api_${response.status}`;
+    const structuredCode = creditError ? "runway_insufficient_credits" : apiCode;
+    const friendlyCreditMessage = "O Runway recusou a geração por saldo insuficiente na organização da API. Verifique os créditos/autobilling no Runway Dev ou escolha outro motor disponível.";
+    const errorPayload = creditError
+      ? { ...(payload && typeof payload === "object" ? payload as Record<string, unknown> : {}), msg: friendlyCreditMessage, providerMessage: detail }
+      : payload;
+    const error = new Error(structuredCode) as Error & { status?: number; payload?: unknown; code?: string; providerMessage?: string | null };
+    error.status = creditError ? 402 : response.status;
+    error.payload = errorPayload;
+    error.code = structuredCode;
+    error.providerMessage = detail;
     throw error;
   }
   return payload;

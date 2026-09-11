@@ -11,17 +11,35 @@ const brandSchema = z.object({
 });
 
 const overlaySchema = z.object({
-  sceneIndex: z.number().int().min(1), enabled: z.boolean(), eyebrow: z.string().max(80), headline: z.string().max(160), body: z.string().max(280), cta: z.string().max(100),
-  align: z.enum(["left", "center", "right"]), position: z.enum(["top", "center", "bottom"]), showBrand: z.boolean(),
-  offsetX: z.number().min(-28).max(28).default(0), offsetY: z.number().min(-28).max(28).default(0),
-  widthPercent: z.number().min(36).max(92).default(84), scalePercent: z.number().min(65).max(135).default(100), panelOpacity: z.number().min(18).max(80).default(58),
+  sceneIndex: z.number().int().min(1),
+  enabled: z.boolean(),
+  eyebrow: z.string().max(80),
+  headline: z.string().max(160),
+  body: z.string().max(280),
+  cta: z.string().max(100),
+  align: z.enum(["left", "center", "right"]),
+  position: z.enum(["top", "center", "bottom"]),
+  showBrand: z.boolean(),
+  offsetX: z.number().min(-40).max(40).default(0),
+  offsetY: z.number().min(-45).max(45).default(0),
+  widthPercent: z.number().min(28).max(94).default(84),
+  scalePercent: z.number().min(50).max(150).default(100),
+  panelOpacity: z.number().min(0).max(90).default(58),
+  logoScalePercent: z.number().min(40).max(220).default(100),
+  logoOffsetX: z.number().min(-40).max(40).default(0),
+  logoOffsetY: z.number().min(-40).max(40).default(0),
 });
 
 const patchSchema = z.object({
-  brand: brandSchema.optional(), preset: z.enum(["editorial", "commercial", "minimal"]).optional(), sceneOverlays: z.array(overlaySchema), transition: z.enum(["cut", "fade"]), approve: z.boolean().optional(),
+  brand: brandSchema.optional(),
+  preset: z.enum(["editorial", "commercial", "minimal"]).optional(),
+  sceneOverlays: z.array(overlaySchema),
+  transition: z.enum(["cut", "fade"]),
+  approve: z.boolean().optional(),
 });
 
 type AuthorizationResult = { ok: true; project: NonNullable<Awaited<ReturnType<typeof getStudioProject>>> } | { ok: false; response: Response };
+
 async function authorize(request: Request, projectId: string): Promise<AuthorizationResult> {
   const user = await requireAlgenriInternalUser(request);
   const project = await getStudioProject(projectId);
@@ -33,10 +51,12 @@ async function authorize(request: Request, projectId: string): Promise<Authoriza
 export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {
   try {
     const { projectId } = await context.params;
-    const auth = await authorize(request, projectId); if (!auth.ok) return auth.response;
+    const auth = await authorize(request, projectId);
+    if (!auth.ok) return auth.response;
     return Response.json({ ok: true, composition: await getStudioComposition(projectId) });
   } catch (error) {
-    const auth = internalAuthResponse(error); if (auth) return auth;
+    const auth = internalAuthResponse(error);
+    if (auth) return auth;
     return Response.json({ ok: false, error: error instanceof Error ? error.message : "composition_load_failed" }, { status: 500 });
   }
 }
@@ -44,12 +64,14 @@ export async function GET(request: Request, context: { params: Promise<{ project
 export async function PATCH(request: Request, context: { params: Promise<{ projectId: string }> }) {
   try {
     const { projectId } = await context.params;
-    const auth = await authorize(request, projectId); if (!auth.ok) return auth.response;
+    const auth = await authorize(request, projectId);
+    if (!auth.ok) return auth.response;
     const parsed = patchSchema.safeParse(await request.json());
     if (!parsed.success) return Response.json({ ok: false, error: "invalid_request", issues: parsed.error.issues }, { status: 400 });
     return Response.json({ ok: true, composition: await saveStudioComposition(projectId, parsed.data) });
   } catch (error) {
-    const auth = internalAuthResponse(error); if (auth) return auth;
+    const auth = internalAuthResponse(error);
+    if (auth) return auth;
     return Response.json({ ok: false, error: error instanceof Error ? error.message : "composition_save_failed" }, { status: 500 });
   }
 }

@@ -46,7 +46,7 @@ export default function StudioProjectPage({ params }: { params: Promise<{ projec
       <section className={`mt-8 rounded-[26px] border p-5 ${allApproved?"border-emerald-300/20 bg-emerald-300/[.035]":"border-white/10 bg-white/[.02]"}`}><div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-200"/><div><h2 className="font-semibold">{allApproved?"Storyboard aprovado para roteamento":"Revisão criativa em andamento"}</h2><p className="mt-2 text-sm leading-6 text-white/45">{allApproved?"Todas as cenas estão aprovadas. O Studio pode calcular o motor e custo considerando também a estratégia de continuidade.":"Edite, regenere ou aprove as cenas. A continuity bible orienta todas elas sem gastar créditos de vídeo."}</p></div></div></section>
       <StudioRoutingPanel projectId={projectId} allApproved={allApproved} initialRouting={project.routing} />
       {project.routing?.routes?.length>0&&<StudioProductionPanel projectId={projectId} routing={project.routing} budgetLimit={project.briefing?.budgetLimit??null} initialGeneration={project.generation} />}
-      <StudioCompositionPanel projectId={projectId} storyboard={project.storyboard??[]} generation={project.generation} onCompositionChange={composition=>setProject(current=>current?{...current,composition}:current)} />
+      <StudioCompositionPanel projectId={projectId} storyboard={project.storyboard??[]} generation={project.generation} aspectRatio={project.briefing?.aspectRatio} onCompositionChange={composition=>setProject(current=>current?{...current,composition}:current)} />
       <StudioFinalRenderPanel projectId={projectId} composition={project.composition} initialFinalRender={project.finalRender??null} />
     </>}
   </div></main>;

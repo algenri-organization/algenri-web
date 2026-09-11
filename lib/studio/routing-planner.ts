@@ -1,163 +1,35 @@
 import "server-only";
 
+import { getAdminStorage } from "@/lib/firebase/admin";
 import { dryRunRunwayVideoRouter, extractRunwayRoutingCost } from "@/lib/studio/runway";
 import { canKieKling26RenderScene, getKieCreditBalance, getKieIntegrationStatus, KIE_STUDIO_VIDEO_MODEL, normalizeKieKling26Duration } from "@/lib/studio/kie";
 import { studioProviders } from "@/lib/studio/providers";
 import { getStudioProject, saveStudioRoutingPlan, type StudioStoryboardScene } from "@/lib/studio/project-store";
 
-type RouteCandidate = {
-  providerId: string;
-  providerName: string;
-  score: number;
-  executable: boolean;
-  reason: string;
-};
+type RouteCandidate={providerId:string;providerName:string;score:number;executable:boolean;reason:string};
+export type StudioSceneRouting={sceneIndex:number;sceneTitle:string;selectedProviderId:string;selectedProviderName:string;selectedModel:string|null;estimatedCredits:number|null;executable:boolean;reason:string;candidates:RouteCandidate[]};
 
-export type StudioSceneRouting = {
-  sceneIndex: number;
-  sceneTitle: string;
-  selectedProviderId: string;
-  selectedProviderName: string;
-  selectedModel: string | null;
-  estimatedCredits: number | null;
-  executable: boolean;
-  reason: string;
-  candidates: RouteCandidate[];
-};
-
-function scoreProvider(providerId: string, scene: StudioStoryboardScene, project: any, kieCredits: number | null) {
-  const briefing = project.briefing ?? {};
-  let score = 50;
-  const text = `${scene.title} ${scene.objective} ${scene.visualDirection} ${scene.technicalPrompt}`.toLowerCase();
-  if (providerId === "runway") score += 22;
-  if (providerId === "kie-ai") {
-    score += kieCredits !== null && kieCredits > 0 ? 18 : -20;
-    if (briefing.priority === "cost") score += 30;
-    if (briefing.priority === "balanced") score += 10;
-    if (/cinemat|realist|camera|movimento|produto|visual/.test(text)) score += 4;
-  }
-  if (providerId === "heygen" && briefing.useAvatar) score += 40;
-  if (providerId === "heygen" && !briefing.useAvatar) score -= 18;
-  if (providerId === "higgsfield" && /cinemat|camera|movimento|fashion|visual/.test(text)) score += 16;
-  if (providerId === "veo" && /complex|realist|cinemat|audio/.test(text)) score += 12;
-  if (providerId === "luma" && /image|produto|ambiente|movimento/.test(text)) score += 7;
-  if (providerId === "kling" && /realist|pessoa|movimento/.test(text)) score += 8;
-  if (briefing.priority === "cost" && !["runway", "kie-ai"].includes(providerId)) score -= 2;
-  if (briefing.priority === "quality" && ["veo", "runway", "higgsfield"].includes(providerId)) score += 6;
-  return score;
+function scoreProvider(providerId:string,scene:StudioStoryboardScene,project:any,kieCredits:number|null){
+ const briefing=project.briefing??{};const continuity=project.continuity??{};let score=50;const text=`${scene.title} ${scene.objective} ${scene.visualDirection} ${scene.technicalPrompt}`.toLowerCase();
+ if(providerId==="runway")score+=22;
+ if(continuity.mode==="strict"){if(providerId==="runway")score+=continuity.referenceImageStoragePath?42:26;if(providerId==="kie-ai")score-=18;}
+ else if(continuity.mode==="coherent"&&providerId==="runway")score+=continuity.referenceImageStoragePath?18:8;
+ if(providerId==="kie-ai"){score+=kieCredits!==null&&kieCredits>0?18:-20;if(briefing.priority==="cost")score+=30;if(briefing.priority==="balanced")score+=10;if(/cinemat|realist|camera|movimento|produto|visual/.test(text))score+=4;}
+ if(providerId==="heygen"&&briefing.useAvatar)score+=40;if(providerId==="heygen"&&!briefing.useAvatar)score-=18;if(providerId==="higgsfield"&&/cinemat|camera|movimento|fashion|visual/.test(text))score+=16;if(providerId==="veo"&&/complex|realist|cinemat|audio/.test(text))score+=12;if(providerId==="luma"&&/image|produto|ambiente|movimento/.test(text))score+=7;if(providerId==="kling"&&/realist|pessoa|movimento/.test(text))score+=8;if(briefing.priority==="cost"&&!["runway","kie-ai"].includes(providerId))score-=2;if(briefing.priority==="quality"&&["veo","runway","higgsfield"].includes(providerId))score+=6;return score;
 }
+async function referenceUrl(project:any){const storagePath=project?.continuity?.referenceImageStoragePath;if(!storagePath||project?.continuity?.mode==="independent")return undefined;const file=(await getAdminStorage()).bucket().file(storagePath);const[exists]=await file.exists();if(!exists)return undefined;const[url]=await file.getSignedUrl({version:"v4",action:"read",expires:Date.now()+25*60*1000});return url;}
 
-export async function buildStudioRoutingPlan(projectId: string) {
-  const project = await getStudioProject(projectId);
-  if (!project) throw new Error("studio_project_not_found");
-  const storyboard = (project.storyboard ?? []) as StudioStoryboardScene[];
-  if (!storyboard.length) throw new Error("studio_storyboard_empty");
-  if (storyboard.some((scene) => scene.status !== "approved")) throw new Error("studio_storyboard_not_approved");
-
-  const kieStatus = getKieIntegrationStatus();
-  let kieCredits: number | null = null;
-  let kieReachable = false;
-  if (kieStatus.configured) {
-    try {
-      kieCredits = await getKieCreditBalance();
-      kieReachable = true;
-    } catch {
-      kieReachable = false;
-    }
-  }
-
-  const selectable = studioProviders.filter((provider) => provider.selectable || provider.id === "kie-ai");
-  const manualProviderId = project.briefing?.engineMode === "manual" ? project.briefing.manualEngineId : null;
-  const routes: StudioSceneRouting[] = [];
-
-  for (const scene of storyboard) {
-    const kieSceneExecutable = kieReachable && (kieCredits ?? 0) > 0 && canKieKling26RenderScene(scene.durationSeconds);
-    const candidates = selectable
-      .map((provider) => {
-        const isRunway = provider.id === "runway";
-        const isKie = provider.id === "kie-ai";
-        const executable = isRunway || (isKie && kieSceneExecutable);
-        const reason = isRunway
-          ? "Integração ativa e validada no Studio."
-          : isKie
-            ? !kieReachable
-              ? kieStatus.configured ? "Credencial Kie.ai configurada, mas a consulta de saldo não respondeu." : "Kie.ai ainda não possui credencial configurada."
-              : (kieCredits ?? 0) <= 0
-                ? "Kie.ai conectado, porém sem créditos disponíveis."
-                : !canKieKling26RenderScene(scene.durationSeconds)
-                  ? "Kling 2.6 via Kie.ai aceita clipes de até 10 segundos neste adapter."
-                  : `Kie.ai conectado com ${kieCredits ?? 0} créditos; Kling 2.6 disponível para geração controlada.`
-            : `${provider.name} está catalogado para comparação, mas ainda não possui adapter de geração ativo no Studio.`;
-        return {
-          providerId: provider.id,
-          providerName: provider.name,
-          score: scoreProvider(provider.id, scene, project, kieCredits),
-          executable,
-          reason,
-        };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    const requested = manualProviderId ? candidates.find((item) => item.providerId === manualProviderId) : null;
-    let selected = requested ?? candidates.find((item) => item.executable) ?? candidates[0];
-    if (!selected) throw new Error("studio_no_provider_candidate");
-
-    let selectedModel: string | null = selected.providerId === "kie-ai" ? KIE_STUDIO_VIDEO_MODEL : null;
-    let estimatedCredits: number | null = null;
-    let reason = selected.reason;
-
-    if (selected.providerId === "runway") {
-      try {
-        const ratio = project.briefing?.aspectRatio === "1:1" ? "1:1" : project.briefing?.aspectRatio === "9:16" || project.briefing?.aspectRatio === "4:5" ? "9:16" : "16:9";
-        const dryRun = await dryRunRunwayVideoRouter({ promptText: scene.technicalPrompt, aspectRatio: ratio, duration: Math.min(30, Math.max(1, scene.durationSeconds)) });
-        const routing: any = dryRun.routing ?? null;
-        selectedModel = routing?.model ?? routing?.selectedModel ?? routing?.modelId ?? null;
-        estimatedCredits = extractRunwayRoutingCost(routing);
-        reason = "Runway selecionado e validado por dry run para esta cena; nenhuma mídia foi gerada.";
-      } catch (error) {
-        selected = { ...selected, executable: false };
-        reason = `Runway não pôde estimar esta cena: ${error instanceof Error ? error.message : "dry_run_failed"}.`;
-      }
-    } else if (selected.providerId === "kie-ai") {
-      const renderDuration = normalizeKieKling26Duration(scene.durationSeconds);
-      reason = `Kie.ai selecionado com ${kieCredits ?? 0} créditos disponíveis. Kling 2.6 gerará um clipe de ${renderDuration}s; custo real será registrado pela Kie.ai após a conclusão.`;
-    }
-
-    routes.push({
-      sceneIndex: scene.index,
-      sceneTitle: scene.title,
-      selectedProviderId: selected.providerId,
-      selectedProviderName: selected.providerName,
-      selectedModel,
-      estimatedCredits,
-      executable: selected.executable,
-      reason,
-      candidates: candidates.slice(0, 5),
-    });
-  }
-
-  const knownCredits = routes.map((item) => item.estimatedCredits).filter((value): value is number => typeof value === "number");
-  const totalEstimatedCredits = knownCredits.length === routes.length ? knownCredits.reduce((sum, value) => sum + value, 0) : null;
-  const plan = {
-    state: "estimated",
-    generatedAt: new Date().toISOString(),
-    routes,
-    totalEstimatedCredits,
-    fullyExecutable: routes.every((item) => item.executable),
-    providerCoverage: {
-      active: kieReachable ? ["runway", "kie-ai"] : ["runway"],
-      recommendedNext: ["heygen", "higgsfield", "remotion"],
-      planned: ["veo", "luma", "kling", "seedance"],
-    },
-    creditSources: {
-      kie: {
-        configured: kieStatus.configured,
-        reachable: kieReachable,
-        balance: kieCredits,
-      },
-    },
-  };
-
-  await saveStudioRoutingPlan(projectId, plan);
-  return plan;
+export async function buildStudioRoutingPlan(projectId:string){
+ const project=await getStudioProject(projectId);if(!project)throw new Error("studio_project_not_found");const storyboard=(project.storyboard??[]) as StudioStoryboardScene[];if(!storyboard.length)throw new Error("studio_storyboard_empty");if(storyboard.some(scene=>scene.status!=="approved"))throw new Error("studio_storyboard_not_approved");
+ const kieStatus=getKieIntegrationStatus();let kieCredits:number|null=null;let kieReachable=false;if(kieStatus.configured){try{kieCredits=await getKieCreditBalance();kieReachable=true;}catch{kieReachable=false;}}
+ const selectable=studioProviders.filter(provider=>provider.selectable||provider.id==="kie-ai");const manualProviderId=project.briefing?.engineMode==="manual"?project.briefing.manualEngineId:null;const routes:StudioSceneRouting[]=[];const projectReferenceUrl=await referenceUrl(project);
+ for(const scene of storyboard){
+  const kieSceneExecutable=kieReachable&&(kieCredits??0)>0&&canKieKling26RenderScene(scene.durationSeconds);
+  const candidates=selectable.map(provider=>{const isRunway=provider.id==="runway";const isKie=provider.id==="kie-ai";const executable=isRunway||(isKie&&kieSceneExecutable);const reason=isRunway?(project.continuity?.mode==="strict"?`Runway priorizado para continuidade estrita${projectReferenceUrl?" com imagem de referência":""}.`:"Integração ativa e validada no Studio."):isKie?!kieReachable?(kieStatus.configured?"Credencial Kie.ai configurada, mas a consulta de saldo não respondeu.":"Kie.ai ainda não possui credencial configurada."):(kieCredits??0)<=0?"Kie.ai conectado, porém sem créditos disponíveis.":!canKieKling26RenderScene(scene.durationSeconds)?"Kling 2.6 via Kie.ai aceita clipes de até 10 segundos neste adapter.":`Kie.ai conectado com ${kieCredits??0} créditos; adapter atual é text-to-video e tem menor garantia de identidade entre cenas.`:`${provider.name} está catalogado para comparação, mas ainda não possui adapter de geração ativo no Studio.`;return{providerId:provider.id,providerName:provider.name,score:scoreProvider(provider.id,scene,project,kieCredits),executable,reason};}).sort((a,b)=>b.score-a.score);
+  const requested=manualProviderId?candidates.find(item=>item.providerId===manualProviderId):null;let selected=requested??candidates.find(item=>item.executable)??candidates[0];if(!selected)throw new Error("studio_no_provider_candidate");let selectedModel:string|null=selected.providerId==="kie-ai"?KIE_STUDIO_VIDEO_MODEL:null;let estimatedCredits:number|null=null;let reason=selected.reason;
+  if(selected.providerId==="runway"){try{const aspect=project.briefing?.aspectRatio==="1:1"?"1:1":project.briefing?.aspectRatio==="9:16"||project.briefing?.aspectRatio==="4:5"?"9:16":"16:9";const dryRun=await dryRunRunwayVideoRouter({promptText:scene.technicalPrompt,aspectRatio:aspect,duration:Math.min(30,Math.max(1,scene.durationSeconds)),...(projectReferenceUrl?{referenceImageUrl:projectReferenceUrl}:{})});const routing:any=dryRun.routing??null;selectedModel=routing?.model??routing?.selectedModel??routing?.modelId??null;estimatedCredits=extractRunwayRoutingCost(routing);reason=`Runway validado por dry run${projectReferenceUrl?" com referência visual de continuidade":""}; nenhuma mídia foi gerada.`;}catch(error){selected={...selected,executable:false};reason=`Runway não pôde estimar esta cena: ${error instanceof Error?error.message:"dry_run_failed"}.`;}}
+  else if(selected.providerId==="kie-ai"){const renderDuration=normalizeKieKling26Duration(scene.durationSeconds);reason=`Kie.ai selecionado com ${kieCredits??0} créditos disponíveis. Kling 2.6 gerará ${renderDuration}s; continuidade será orientada por prompt, sem imagem de referência neste adapter.`;}
+  routes.push({sceneIndex:scene.index,sceneTitle:scene.title,selectedProviderId:selected.providerId,selectedProviderName:selected.providerName,selectedModel,estimatedCredits,executable:selected.executable,reason,candidates:candidates.slice(0,5)});
+ }
+ const knownCredits=routes.map(item=>item.estimatedCredits).filter((value):value is number=>typeof value==="number");const totalEstimatedCredits=knownCredits.length===routes.length?knownCredits.reduce((sum,value)=>sum+value,0):null;const plan={state:"estimated",generatedAt:new Date().toISOString(),routes,totalEstimatedCredits,fullyExecutable:routes.every(item=>item.executable),continuity:{mode:project.continuity?.mode??"coherent",referenceImageApplied:Boolean(projectReferenceUrl)},providerCoverage:{active:kieReachable?["runway","kie-ai"]:["runway"],recommendedNext:["heygen","higgsfield","remotion"],planned:["veo","luma","kling","seedance"]},creditSources:{kie:{configured:kieStatus.configured,reachable:kieReachable,balance:kieCredits}}};await saveStudioRoutingPlan(projectId,plan);return plan;
 }

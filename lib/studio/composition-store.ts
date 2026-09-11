@@ -29,6 +29,9 @@ export type StudioSceneOverlay = {
   widthPercent: number;
   scalePercent: number;
   panelOpacity: number;
+  logoScalePercent: number;
+  logoOffsetX: number;
+  logoOffsetY: number;
 };
 
 export type StudioComposition = {
@@ -67,21 +70,37 @@ function normalizeOverlay(item: Partial<StudioSceneOverlay> & { sceneIndex: numb
     align: item.align === "center" || item.align === "right" ? item.align : "left",
     position: item.position === "top" || item.position === "bottom" ? item.position : "center",
     showBrand: brandMode !== "none" && item.showBrand !== false,
-    offsetX: clamp(item.offsetX, -28, 28, 0),
-    offsetY: clamp(item.offsetY, -28, 28, 0),
-    widthPercent: clamp(item.widthPercent, 36, 92, 84),
-    scalePercent: clamp(item.scalePercent, 65, 135, 100),
-    panelOpacity: clamp(item.panelOpacity, 18, 80, 58),
+    offsetX: clamp(item.offsetX, -40, 40, 0),
+    offsetY: clamp(item.offsetY, -45, 45, 0),
+    widthPercent: clamp(item.widthPercent, 28, 94, 84),
+    scalePercent: clamp(item.scalePercent, 50, 150, 100),
+    panelOpacity: clamp(item.panelOpacity, 0, 90, 58),
+    logoScalePercent: clamp(item.logoScalePercent, 40, 220, 100),
+    logoOffsetX: clamp(item.logoOffsetX, -40, 40, 0),
+    logoOffsetY: clamp(item.logoOffsetY, -40, 40, 0),
   };
 }
 
 function defaultsForProject(project: any, brand = brandForProject(project)): StudioSceneOverlay[] {
   const scenes = Array.isArray(project?.storyboard) ? project.storyboard : [];
   return scenes.map((scene: any, index: number) => normalizeOverlay({
-    sceneIndex: Number(scene.index), enabled: true, eyebrow: "", headline: String(scene.title ?? ""), body: "",
+    sceneIndex: Number(scene.index),
+    enabled: true,
+    eyebrow: "",
+    headline: String(scene.title ?? ""),
+    body: "",
     cta: index === scenes.length - 1 && brand.name ? `Conheça ${brand.name}` : "",
-    align: "left", position: index === scenes.length - 1 ? "bottom" : "center", showBrand: brand.mode !== "none",
-    offsetX: 0, offsetY: 0, widthPercent: 84, scalePercent: 100, panelOpacity: 58,
+    align: "left",
+    position: index === scenes.length - 1 ? "bottom" : "center",
+    showBrand: brand.mode !== "none",
+    offsetX: 0,
+    offsetY: 0,
+    widthPercent: 84,
+    scalePercent: 100,
+    panelOpacity: 58,
+    logoScalePercent: 100,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
   }, brand.mode));
 }
 
@@ -99,7 +118,15 @@ export async function getStudioComposition(projectId: string): Promise<StudioCom
       sceneOverlays: stored.sceneOverlays.map((item) => normalizeOverlay(item, brand.mode)),
     };
   }
-  return { state: "draft", brand: fallbackBrand, preset: "editorial", sceneOverlays: defaultsForProject(project, fallbackBrand), transition: "fade", approvedAt: null, updatedAt: new Date().toISOString() };
+  return {
+    state: "draft",
+    brand: fallbackBrand,
+    preset: "editorial",
+    sceneOverlays: defaultsForProject(project, fallbackBrand),
+    transition: "fade",
+    approvedAt: null,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export async function saveStudioComposition(projectId: string, input: { brand?: StudioBrandConfig; preset?: StudioCompositionPreset; sceneOverlays: StudioSceneOverlay[]; transition: "cut" | "fade"; approve?: boolean }) {
@@ -122,6 +149,7 @@ export async function saveStudioComposition(projectId: string, input: { brand?: 
   const overlays = input.sceneOverlays
     .filter((item) => storyboardIndices.has(Number(item.sceneIndex)))
     .map((item) => normalizeOverlay(item, brand.mode));
+
   const now = new Date().toISOString();
   const composition: StudioComposition = {
     state: input.approve ? "approved" : "draft",
@@ -132,6 +160,7 @@ export async function saveStudioComposition(projectId: string, input: { brand?: 
     approvedAt: input.approve ? now : null,
     updatedAt: now,
   };
+
   const db = await getAdminDb();
   await db.collection("studioProjects").doc(projectId).set({ composition, finalRender: null, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   return composition;

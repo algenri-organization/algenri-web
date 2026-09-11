@@ -63,14 +63,18 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     "set -euo pipefail",
     "cd /tmp",
     `STATUS_URL=${shQuote(statusUrl)}`,
-    "report_failed() { code=$?; printf 'failed:%s' \"$code\" | curl -fsS --retry 2 -X PUT -H 'Content-Type: text/plain' --data-binary @- \"$STATUS_URL\" >/dev/null 2>&1 || true; exit \"$code\"; }",
+    "STEP=bootstrap",
+    "report_failed() { code=$?; detail=$( (tail -c 1200 /tmp/dnf.log 2>/dev/null || true; tail -c 1800 /tmp/render.log 2>/dev/null || true) | tr '\\n' ' ' | tr -cd '[:print:]' ); printf 'failed:%s:%s:%s' \"$code\" \"${STEP:-unknown}\" \"$detail\" | curl -fsS --retry 2 -X PUT -H 'Content-Type: text/plain' --data-binary @- \"$STATUS_URL\" >/dev/null 2>&1 || true; exit \"$code\"; }",
     "trap report_failed ERR",
     "if ! command -v ffmpeg >/dev/null 2>&1; then",
-    "  sudo dnf install -y ffmpeg curl dejavu-sans-fonts >/tmp/dnf.log 2>&1",
+    "  sudo dnf install -y ffmpeg-free curl dejavu-sans-fonts >/tmp/dnf.log 2>&1",
     "fi",
+    "STEP=verify_ffmpeg",
+    "ffmpeg -hide_banner -filters 2>/tmp/render.log | grep -q ' drawtext '",
   ];
 
   sceneUrls.forEach((url, index) => {
+    lines.push(`STEP=download_scene_${index}`);
     lines.push(`curl -fsSL --retry 3 ${shQuote(url)} -o ${shQuote(`scene-${index}.mp4`)}`);
   });
 
@@ -115,8 +119,11 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
   filters.push(`${sceneOutputs.join("")}concat=n=${sceneOutputs.length}:v=1:a=0[outv]`);
   const inputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/scene-${index}.mp4`)}`).join(" ");
   lines.push(
+    "STEP=ffmpeg_render",
     `ffmpeg -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -an -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -movflags +faststart /tmp/final.mp4 2>/tmp/render.log`,
+    "STEP=upload_output",
     `curl -fsS --retry 3 -X PUT -H 'Content-Type: video/mp4' --upload-file /tmp/final.mp4 ${shQuote(outputUrl)}`,
+    "STEP=complete_status",
     `printf completed | curl -fsS --retry 3 -X PUT -H 'Content-Type: text/plain' --data-binary @- ${shQuote(statusUrl)}`,
     "trap - ERR",
     "echo ALGENRI_RENDER_OK",
@@ -248,7 +255,7 @@ export async function refreshStudioSandboxRender(projectId: string): Promise<Stu
         ...manifest,
         state: "failed",
         completedAt: finishedAt,
-        error: `studio_sandbox_render_${status}`.slice(0, 1000),
+        error: `studio_sandbox_render_${status}`.slice(0, 3200),
         worker: { ...manifest.worker, exitCode: status.split(":")[1] || "1", finishedAt },
       };
       await persist(projectId, failed);

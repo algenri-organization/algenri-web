@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { createStudioVideoProject } from "@/lib/studio/project-store";
 import { generateStudioStoryboardWithAi } from "@/lib/studio/storyboard-ai";
 
@@ -10,6 +11,48 @@ const briefingSchema = z.object({
 
 const commercialLinkSchema = z.object({ origin: z.enum(["internal", "client"]), clientId: z.string().trim().optional(), commercialProjectId: z.string().trim().optional(), proposalId: z.string().trim().optional(), contractId: z.string().trim().optional() });
 const requestSchema = z.object({ name: z.string().trim().min(2).max(180), briefing: briefingSchema, commercialLink: commercialLinkSchema.default({ origin: "internal" }) });
+
+function iso(value: any) {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value?.toDate === "function") return value.toDate().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  return null;
+}
+
+export async function GET(request: Request) {
+  try {
+    const user = await requireAlgenriInternalUser(request);
+    const db = await getAdminDb();
+    const snapshot = await db.collection("studioProjects").where("ownerUid", "==", user.uid).get();
+    const projects = snapshot.docs.map((doc) => {
+      const data = doc.data() as Record<string, any>;
+      const storyboard = Array.isArray(data.storyboard) ? data.storyboard : [];
+      const generation = data.generation ?? {};
+      return {
+        id: doc.id,
+        name: data.name || "Projeto sem nome",
+        format: data.format || "video",
+        status: data.status || "planning",
+        destination: data.briefing?.destination || "—",
+        aspectRatio: data.briefing?.aspectRatio || "—",
+        durationSeconds: Number(data.briefing?.durationSeconds || 0) || null,
+        visualStyle: data.briefing?.visualStyle || "—",
+        sceneCount: storyboard.length,
+        generationState: generation.state || "not_started",
+        finalRenderState: data.finalRender?.state || null,
+        createdAt: iso(data.createdAt),
+        updatedAt: iso(data.updatedAt),
+      };
+    }).sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+
+    return Response.json({ ok: true, projects });
+  } catch (error) {
+    const auth = internalAuthResponse(error); if (auth) return auth;
+    console.error("studio_project_list_failed", error);
+    return Response.json({ ok: false, error: "studio_project_list_failed" }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {

@@ -13,6 +13,7 @@ const patchSchema = z.object({
   environment: z.string().max(1800),
   wardrobe: z.string().max(1200),
   visualRules: z.string().max(1800),
+  chainPreviousScene: z.boolean().default(true),
 });
 
 async function authorize(request: Request, projectId: string) {

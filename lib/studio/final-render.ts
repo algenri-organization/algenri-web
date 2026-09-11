@@ -17,8 +17,9 @@ export type StudioFinalRenderScene = {
 
 export type StudioFinalRenderWorker = {
   provider: "vercel-sandbox";
-  sessionId: string;
+  sandboxName: string;
   commandId: string;
+  statusStoragePath: string;
   startedAt: string;
   finishedAt?: string | null;
   exitCode?: string | null;

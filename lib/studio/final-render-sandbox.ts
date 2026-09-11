@@ -1,14 +1,14 @@
 import "server-only";
 
-import { getVercelOidcToken } from "@vercel/oidc";
+import { Sandbox } from "@vercel/sandbox";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, getAdminStorage } from "@/lib/firebase/admin";
 import { getStudioProject } from "@/lib/studio/project-store";
 import type { StudioFinalRenderManifest, StudioFinalRenderScene } from "@/lib/studio/final-render";
 
-const SANDBOX_API = "https://api.vercel.com/v2/sandboxes";
 const RENDER_TIMEOUT_MS = 12 * 60 * 1000;
 const SIGNED_URL_TTL_MS = 25 * 60 * 1000;
+const FAILURE_GRACE_MS = 14 * 60 * 1000;
 
 function shQuote(value: string) {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
@@ -37,15 +37,15 @@ function wrapText(value: string, max = 38) {
   return lines.join("\n");
 }
 
-function textFileLine(path: string, text: string) {
+function textFileLine(filePath: string, text: string) {
   const encoded = Buffer.from(text, "utf8").toString("base64");
-  return `printf %s ${shQuote(encoded)} | base64 -d > ${shQuote(path)}`;
+  return `printf %s ${shQuote(encoded)} | base64 -d > ${shQuote(filePath)}`;
 }
 
 function drawText(input: string, output: string, textPath: string, options: { x: string; y: string; size: number; bold?: boolean }) {
   const font = options.bold
-    ? "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-    : "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    ? "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf"
+    : "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf";
   return `${input}drawtext=fontfile='${font}':textfile='${textPath}':fontcolor=white:fontsize=${options.size}:box=1:boxcolor=black@0.42:boxborderw=18:x=${options.x}:y=${options.y}:line_spacing=12${output}`;
 }
 
@@ -57,14 +57,16 @@ function xy(scene: StudioFinalRenderScene) {
   return { x, baseY };
 }
 
-function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: string[], outputUrl: string) {
+function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: string[], outputUrl: string, statusUrl: string) {
   const { width, height } = dimensions(manifest.aspectRatio);
   const lines = [
     "set -euo pipefail",
     "cd /tmp",
+    `STATUS_URL=${shQuote(statusUrl)}`,
+    "report_failed() { code=$?; printf 'failed:%s' \"$code\" | curl -fsS --retry 2 -X PUT -H 'Content-Type: text/plain' --data-binary @- \"$STATUS_URL\" >/dev/null 2>&1 || true; exit \"$code\"; }",
+    "trap report_failed ERR",
     "if ! command -v ffmpeg >/dev/null 2>&1; then",
-    "  sudo apt-get update -qq",
-    "  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg fonts-dejavu-core curl",
+    "  sudo dnf install -y ffmpeg curl dejavu-sans-fonts >/tmp/dnf.log 2>&1",
     "fi",
   ];
 
@@ -113,38 +115,14 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
   filters.push(`${sceneOutputs.join("")}concat=n=${sceneOutputs.length}:v=1:a=0[outv]`);
   const inputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/scene-${index}.mp4`)}`).join(" ");
   lines.push(
-    `ffmpeg -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -an -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -movflags +faststart /tmp/final.mp4`,
+    `ffmpeg -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -an -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -movflags +faststart /tmp/final.mp4 2>/tmp/render.log`,
     `curl -fsS --retry 3 -X PUT -H 'Content-Type: video/mp4' --upload-file /tmp/final.mp4 ${shQuote(outputUrl)}`,
+    `printf completed | curl -fsS --retry 3 -X PUT -H 'Content-Type: text/plain' --data-binary @- ${shQuote(statusUrl)}`,
+    "trap - ERR",
     "echo ALGENRI_RENDER_OK",
   );
 
   return lines.join("\n");
-}
-
-async function vercelToken() {
-  const token = await getVercelOidcToken();
-  if (!token) throw new Error("studio_sandbox_auth_missing");
-  return token;
-}
-
-async function apiFetch(url: string, token: string, init?: RequestInit) {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
-  const text = await response.text();
-  let data: any = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-  if (!response.ok) {
-    const message = data?.error?.message || data?.message || data?.error || text || `HTTP ${response.status}`;
-    throw new Error(`studio_sandbox_api_failed: ${String(message).slice(0, 900)}`);
-  }
-  return data;
 }
 
 async function persist(projectId: string, manifest: StudioFinalRenderManifest) {
@@ -155,24 +133,12 @@ async function persist(projectId: string, manifest: StudioFinalRenderManifest) {
   }, { merge: true });
 }
 
-function sandboxIds(data: any) {
-  const sessionId = data?.session?.id || data?.data?.session?.id || data?.currentSessionId || data?.data?.currentSessionId || (String(data?.id || "").startsWith("sbx_") ? data.id : null);
-  return { sessionId: sessionId ? String(sessionId) : null };
-}
-
-function commandId(data: any) {
-  return data?.command?.id || data?.data?.command?.id || data?.id || null;
-}
-
 export async function startStudioSandboxRender(projectId: string): Promise<StudioFinalRenderManifest> {
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
   const manifest = project.finalRender as StudioFinalRenderManifest | undefined;
   if (!manifest || manifest.state !== "prepared") throw new Error("studio_final_render_not_prepared");
 
-  const projectIdVercel = process.env.VERCEL_PROJECT_ID;
-  if (!projectIdVercel) throw new Error("studio_sandbox_project_id_missing");
-  const token = await vercelToken();
   const storage = await getAdminStorage();
   const bucket = storage.bucket();
   const expires = Date.now() + SIGNED_URL_TTL_MS;
@@ -183,44 +149,58 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
   }));
 
   const outputStoragePath = `studio/projects/${projectId}/final/ALGENRI-Studio-Final.mp4`;
+  const statusStoragePath = `studio/projects/${projectId}/final/render-status.txt`;
+  await Promise.all([
+    bucket.file(outputStoragePath).delete({ ignoreNotFound: true }).catch(() => undefined),
+    bucket.file(statusStoragePath).delete({ ignoreNotFound: true }).catch(() => undefined),
+  ]);
+
   const [outputUploadUrl] = await bucket.file(outputStoragePath).getSignedUrl({
     version: "v4",
     action: "write",
     expires,
     contentType: "video/mp4",
   });
+  const [statusUploadUrl] = await bucket.file(statusStoragePath).getSignedUrl({
+    version: "v4",
+    action: "write",
+    expires,
+    contentType: "text/plain",
+  });
 
   const startedAt = new Date().toISOString();
-  const sandbox = await apiFetch(SANDBOX_API, token, {
-    method: "POST",
-    body: JSON.stringify({
+  let sandbox: Sandbox;
+  try {
+    sandbox = await Sandbox.create({
       name: `algenri-render-${projectId.slice(0, 8)}-${Date.now()}`,
-      projectId: projectIdVercel,
       runtime: "node24",
-      resources: { vcpus: "2", memory: "4096" },
-      networkPolicy: { mode: "allow-all" },
-      timeout: String(RENDER_TIMEOUT_MS),
+      resources: { vcpus: 2 },
+      timeout: RENDER_TIMEOUT_MS,
       persistent: false,
-      tags: { app: "algenri-studio", projectId: projectId.slice(0, 60) },
-    }),
-  });
-  const { sessionId } = sandboxIds(sandbox);
-  if (!sessionId) throw new Error(`studio_sandbox_session_missing: ${JSON.stringify(sandbox).slice(0, 600)}`);
+      tags: { app: "algenri-studio", project: projectId.slice(0, 50) },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`studio_sandbox_create_failed: ${message.slice(0, 900)}`);
+  }
 
-  const script = buildRenderScript(manifest, sceneUrls, outputUploadUrl);
-  const command = await apiFetch(`${SANDBOX_API}/sessions/${encodeURIComponent(sessionId)}/cmd`, token, {
-    method: "POST",
-    body: JSON.stringify({
-      command: "bash",
+  const script = buildRenderScript(manifest, sceneUrls, outputUploadUrl, statusUploadUrl);
+  let commandId = "";
+  try {
+    const command = await sandbox.runCommand({
+      cmd: "bash",
       args: ["-lc", script],
       cwd: "/tmp",
-      wait: false,
-      logs: false,
-      timeout: RENDER_TIMEOUT_MS - 30_000,
-    }),
-  });
-  const cmdId = commandId(command);
-  if (!cmdId) throw new Error(`studio_sandbox_command_missing: ${JSON.stringify(command).slice(0, 600)}`);
+      detached: true,
+    });
+    commandId = command.cmdId;
+  } catch (error) {
+    await sandbox.stop().catch(() => undefined);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`studio_sandbox_command_start_failed: ${message.slice(0, 900)}`);
+  }
+
+  if (!commandId) throw new Error("studio_sandbox_command_id_missing");
 
   const rendering: StudioFinalRenderManifest = {
     ...manifest,
@@ -233,69 +213,81 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
     sizeBytes: null,
     contentType: "video/mp4",
     error: null,
-    worker: { provider: "vercel-sandbox", sessionId, commandId: String(cmdId), startedAt },
+    worker: {
+      provider: "vercel-sandbox",
+      sandboxName: sandbox.name,
+      commandId,
+      statusStoragePath,
+      startedAt,
+    },
   };
   await persist(projectId, rendering);
   return rendering;
-}
-
-async function commandLogs(sessionId: string, cmdId: string, token: string) {
-  try {
-    const response = await fetch(`${SANDBOX_API}/sessions/${encodeURIComponent(sessionId)}/cmd/${encodeURIComponent(cmdId)}/logs`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    const text = await response.text();
-    return text.slice(-3000);
-  } catch {
-    return "";
-  }
 }
 
 export async function refreshStudioSandboxRender(projectId: string): Promise<StudioFinalRenderManifest | null> {
   const project = await getStudioProject(projectId);
   if (!project) return null;
   const manifest = project.finalRender as StudioFinalRenderManifest | undefined;
-  if (!manifest || manifest.state !== "rendering" || manifest.renderEngine !== "vercel-sandbox" || !manifest.worker?.sessionId || !manifest.worker?.commandId) {
+  if (!manifest || manifest.state !== "rendering" || manifest.renderEngine !== "vercel-sandbox" || !manifest.worker?.statusStoragePath) {
     return manifest ?? null;
   }
 
-  const token = await vercelToken();
-  const { sessionId, commandId: cmdId } = manifest.worker;
-  const data = await apiFetch(`${SANDBOX_API}/sessions/${encodeURIComponent(sessionId)}/cmd/${encodeURIComponent(cmdId)}`, token);
-  const command = data?.command || data?.data?.command || data;
-  const exitCode = command?.exitCode;
-  if (exitCode === undefined || exitCode === null || exitCode === "") return manifest;
+  const storage = await getAdminStorage();
+  const bucket = storage.bucket();
+  const statusFile = bucket.file(manifest.worker.statusStoragePath);
+  const [statusExists] = await statusFile.exists();
 
-  const finishedAt = new Date().toISOString();
-  if (String(exitCode) !== "0") {
-    const logs = await commandLogs(sessionId, cmdId, token);
+  if (statusExists) {
+    const [statusBuffer] = await statusFile.download();
+    const status = statusBuffer.toString("utf8").trim();
+    const finishedAt = new Date().toISOString();
+
+    if (status.startsWith("failed")) {
+      const failed: StudioFinalRenderManifest = {
+        ...manifest,
+        state: "failed",
+        completedAt: finishedAt,
+        error: `studio_sandbox_render_${status}`.slice(0, 1000),
+        worker: { ...manifest.worker, exitCode: status.split(":")[1] || "1", finishedAt },
+      };
+      await persist(projectId, failed);
+      return failed;
+    }
+
+    if (status === "completed") {
+      const outputFile = bucket.file(manifest.outputStoragePath || `studio/projects/${projectId}/final/ALGENRI-Studio-Final.mp4`);
+      const [exists] = await outputFile.exists();
+      if (!exists) return manifest;
+      const [metadata] = await outputFile.getMetadata();
+      const completed: StudioFinalRenderManifest = {
+        ...manifest,
+        state: "completed",
+        completedAt: finishedAt,
+        outputUrl: `/api/internal/studio/projects/${projectId}/final-render/download`,
+        contentType: metadata.contentType || "video/mp4",
+        sizeBytes: Number(metadata.size || 0) || null,
+        error: null,
+        worker: { ...manifest.worker, exitCode: "0", finishedAt },
+      };
+      await persist(projectId, completed);
+      return completed;
+    }
+  }
+
+  const startedMs = Date.parse(manifest.startedAt || manifest.worker.startedAt || "");
+  if (Number.isFinite(startedMs) && Date.now() - startedMs > FAILURE_GRACE_MS) {
+    const finishedAt = new Date().toISOString();
     const failed: StudioFinalRenderManifest = {
       ...manifest,
       state: "failed",
       completedAt: finishedAt,
-      error: `studio_sandbox_render_failed_exit_${exitCode}${logs ? `: ${logs}` : ""}`.slice(0, 3500),
-      worker: { ...manifest.worker, exitCode: String(exitCode), finishedAt },
+      error: "studio_sandbox_render_timeout_no_status",
+      worker: { ...manifest.worker, exitCode: "timeout", finishedAt },
     };
     await persist(projectId, failed);
     return failed;
   }
 
-  const storage = await getAdminStorage();
-  const file = storage.bucket().file(manifest.outputStoragePath || `studio/projects/${projectId}/final/ALGENRI-Studio-Final.mp4`);
-  const [exists] = await file.exists();
-  if (!exists) return manifest;
-  const [metadata] = await file.getMetadata();
-  const completed: StudioFinalRenderManifest = {
-    ...manifest,
-    state: "completed",
-    completedAt: finishedAt,
-    outputUrl: `/api/internal/studio/projects/${projectId}/final-render/download`,
-    contentType: metadata.contentType || "video/mp4",
-    sizeBytes: Number(metadata.size || 0) || null,
-    error: null,
-    worker: { ...manifest.worker, exitCode: "0", finishedAt },
-  };
-  await persist(projectId, completed);
-  return completed;
+  return manifest;
 }

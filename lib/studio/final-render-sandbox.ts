@@ -70,9 +70,9 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     "if [ -z \"$FFMPEG\" ]; then",
     "  ARCH=$(uname -m)",
     "  case \"$ARCH\" in",
-    "    x86_64|amd64) FFMPEG_ARCH=linux64 ;;","
-    "    aarch64|arm64) FFMPEG_ARCH=linuxarm64 ;;","
-    "    *) echo \"unsupported architecture: $ARCH\" >/tmp/bootstrap.log; false ;;","
+    "    x86_64|amd64) FFMPEG_ARCH=linux64 ;;",
+    "    aarch64|arm64) FFMPEG_ARCH=linuxarm64 ;;",
+    "    *) echo \"unsupported architecture: $ARCH\" >/tmp/bootstrap.log; false ;;",
     "  esac",
     "  FFMPEG_URL=\"https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-${FFMPEG_ARCH}-gpl.tar.xz\"",
     "  curl -fL --retry 3 --connect-timeout 20 \"$FFMPEG_URL\" -o /tmp/ffmpeg.tar.xz >/tmp/bootstrap.log 2>&1",

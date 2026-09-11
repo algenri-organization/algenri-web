@@ -95,6 +95,24 @@ async function archiveFinal(projectId: string, buffer: Buffer) {
   return storagePath;
 }
 
+function ffmpegFailureDetail(error: unknown) {
+  if (!(error instanceof Error)) return "studio_final_render_failed";
+  const processError = error as Error & { stderr?: string | Buffer; stdout?: string | Buffer; code?: string | number };
+  const stderr = typeof processError.stderr === "string"
+    ? processError.stderr
+    : Buffer.isBuffer(processError.stderr)
+      ? processError.stderr.toString("utf8")
+      : "";
+  const stdout = typeof processError.stdout === "string"
+    ? processError.stdout
+    : Buffer.isBuffer(processError.stdout)
+      ? processError.stdout.toString("utf8")
+      : "";
+  const diagnostic = (stderr || stdout).trim();
+  const code = processError.code != null ? ` [exit ${processError.code}]` : "";
+  return diagnostic ? `FFmpeg${code}: ${diagnostic.slice(0, 6000)}` : `${error.message}${code}`;
+}
+
 export async function renderStudioFinalVideo(projectId: string) {
   if (!ffmpegPath) throw new Error("studio_ffmpeg_unavailable");
   const project = await getStudioProject(projectId);
@@ -171,7 +189,12 @@ export async function renderStudioFinalVideo(projectId: string) {
       outputPath,
     );
 
-    await execFileAsync(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024, timeout: 280_000 });
+    try {
+      await execFileAsync(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024, timeout: 280_000 });
+    } catch (error) {
+      throw new Error(ffmpegFailureDetail(error));
+    }
+
     const buffer = await readFile(outputPath);
     const outputStoragePath = await archiveFinal(projectId, buffer);
     const completedAt = new Date().toISOString();

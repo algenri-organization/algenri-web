@@ -1,13 +1,15 @@
 export function studioFileBaseName(project: any) {
-  const preferred = project?.commercialLink?.origin === "client"
-    ? String(project?.commercialLink?.clientName || project?.name || "Projeto Studio")
-    : String(project?.name || "Projeto Studio");
+  const clientName = project?.commercialLink?.origin === "client" ? String(project?.commercialLink?.clientName || "").trim() : "";
+  const projectName = String(project?.name || "Projeto Studio").trim();
+  const preferred = clientName && projectName && clientName.toLocaleLowerCase("pt-BR") !== projectName.toLocaleLowerCase("pt-BR")
+    ? `${clientName}-${projectName}`
+    : clientName || projectName || "Projeto Studio";
   const normalized = preferred
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 72);
+    .slice(0, 88);
   return normalized || "Projeto-Studio";
 }
 

@@ -59,6 +59,8 @@ export async function POST(request:Request,context:{params:Promise<{projectId:st
   const existing=activeSceneJob(project,scene.index)??undefined;
   if(parsed.data.action==="start_scene"){
    if(existing&&["queued","running"].includes(existing.status))return Response.json({ok:false,error:"scene_generation_in_progress",job:existing},{status:409});
+   const continuity=project.continuity??{};const sequential=continuity.mode!=="independent"&&continuity.chainPreviousScene!==false&&scene.index>1;
+   if(sequential){const previous=activeSceneJob(project,scene.index-1);if(!previous||previous.status!=="succeeded"||!previous.storagePath)return Response.json({ok:false,error:"previous_scene_not_ready",message:`Conclua e arquive a Cena ${scene.index-1} antes de gerar a Cena ${scene.index}, pois o encadeamento visual está ativo.`,previousSceneIndex:scene.index-1},{status:409});}
    const providerId=parsed.data.providerOverride??route.selectedProviderId;if(!["runway","kie-ai"].includes(providerId))return Response.json({ok:false,error:"provider_not_executable"},{status:409});
    const providerPrompt=buildBrandSafeVisualPrompt(scene,project);const budgetLimit=Number(project.briefing?.budgetLimit??0);
    if(providerId==="kie-ai"){

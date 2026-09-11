@@ -1,4 +1,5 @@
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
+import { studioSceneFilename } from "@/lib/studio/file-naming";
 import { getStudioProject } from "@/lib/studio/project-store";
 import { readStudioArchivedOutput } from "@/lib/studio/output-storage";
 
@@ -22,14 +23,14 @@ export async function GET(request: Request, context: { params: Promise<{ project
 
     const stored = await readStudioArchivedOutput(asset.storagePath);
     const version = Number(asset.version ?? 1);
-    const filename = asset.filename || `ALGENRI-Studio-Cena-${String(index).padStart(2, "0")}-V${String(version).padStart(2, "0")}.mp4`;
+    const filename = studioSceneFilename(project, index, version).replace(/\"/g, "");
     const body = new Uint8Array(stored.buffer);
 
     return new Response(body, {
       headers: {
         "Content-Type": stored.contentType,
         "Content-Length": String(stored.sizeBytes),
-        "Content-Disposition": `attachment; filename="${filename.replace(/\"/g, "")}"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "private, no-store",
       },
     });

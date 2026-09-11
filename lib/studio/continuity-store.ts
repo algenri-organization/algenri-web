@@ -11,6 +11,7 @@ export type StudioContinuityConfig = {
   environment: string;
   wardrobe: string;
   visualRules: string;
+  chainPreviousScene: boolean;
   referenceImageStoragePath?: string | null;
   referenceImageContentType?: string | null;
   updatedAt: string;
@@ -24,6 +25,7 @@ export function normalizeStudioContinuity(value: any): StudioContinuityConfig {
     environment: String(value?.environment ?? "").slice(0, 1800),
     wardrobe: String(value?.wardrobe ?? "").slice(0, 1200),
     visualRules: String(value?.visualRules ?? "").slice(0, 1800),
+    chainPreviousScene: value?.chainPreviousScene !== false,
     referenceImageStoragePath: value?.referenceImageStoragePath ? String(value.referenceImageStoragePath).slice(0, 500) : null,
     referenceImageContentType: value?.referenceImageContentType ? String(value.referenceImageContentType).slice(0, 120) : null,
     updatedAt: String(value?.updatedAt || new Date().toISOString()),

@@ -13,6 +13,8 @@ const brandSchema = z.object({
 const overlaySchema = z.object({
   sceneIndex: z.number().int().min(1), enabled: z.boolean(), eyebrow: z.string().max(80), headline: z.string().max(160), body: z.string().max(280), cta: z.string().max(100),
   align: z.enum(["left", "center", "right"]), position: z.enum(["top", "center", "bottom"]), showBrand: z.boolean(),
+  offsetX: z.number().min(-28).max(28).default(0), offsetY: z.number().min(-28).max(28).default(0),
+  widthPercent: z.number().min(36).max(92).default(84), scalePercent: z.number().min(65).max(135).default(100), panelOpacity: z.number().min(18).max(80).default(58),
 });
 
 const patchSchema = z.object({

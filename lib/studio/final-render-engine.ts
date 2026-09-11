@@ -16,9 +16,9 @@ import { renderStudioSceneOverlayImage } from "@/lib/studio/render-overlay-image
 const execFileAsync = promisify(execFile);
 
 function dimensions(aspectRatio: StudioFinalRenderManifest["aspectRatio"]) {
-  if (aspectRatio === "9:16") return { width: 1080, height: 1920 };
-  if (aspectRatio === "1:1") return { width: 1080, height: 1080 };
-  return { width: 1920, height: 1080 };
+  if (aspectRatio === "9:16") return { width: 720, height: 1280 };
+  if (aspectRatio === "1:1") return { width: 960, height: 960 };
+  return { width: 1280, height: 720 };
 }
 
 async function persistFinalRender(projectId: string, patch: Record<string, unknown>) {
@@ -77,14 +77,26 @@ export async function renderStudioFinalVideo(projectId: string) {
     const overlayPaths: string[] = [];
 
     for (const scene of manifest.scenes) {
-      const archived = await readStudioArchivedOutput(scene.storagePath);
+      let archived;
+      try {
+        archived = await readStudioArchivedOutput(scene.storagePath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown_storage_error";
+        throw new Error(`studio_scene_load_failed_${scene.sceneIndex}: ${message}`);
+      }
+
       const inputPath = path.join(workdir, `scene-${scene.sceneIndex}.mp4`);
       await writeFile(inputPath, archived.buffer);
       inputPaths.push(inputPath);
 
       const overlayPath = path.join(workdir, `scene-${scene.sceneIndex}-overlay.png`);
-      const overlayBuffer = await renderStudioSceneOverlayImage(scene, manifest.aspectRatio);
-      await writeFile(overlayPath, overlayBuffer);
+      try {
+        const overlayBuffer = await renderStudioSceneOverlayImage(scene, manifest.aspectRatio);
+        await writeFile(overlayPath, overlayBuffer);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown_overlay_error";
+        throw new Error(`studio_overlay_stage_failed_${scene.sceneIndex}: ${message}`);
+      }
       overlayPaths.push(overlayPath);
     }
 
@@ -120,7 +132,7 @@ export async function renderStudioFinalVideo(projectId: string) {
       "-an",
       "-c:v", "libx264",
       "-preset", "veryfast",
-      "-crf", "19",
+      "-crf", "20",
       "-pix_fmt", "yuv420p",
       "-movflags", "+faststart",
       outputPath,

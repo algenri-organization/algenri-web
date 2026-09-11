@@ -1,7 +1,5 @@
 import "server-only";
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { ImageResponse } from "next/og";
 import type { StudioFinalRenderScene, StudioFinalRenderManifest } from "@/lib/studio/final-render";
 
@@ -22,6 +20,12 @@ function wrapWords(value: string, max: number) {
   return lines;
 }
 
+function overlayDimensions(aspectRatio: StudioFinalRenderManifest["aspectRatio"]) {
+  if (aspectRatio === "9:16") return { width: 720, height: 1280 };
+  if (aspectRatio === "1:1") return { width: 960, height: 960 };
+  return { width: 1280, height: 720 };
+}
+
 function layoutFor(scene: StudioFinalRenderScene, height: number) {
   const align = scene.overlay.align;
   const position = scene.overlay.position;
@@ -36,24 +40,13 @@ function layoutFor(scene: StudioFinalRenderScene, height: number) {
   } as const;
 }
 
-async function brandMarkDataUri() {
-  try {
-    const svg = await readFile(path.join(process.cwd(), "public", "algenri-mark.svg"), "utf8");
-    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
 export async function renderStudioSceneOverlayImage(
   scene: StudioFinalRenderScene,
   aspectRatio: StudioFinalRenderManifest["aspectRatio"],
 ) {
-  const width = aspectRatio === "9:16" || aspectRatio === "1:1" ? 1080 : 1920;
-  const height = aspectRatio === "9:16" ? 1920 : 1080;
+  const { width, height } = overlayDimensions(aspectRatio);
   const overlay = scene.overlay;
   const layout = layoutFor(scene, height);
-  const mark = overlay.showBrand ? await brandMarkDataUri() : null;
   const maxWidth = aspectRatio === "9:16" ? Math.round(width * 0.82) : Math.round(width * 0.68);
   const lineBase = aspectRatio === "9:16" ? 30 : 42;
 
@@ -98,7 +91,6 @@ export async function renderStudioSceneOverlayImage(
           paddingTop: layout.paddingTop,
           paddingBottom: layout.paddingBottom,
           background: "transparent",
-          fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
         {overlay.enabled ? (
@@ -111,13 +103,24 @@ export async function renderStudioSceneOverlayImage(
               maxWidth,
             }}
           >
-            {mark ? (
-              <img
-                src={mark}
-                width={Math.round(height * 0.075)}
-                height={Math.round(height * 0.075)}
-                alt=""
-              />
+            {overlay.showBrand ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid rgba(255,255,255,0.20)",
+                  borderRadius: Math.round(height * 0.010),
+                  background: "rgba(3,8,20,0.58)",
+                  padding: `${Math.round(height * 0.008)}px ${Math.round(width * 0.016)}px`,
+                  color: "white",
+                  fontSize: Math.round(height * 0.026),
+                  fontWeight: 800,
+                  letterSpacing: "0.10em",
+                }}
+              >
+                ALGENRI
+              </div>
             ) : null}
             {field("eyebrow", overlay.eyebrow, Math.round(height * 0.026), 700, lineBase + 10)}
             {field("headline", overlay.headline, Math.round(height * 0.047), 800, lineBase)}
@@ -130,5 +133,10 @@ export async function renderStudioSceneOverlayImage(
     { width, height },
   );
 
-  return Buffer.from(await response.arrayBuffer());
+  try {
+    return Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_overlay_error";
+    throw new Error(`studio_overlay_render_failed_scene_${scene.sceneIndex}: ${message}`);
+  }
 }

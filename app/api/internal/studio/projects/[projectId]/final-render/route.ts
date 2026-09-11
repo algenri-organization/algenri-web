@@ -3,6 +3,7 @@ import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing
 import { getStudioProject } from "@/lib/studio/project-store";
 import { prepareStudioFinalRender } from "@/lib/studio/final-render";
 import { refreshStudioSandboxRender, startStudioSandboxRender } from "@/lib/studio/final-render-sandbox";
+import { buildStudioPreflightReport } from "@/lib/studio/preflight";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -41,10 +42,20 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const parsed = requestSchema.safeParse(body);
     if (!parsed.success) return Response.json({ ok: false, error: "invalid_request", issues: parsed.error.issues }, { status: 400 });
 
+    const preflight = await buildStudioPreflightReport(projectId);
+    if (!preflight.ready) {
+      return Response.json({
+        ok: false,
+        error: "studio_preflight_blocked",
+        message: "O controle de qualidade encontrou pendências obrigatórias antes da montagem final.",
+        preflight,
+      }, { status: 409 });
+    }
+
     const manifest = parsed.data.action === "render"
       ? await startStudioSandboxRender(projectId)
       : await prepareStudioFinalRender(projectId);
-    return Response.json({ ok: true, manifest });
+    return Response.json({ ok: true, manifest, preflight });
   } catch (error) {
     const auth = internalAuthResponse(error);
     if (auth) return auth;

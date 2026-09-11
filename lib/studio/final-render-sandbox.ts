@@ -20,20 +20,30 @@ function dimensions(aspectRatio: StudioFinalRenderManifest["aspectRatio"]) {
   return { width: 1920, height: 1080 };
 }
 
-function wrapText(value: string, max = 38) {
+function normalizeComparable(value: string) {
+  return value.trim().toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
+}
+
+function wrapText(value: string, maxChars: number, maxLines: number) {
   const words = value.trim().split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = "";
-  for (const word of words) {
+  for (const rawWord of words) {
+    const word = rawWord.length > maxChars ? `${rawWord.slice(0, Math.max(1, maxChars - 1))}…` : rawWord;
     const next = line ? `${line} ${word}` : word;
-    if (next.length > max && line) {
+    if (next.length > maxChars && line) {
       lines.push(line);
       line = word;
+      if (lines.length === maxLines) break;
     } else {
       line = next;
     }
   }
-  if (line) lines.push(line);
+  if (lines.length < maxLines && line) lines.push(line);
+  const consumed = lines.join(" ").replace(/…$/g, "").length;
+  if (lines.length === maxLines && value.trim().length > consumed) {
+    lines[lines.length - 1] = `${lines[lines.length - 1].replace(/[\s.,;:!?…-]+$/g, "").slice(0, Math.max(1, maxChars - 1))}…`;
+  }
   return lines.join("\n");
 }
 
@@ -42,19 +52,29 @@ function textFileLine(filePath: string, text: string) {
   return `printf %s ${shQuote(encoded)} | base64 -d > ${shQuote(filePath)}`;
 }
 
-function drawText(input: string, output: string, textPath: string, options: { x: string; y: string; size: number; bold?: boolean }) {
+function drawText(input: string, output: string, textPath: string, options: { x: string; y: string; size: number; bold?: boolean; box?: boolean }) {
   const font = options.bold
     ? "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf"
     : "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf";
-  return `${input}drawtext=fontfile='${font}':textfile='${textPath}':fontcolor=white:fontsize=${options.size}:box=1:boxcolor=black@0.42:boxborderw=18:x=${options.x}:y=${options.y}:line_spacing=12${output}`;
+  const box = options.box === false ? "box=0" : "box=1:boxcolor=black@0.30:boxborderw=14";
+  return `${input}drawtext=fontfile='${font}':textfile='${textPath}':fontcolor=white:fontsize=${options.size}:${box}:x=${options.x}:y=${options.y}:line_spacing=10${output}`;
 }
 
-function xy(scene: StudioFinalRenderScene) {
-  const align = scene.overlay.align;
-  const position = scene.overlay.position;
-  const x = align === "center" ? "(w-text_w)/2" : align === "right" ? "w-text_w-w*0.07" : "w*0.07";
-  const baseY = position === "top" ? "h*0.10" : position === "bottom" ? "h*0.62" : "h*0.34";
-  return { x, baseY };
+function safeLayout(scene: StudioFinalRenderScene, aspectRatio: StudioFinalRenderManifest["aspectRatio"]) {
+  const vertical = aspectRatio === "9:16";
+  const square = aspectRatio === "1:1";
+  const safeX = vertical ? 0.08 : square ? 0.07 : 0.06;
+  const x = scene.overlay.align === "center"
+    ? "(w-text_w)/2"
+    : scene.overlay.align === "right"
+      ? `w-text_w-w*${safeX}`
+      : `w*${safeX}`;
+  const baseY = scene.overlay.position === "top"
+    ? (vertical ? 0.10 : 0.08)
+    : scene.overlay.position === "bottom"
+      ? (vertical ? 0.54 : 0.58)
+      : (vertical ? 0.30 : 0.31);
+  return { x, baseY, vertical, square };
 }
 
 function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: string[], outputUrl: string, statusUrl: string) {
@@ -116,22 +136,52 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     filters.push(`[${index}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},fps=30,format=yuv420p,trim=duration=${duration},setpts=PTS-STARTPTS[base${index}]`);
 
     if (scene.overlay.enabled) {
-      const { x, baseY } = xy(scene);
-      const fields = [
-        { key: "brand", text: scene.overlay.showBrand ? "ALGENRI" : "", y: `${baseY}`, size: Math.round(height * 0.025), bold: true, wrap: 42 },
-        { key: "eyebrow", text: scene.overlay.eyebrow, y: `${baseY}+h*0.052`, size: Math.round(height * 0.026), bold: true, wrap: 42 },
-        { key: "headline", text: scene.overlay.headline, y: `${baseY}+h*0.110`, size: Math.round(height * 0.047), bold: true, wrap: 32 },
-        { key: "body", text: scene.overlay.body, y: `${baseY}+h*0.205`, size: Math.round(height * 0.024), bold: false, wrap: 46 },
-        { key: "cta", text: scene.overlay.cta, y: `${baseY}+h*0.300`, size: Math.round(height * 0.023), bold: true, wrap: 36 },
-      ];
+      const { x, baseY, vertical } = safeLayout(scene, manifest.aspectRatio);
+      const duplicateBrand = normalizeComparable(scene.overlay.eyebrow || "") === "algenri" || normalizeComparable(scene.overlay.headline || "") === "algenri";
+      const configs = vertical
+        ? {
+            brand: { chars: 18, lines: 1, size: 0.018, gap: 0.018 },
+            eyebrow: { chars: 24, lines: 2, size: 0.018, gap: 0.020 },
+            headline: { chars: 22, lines: 3, size: 0.032, gap: 0.025 },
+            body: { chars: 30, lines: 3, size: 0.019, gap: 0.022 },
+            cta: { chars: 24, lines: 2, size: 0.019, gap: 0.020 },
+          }
+        : {
+            brand: { chars: 28, lines: 1, size: 0.022, gap: 0.014 },
+            eyebrow: { chars: 36, lines: 2, size: 0.022, gap: 0.016 },
+            headline: { chars: 34, lines: 3, size: 0.040, gap: 0.022 },
+            body: { chars: 48, lines: 3, size: 0.022, gap: 0.018 },
+            cta: { chars: 36, lines: 2, size: 0.021, gap: 0.018 },
+          };
+      const rawFields = [
+        { key: "brand", text: scene.overlay.showBrand && !duplicateBrand ? "ALGENRI" : "", bold: true, box: false },
+        { key: "eyebrow", text: scene.overlay.eyebrow, bold: true, box: false },
+        { key: "headline", text: scene.overlay.headline, bold: true, box: true },
+        { key: "body", text: scene.overlay.body, bold: false, box: true },
+        { key: "cta", text: scene.overlay.cta, bold: true, box: true },
+      ] as const;
+      let yCursor = baseY;
       let stage = 0;
-      for (const field of fields) {
-        if (!field.text?.trim()) continue;
+      let previousComparable = "";
+      for (const field of rawFields) {
+        const comparable = normalizeComparable(field.text || "");
+        if (!comparable || comparable === previousComparable) continue;
+        previousComparable = comparable;
+        const config = configs[field.key];
+        const wrapped = wrapText(field.text, config.chars, config.lines);
+        const lineCount = Math.max(1, wrapped.split("\n").length);
         const textPath = `/tmp/scene-${index}-${field.key}.txt`;
-        lines.push(textFileLine(textPath, wrapText(field.text, field.wrap)));
+        lines.push(textFileLine(textPath, wrapped));
         const next = `[s${index}t${stage}]`;
-        filters.push(drawText(current, next, textPath, { x, y: field.y, size: field.size, bold: field.bold }));
+        filters.push(drawText(current, next, textPath, {
+          x,
+          y: `h*${yCursor.toFixed(4)}`,
+          size: Math.round(height * config.size),
+          bold: field.bold,
+          box: field.box,
+        }));
         current = next;
+        yCursor += (config.size * 1.34 * lineCount) + config.gap;
         stage += 1;
       }
     }

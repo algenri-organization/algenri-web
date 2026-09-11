@@ -58,6 +58,17 @@ function resolveBrand(project: Record<string, any>, composition: StudioCompositi
   return clientName ? { mode: "text", name: clientName.slice(0, 80) } : { mode: "algenri", name: "ALGENRI" };
 }
 
+function overlayForBrand(overlay: StudioSceneOverlay, brand: StudioBrandConfig): StudioSceneOverlay {
+  if (brand.mode === "algenri") return overlay;
+  if (brand.mode === "none") return { ...overlay, showBrand: false };
+  if (!overlay.showBrand) return overlay;
+  return {
+    ...overlay,
+    showBrand: false,
+    eyebrow: overlay.eyebrow.trim() || brand.name,
+  };
+}
+
 function resolveActiveSceneJob(project: Record<string, any>, sceneIndex: number): StudioSceneGenerationJob | null {
   const history = Array.isArray(project.generation?.sceneVersions)
     ? project.generation.sceneVersions as StudioSceneGenerationJob[]
@@ -97,6 +108,7 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
   const storyboard = Array.isArray(project.storyboard) ? project.storyboard : [];
   if (!storyboard.length) throw new Error("studio_storyboard_empty");
 
+  const brand = resolveBrand(project, composition);
   const overlayByScene = new Map(composition.sceneOverlays.map((item) => [item.sceneIndex, item]));
   const seen = new Set<number>();
 
@@ -120,7 +132,7 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
         model: job.model ?? null,
         storagePath: job.storagePath,
         durationSeconds: Math.max(1, Math.round(Number(scene.durationSeconds ?? 1))),
-        overlay,
+        overlay: overlayForBrand(overlay, brand),
       };
     })
     .sort((a, b) => a.sceneIndex - b.sceneIndex);
@@ -136,7 +148,7 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
     format: "mp4",
     aspectRatio: normalizeAspectRatio(project.briefing?.aspectRatio),
     transition: composition.transition,
-    brand: resolveBrand(project, composition),
+    brand,
     scenes,
     totalDurationSeconds,
     preparedAt,

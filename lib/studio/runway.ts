@@ -80,12 +80,9 @@ function extractRunwayErrorMessage(payload: unknown) {
   return null;
 }
 
-function isRunwayInsufficientCredits(detail: string | null) {
-  const normalized = String(detail || "").toLowerCase();
-  return normalized.includes("not enough credits")
-    || normalized.includes("insufficient credits")
-    || normalized.includes("insufficient credit")
-    || normalized.includes("credit balance");
+function isRunwayCreditError(detail: string | null) {
+  if (!detail) return false;
+  return /not enough credits|insufficient credits|insufficient credit|credit balance/i.test(detail);
 }
 
 async function parseRunwayResponse(response: Response) {
@@ -94,23 +91,13 @@ async function parseRunwayResponse(response: Response) {
   try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }
   if (!response.ok) {
     const detail = extractRunwayErrorMessage(payload);
-    if (isRunwayInsufficientCredits(detail)) {
-      const friendly = "O Runway está sem créditos suficientes para gerar esta cena. Recarregue o saldo do Runway ou selecione outro motor disponível no Studio. Nenhuma troca de motor será feita automaticamente.";
-      const error = new Error("runway_insufficient_credits") as Error & { status?: number; payload?: unknown; code?: string };
-      error.status = 402;
-      error.payload = {
-        ...(payload && typeof payload === "object" ? payload as Record<string, unknown> : {}),
-        msg: friendly,
-        providerDetail: detail,
-      };
-      error.code = "runway_insufficient_credits";
-      throw error;
-    }
-    const code = `runway_api_${response.status}`;
-    const error = new Error(detail ? `${code}: ${detail}` : code) as Error & { status?: number; payload?: unknown; code?: string };
-    error.status = response.status;
+    const apiCode = `runway_api_${response.status}`;
+    const structuredCode = isRunwayCreditError(detail) ? "runway_insufficient_credits" : apiCode;
+    const error = new Error(structuredCode) as Error & { status?: number; payload?: unknown; code?: string; providerMessage?: string | null };
+    error.status = isRunwayCreditError(detail) ? 402 : response.status;
     error.payload = payload;
-    error.code = code;
+    error.code = structuredCode;
+    error.providerMessage = detail;
     throw error;
   }
   return payload;

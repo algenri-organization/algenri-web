@@ -101,6 +101,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         referenceImageContentType: referencePath ? project.continuity?.referenceImageContentType ?? null : null,
         updatedAt: new Date().toISOString(),
       } : null;
+      const visualBible = project.visualBible ? { ...project.visualBible, updatedAt: new Date().toISOString() } : null;
 
       await ref.set({
         name: parsed.data.name || `${String(project.name || "Projeto Studio")} · Modelo`,
@@ -114,6 +115,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         ai: { storyboardState: "copied", model: project.ai?.model ?? null, generatedAt: null, error: null },
         review: { approvedScenes: 0, totalScenes: storyboard.length, allApproved: false, approvedAt: null },
         continuity,
+        visualBible,
         routing: { state: "not_started", generatedAt: null, routes: [], totalEstimatedCredits: null, fullyExecutable: false, providerCoverage: null },
         generation: { state: "not_started", estimatedCredits: null, actualCredits: null, provider: null, jobId: null, outputUrl: null, sceneJobs: [], sceneVersions: [], activeVersionByScene: {} },
         assets: [],

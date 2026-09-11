@@ -1,4 +1,5 @@
 import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
+import { studioFinalFilename } from "@/lib/studio/file-naming";
 import { readStudioArchivedOutput } from "@/lib/studio/output-storage";
 import { getStudioProject } from "@/lib/studio/project-store";
 
@@ -18,11 +19,12 @@ export async function GET(request: Request, context: { params: Promise<{ project
     }
 
     const archived = await readStudioArchivedOutput(storagePath);
+    const filename = studioFinalFilename(project).replace(/\"/g, "");
     return new Response(new Uint8Array(archived.buffer), {
       headers: {
         "Content-Type": archived.contentType || "video/mp4",
         "Content-Length": String(archived.sizeBytes),
-        "Content-Disposition": `attachment; filename="ALGENRI-Studio-Video-Final.mp4"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "private, no-store",
       },
     });

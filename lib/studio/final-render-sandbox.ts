@@ -44,8 +44,8 @@ function textFileLine(filePath: string, text: string) {
 
 function drawText(input: string, output: string, textPath: string, options: { x: string; y: string; size: number; bold?: boolean }) {
   const font = options.bold
-    ? "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-    : "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    ? "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf"
+    : "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf";
   return `${input}drawtext=fontfile='${font}':textfile='${textPath}':fontcolor=white:fontsize=${options.size}:box=1:boxcolor=black@0.42:boxborderw=18:x=${options.x}:y=${options.y}:line_spacing=12${output}`;
 }
 
@@ -65,9 +65,8 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     `STATUS_URL=${shQuote(statusUrl)}`,
     "report_failed() { code=$?; printf 'failed:%s' \"$code\" | curl -fsS --retry 2 -X PUT -H 'Content-Type: text/plain' --data-binary @- \"$STATUS_URL\" >/dev/null 2>&1 || true; exit \"$code\"; }",
     "trap report_failed ERR",
-    "if ! command -v ffmpeg >/dev/null 2>&1 || [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then",
-    "  sudo apt-get update -qq",
-    "  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg fonts-dejavu-core curl",
+    "if ! command -v ffmpeg >/dev/null 2>&1; then",
+    "  sudo dnf install -y ffmpeg curl dejavu-sans-fonts >/tmp/dnf.log 2>&1",
     "fi",
   ];
 
@@ -186,19 +185,22 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
   }
 
   const script = buildRenderScript(manifest, sceneUrls, outputUploadUrl, statusUploadUrl);
-  let command: Awaited<ReturnType<Sandbox["runCommand"]>>;
+  let commandId = "";
   try {
-    command = await sandbox.runCommand({
+    const command = await sandbox.runCommand({
       cmd: "bash",
       args: ["-lc", script],
       cwd: "/tmp",
       detached: true,
     });
+    commandId = command.cmdId;
   } catch (error) {
     await sandbox.stop().catch(() => undefined);
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`studio_sandbox_command_start_failed: ${message.slice(0, 900)}`);
   }
+
+  if (!commandId) throw new Error("studio_sandbox_command_id_missing");
 
   const rendering: StudioFinalRenderManifest = {
     ...manifest,
@@ -214,7 +216,7 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
     worker: {
       provider: "vercel-sandbox",
       sandboxName: sandbox.name,
-      commandId: command.cmdId,
+      commandId,
       statusStoragePath,
       startedAt,
     },

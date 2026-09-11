@@ -15,6 +15,15 @@ export type StudioFinalRenderScene = {
   overlay: StudioSceneOverlay;
 };
 
+export type StudioFinalRenderWorker = {
+  provider: "vercel-sandbox";
+  sessionId: string;
+  commandId: string;
+  startedAt: string;
+  finishedAt?: string | null;
+  exitCode?: string | null;
+};
+
 export type StudioFinalRenderManifest = {
   state: "prepared" | "rendering" | "completed" | "failed";
   format: "mp4";
@@ -23,7 +32,7 @@ export type StudioFinalRenderManifest = {
   scenes: StudioFinalRenderScene[];
   totalDurationSeconds: number;
   preparedAt: string;
-  renderEngine: "pending" | "ffmpeg-static";
+  renderEngine: "pending" | "ffmpeg-static" | "vercel-sandbox";
   startedAt?: string | null;
   completedAt?: string | null;
   outputStoragePath: string | null;
@@ -31,6 +40,7 @@ export type StudioFinalRenderManifest = {
   contentType?: string | null;
   sizeBytes?: number | null;
   error: string | null;
+  worker?: StudioFinalRenderWorker | null;
 };
 
 function normalizeAspectRatio(value: unknown): "16:9" | "9:16" | "1:1" {
@@ -84,6 +94,7 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
     contentType: null,
     sizeBytes: null,
     error: null,
+    worker: null,
   };
 
   const db = await getAdminDb();

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { Sandbox } from "@vercel/sandbox";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, getAdminStorage } from "@/lib/firebase/admin";
@@ -9,6 +11,7 @@ import type { StudioFinalRenderManifest, StudioFinalRenderScene } from "@/lib/st
 const RENDER_TIMEOUT_MS = 12 * 60 * 1000;
 const SIGNED_URL_TTL_MS = 25 * 60 * 1000;
 const FAILURE_GRACE_MS = 14 * 60 * 1000;
+const BRAND_LOGO_STORAGE_PATH = "studio/brand/algenri-logo.webp";
 
 function shQuote(value: string) {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
@@ -52,11 +55,11 @@ function textFileLine(filePath: string, text: string) {
   return `printf %s ${shQuote(encoded)} | base64 -d > ${shQuote(filePath)}`;
 }
 
-function drawText(input: string, output: string, textPath: string, options: { x: string; y: string; size: number; bold?: boolean; box?: boolean }) {
+function drawText(input: string, output: string, textPath: string, options: { x: string; y: string; size: number; bold?: boolean; box?: boolean; boxColor?: string }) {
   const font = options.bold
     ? "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf"
     : "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf";
-  const box = options.box === false ? "box=0" : "box=1:boxcolor=black@0.30:boxborderw=14";
+  const box = options.box === false ? "box=0" : `box=1:boxcolor=${options.boxColor || "0x0b2536@0.82"}:boxborderw=14`;
   return `${input}drawtext=fontfile='${font}':textfile='${textPath}':fontcolor=white:fontsize=${options.size}:${box}:x=${options.x}:y=${options.y}:line_spacing=10${output}`;
 }
 
@@ -68,16 +71,16 @@ function safeLayout(scene: StudioFinalRenderScene, aspectRatio: StudioFinalRende
     ? "(w-text_w)/2"
     : scene.overlay.align === "right"
       ? `w-text_w-w*${safeX}`
-      : `w*${safeX}`;
+      : `w*${safeX + 0.025}`;
   const baseY = scene.overlay.position === "top"
-    ? (vertical ? 0.10 : 0.08)
+    ? (vertical ? 0.13 : 0.11)
     : scene.overlay.position === "bottom"
-      ? (vertical ? 0.54 : 0.58)
-      : (vertical ? 0.30 : 0.31);
-  return { x, baseY, vertical, square };
+      ? (vertical ? 0.57 : 0.59)
+      : (vertical ? 0.33 : 0.34);
+  return { x, baseY, safeX, vertical, square };
 }
 
-function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: string[], outputUrl: string, statusUrl: string) {
+function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: string[], brandLogoUrl: string, outputUrl: string, statusUrl: string) {
   const { width, height } = dimensions(manifest.aspectRatio);
   const lines = [
     "set -euo pipefail",
@@ -110,6 +113,8 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     "STEP=verify_ffmpeg",
     "\"$FFMPEG\" -hide_banner -filters > /tmp/filters.txt 2>/tmp/render.log",
     "grep -q ' drawtext ' /tmp/filters.txt",
+    "STEP=download_brand_logo",
+    `curl -fsSL --retry 3 ${shQuote(brandLogoUrl)} -o /tmp/algenri-logo.webp`,
   ];
 
   sceneUrls.forEach((url, index) => {
@@ -129,6 +134,9 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
   const sceneOutputs: string[] = [];
   const audioOutputs: string[] = [];
   const sceneCount = manifest.scenes.length;
+  const brandInputIndex = sceneCount * 2;
+  const logoWidth = Math.round(width * (manifest.aspectRatio === "9:16" ? 0.24 : manifest.aspectRatio === "1:1" ? 0.19 : 0.15));
+  filters.push(`[${brandInputIndex}:v]scale=${logoWidth}:-1,format=rgba,split=${sceneCount}${manifest.scenes.map((_, index) => `[logo${index}]`).join("")}`);
 
   manifest.scenes.forEach((scene, index) => {
     const duration = Math.max(1, Number(scene.durationSeconds || 1));
@@ -136,28 +144,39 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     filters.push(`[${index}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},fps=30,format=yuv420p,trim=duration=${duration},setpts=PTS-STARTPTS[base${index}]`);
 
     if (scene.overlay.enabled) {
-      const { x, baseY, vertical } = safeLayout(scene, manifest.aspectRatio);
+      const { x, baseY, safeX, vertical } = safeLayout(scene, manifest.aspectRatio);
+      const panelY = Math.max(0.07, baseY - 0.025);
+      const panelHeight = vertical ? 0.31 : 0.30;
+      const panelStart = `[panel${index}]`;
+      const accent = `[accent${index}]`;
+      filters.push(`${current}drawbox=x=w*${safeX}:y=h*${panelY.toFixed(4)}:w=w*${(1 - (safeX * 2)).toFixed(4)}:h=h*${panelHeight}:color=0x061522@0.58:t=fill${panelStart}`);
+      filters.push(`${panelStart}drawbox=x=w*${safeX}:y=h*${panelY.toFixed(4)}:w=w*0.008:h=h*${panelHeight}:color=0x22d3ee@0.90:t=fill${accent}`);
+      current = accent;
+
+      if (scene.overlay.showBrand) {
+        const branded = `[brand${index}]`;
+        filters.push(`${current}[logo${index}]overlay=x=w*${safeX}:y=h*${vertical ? 0.055 : 0.045}:format=auto:shortest=1${branded}`);
+        current = branded;
+      }
+
       const duplicateBrand = normalizeComparable(scene.overlay.eyebrow || "") === "algenri" || normalizeComparable(scene.overlay.headline || "") === "algenri";
       const configs = vertical
         ? {
-            brand: { chars: 18, lines: 1, size: 0.018, gap: 0.018 },
-            eyebrow: { chars: 24, lines: 2, size: 0.018, gap: 0.020 },
-            headline: { chars: 22, lines: 3, size: 0.032, gap: 0.025 },
-            body: { chars: 30, lines: 3, size: 0.019, gap: 0.022 },
-            cta: { chars: 24, lines: 2, size: 0.019, gap: 0.020 },
+            eyebrow: { chars: 24, lines: 2, size: 0.017, gap: 0.020 },
+            headline: { chars: 22, lines: 3, size: 0.031, gap: 0.025 },
+            body: { chars: 30, lines: 3, size: 0.018, gap: 0.022 },
+            cta: { chars: 24, lines: 2, size: 0.018, gap: 0.020 },
           }
         : {
-            brand: { chars: 28, lines: 1, size: 0.022, gap: 0.014 },
-            eyebrow: { chars: 36, lines: 2, size: 0.022, gap: 0.016 },
-            headline: { chars: 34, lines: 3, size: 0.040, gap: 0.022 },
-            body: { chars: 48, lines: 3, size: 0.022, gap: 0.018 },
-            cta: { chars: 36, lines: 2, size: 0.021, gap: 0.018 },
+            eyebrow: { chars: 36, lines: 2, size: 0.021, gap: 0.016 },
+            headline: { chars: 34, lines: 3, size: 0.038, gap: 0.022 },
+            body: { chars: 48, lines: 3, size: 0.021, gap: 0.018 },
+            cta: { chars: 36, lines: 2, size: 0.020, gap: 0.018 },
           };
       const rawFields = [
-        { key: "brand", text: scene.overlay.showBrand && !duplicateBrand ? "ALGENRI" : "", bold: true, box: false },
-        { key: "eyebrow", text: scene.overlay.eyebrow, bold: true, box: false },
-        { key: "headline", text: scene.overlay.headline, bold: true, box: true },
-        { key: "body", text: scene.overlay.body, bold: false, box: true },
+        { key: "eyebrow", text: duplicateBrand ? "" : scene.overlay.eyebrow, bold: true, box: false },
+        { key: "headline", text: scene.overlay.headline, bold: true, box: false },
+        { key: "body", text: scene.overlay.body, bold: false, box: false },
         { key: "cta", text: scene.overlay.cta, bold: true, box: true },
       ] as const;
       let yCursor = baseY;
@@ -179,11 +198,15 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
           size: Math.round(height * config.size),
           bold: field.bold,
           box: field.box,
+          boxColor: field.key === "cta" ? "0x0891b2@0.88" : undefined,
         }));
         current = next;
         yCursor += (config.size * 1.34 * lineCount) + config.gap;
         stage += 1;
       }
+    } else {
+      const drained = `[branddrain${index}]`;
+      filters.push(`[logo${index}]null${drained}`);
     }
 
     const finalLabel = `[scene${index}]`;
@@ -203,7 +226,8 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
   filters.push(`${audioOutputs.join("")}concat=n=${audioOutputs.length}:v=0:a=1[outa]`);
   const videoInputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/scene-${index}.mp4`)}`).join(" ");
   const audioInputs = manifest.scenes.map((_, index) => `-i ${shQuote(`/tmp/audio-${index}.wav`)}`).join(" ");
-  const inputs = `${videoInputs} ${audioInputs}`;
+  const brandInput = `-loop 1 -i /tmp/algenri-logo.webp`;
+  const inputs = `${videoInputs} ${audioInputs} ${brandInput}`;
   lines.push(
     "STEP=ffmpeg_render",
     `\"$FFMPEG\" -hide_banner -loglevel error -y ${inputs} -filter_complex ${shQuote(filters.join(";"))} -map '[outv]' -map '[outa]' -c:v libx264 -preset veryfast -crf 19 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 -movflags +faststart /tmp/final.mp4 2>/tmp/render.log`,
@@ -226,6 +250,16 @@ async function persist(projectId: string, manifest: StudioFinalRenderManifest) {
   }, { merge: true });
 }
 
+async function ensureBrandLogo(bucket: ReturnType<Awaited<ReturnType<typeof getAdminStorage>>["bucket"]>) {
+  const file = bucket.file(BRAND_LOGO_STORAGE_PATH);
+  const [exists] = await file.exists();
+  if (!exists) {
+    const buffer = await readFile(path.join(process.cwd(), "public", "algenri-logo.webp"));
+    await file.save(buffer, { resumable: false, metadata: { contentType: "image/webp", cacheControl: "public,max-age=31536000,immutable" } });
+  }
+  return file;
+}
+
 export async function startStudioSandboxRender(projectId: string): Promise<StudioFinalRenderManifest> {
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
@@ -240,6 +274,8 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
     const [url] = await bucket.file(scene.storagePath).getSignedUrl({ version: "v4", action: "read", expires });
     return url;
   }));
+  const brandLogoFile = await ensureBrandLogo(bucket);
+  const [brandLogoUrl] = await brandLogoFile.getSignedUrl({ version: "v4", action: "read", expires });
 
   const outputStoragePath = `studio/projects/${projectId}/final/ALGENRI-Studio-Final.mp4`;
   const statusStoragePath = `studio/projects/${projectId}/final/render-status.txt`;
@@ -277,7 +313,7 @@ export async function startStudioSandboxRender(projectId: string): Promise<Studi
     throw new Error(`studio_sandbox_create_failed: ${message.slice(0, 900)}`);
   }
 
-  const script = buildRenderScript(manifest, sceneUrls, outputUploadUrl, statusUploadUrl);
+  const script = buildRenderScript(manifest, sceneUrls, brandLogoUrl, outputUploadUrl, statusUploadUrl);
   let commandId = "";
   try {
     const command = await sandbox.runCommand({

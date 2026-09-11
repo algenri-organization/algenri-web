@@ -1,12 +1,13 @@
-import { Boxes, FlaskConical, FolderKanban, Gauge, Library, PlugZap, Sparkles } from "lucide-react";
+import { BookOpen, Boxes, FlaskConical, FolderKanban, Gauge, Library, PlugZap, Sparkles } from "lucide-react";
 
 const cards = [
   { title: "ALGENRI Studio", detail: "Produção multimodal com IA para vídeos, imagens, avatares, voz e roteiros.", href: "/interno/lab/studio", icon: Sparkles, ready: true },
+  { title: "Aprendizados", detail: "Caderno vivo para registrar cursos, ferramentas, testes, decisões e como aplicar cada aprendizado na ALGENRI.", href: "/interno/lab/aprendizados", icon: BookOpen, ready: true },
   { title: "Projetos experimentais", detail: "Provas de conceito, protótipos e testes que podem evoluir para produtos ou serviços.", icon: FolderKanban },
   { title: "Apps & Toys", detail: "Microapps, experiências interativas e ideias rápidas para validar novos formatos.", icon: Boxes },
   { title: "Biblioteca", detail: "Assets, referências, prompts, personagens, marcas e materiais reutilizáveis.", icon: Library },
   { title: "Benchmarks de IA", detail: "Comparação de qualidade, custo, velocidade e aderência entre modelos e provedores.", icon: Gauge },
-  { title: "Integrações criativas", detail: "Conexões com HeyGen, Runway, Kie.ai e outros motores criativos.", icon: PlugZap },
+  { title: "Integrações criativas", detail: "Conexões com HeyGen, Runway, Kie.ai, ElevenLabs, MiniMax e outros motores criativos.", icon: PlugZap },
 ];
 
 export default function AlgenriLabPage() {

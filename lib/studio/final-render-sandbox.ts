@@ -85,7 +85,8 @@ function buildRenderScript(manifest: StudioFinalRenderManifest, sceneUrls: strin
     "test -x \"$FFMPEG\"",
     "test -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
     "STEP=verify_ffmpeg",
-    "\"$FFMPEG\" -hide_banner -filters 2>/tmp/render.log | grep -q ' drawtext '",
+    "\"$FFMPEG\" -hide_banner -filters > /tmp/filters.txt 2>/tmp/render.log",
+    "grep -q ' drawtext ' /tmp/filters.txt",
   ];
 
   sceneUrls.forEach((url, index) => {

@@ -3,7 +3,7 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getStudioProject, type StudioSceneGenerationJob } from "@/lib/studio/project-store";
-import type { StudioComposition, StudioSceneOverlay } from "@/lib/studio/composition-store";
+import type { StudioBrandConfig, StudioComposition, StudioSceneOverlay } from "@/lib/studio/composition-store";
 
 export type StudioFinalRenderScene = {
   sceneIndex: number;
@@ -30,6 +30,7 @@ export type StudioFinalRenderManifest = {
   format: "mp4";
   aspectRatio: "16:9" | "9:16" | "1:1";
   transition: "cut" | "fade";
+  brand: StudioBrandConfig;
   scenes: StudioFinalRenderScene[];
   totalDurationSeconds: number;
   preparedAt: string;
@@ -48,6 +49,13 @@ function normalizeAspectRatio(value: unknown): "16:9" | "9:16" | "1:1" {
   if (value === "1:1") return "1:1";
   if (value === "9:16" || value === "4:5") return "9:16";
   return "16:9";
+}
+
+function resolveBrand(project: Record<string, any>, composition: StudioComposition): StudioBrandConfig {
+  if (composition.brand) return composition.brand;
+  if (project.briefing?.useBrandIdentity === false) return { mode: "none", name: "" };
+  const clientName = project.commercialLink?.origin === "client" ? String(project.commercialLink?.clientName || "").trim() : "";
+  return clientName ? { mode: "text", name: clientName.slice(0, 80) } : { mode: "algenri", name: "ALGENRI" };
 }
 
 function resolveActiveSceneJob(project: Record<string, any>, sceneIndex: number): StudioSceneGenerationJob | null {
@@ -128,6 +136,7 @@ export async function prepareStudioFinalRender(projectId: string): Promise<Studi
     format: "mp4",
     aspectRatio: normalizeAspectRatio(project.briefing?.aspectRatio),
     transition: composition.transition,
+    brand: resolveBrand(project, composition),
     scenes,
     totalDurationSeconds,
     preparedAt,

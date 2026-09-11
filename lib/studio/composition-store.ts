@@ -4,6 +4,13 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getStudioProject } from "@/lib/studio/project-store";
 
+export type StudioBrandMode = "algenri" | "text" | "none";
+
+export type StudioBrandConfig = {
+  mode: StudioBrandMode;
+  name: string;
+};
+
 export type StudioSceneOverlay = {
   sceneIndex: number;
   enabled: boolean;
@@ -18,24 +25,35 @@ export type StudioSceneOverlay = {
 
 export type StudioComposition = {
   state: "draft" | "approved";
+  brand: StudioBrandConfig;
   sceneOverlays: StudioSceneOverlay[];
   transition: "cut" | "fade";
   approvedAt: string | null;
   updatedAt: string;
 };
 
-function defaultsForProject(project: any): StudioSceneOverlay[] {
+function brandForProject(project: any): StudioBrandConfig {
+  const useBrandIdentity = project?.briefing?.useBrandIdentity !== false;
+  if (!useBrandIdentity) return { mode: "none", name: "" };
+  const clientName = project?.commercialLink?.origin === "client"
+    ? String(project?.commercialLink?.clientName || "").trim()
+    : "";
+  if (clientName) return { mode: "text", name: clientName.slice(0, 80) };
+  return { mode: "algenri", name: "ALGENRI" };
+}
+
+function defaultsForProject(project: any, brand = brandForProject(project)): StudioSceneOverlay[] {
   const scenes = Array.isArray(project?.storyboard) ? project.storyboard : [];
   return scenes.map((scene: any, index: number) => ({
     sceneIndex: Number(scene.index),
     enabled: true,
-    eyebrow: index === 0 ? "ALGENRI" : "",
+    eyebrow: "",
     headline: String(scene.title ?? ""),
     body: "",
-    cta: index === scenes.length - 1 ? "Conheça a ALGENRI" : "",
+    cta: index === scenes.length - 1 && brand.name ? `Conheça ${brand.name}` : "",
     align: "left" as const,
     position: index === scenes.length - 1 ? "bottom" as const : "center" as const,
-    showBrand: true,
+    showBrand: brand.mode !== "none",
   }));
 }
 
@@ -43,20 +61,36 @@ export async function getStudioComposition(projectId: string): Promise<StudioCom
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
   const stored = project.composition as StudioComposition | undefined;
-  if (stored?.sceneOverlays?.length) return stored;
+  const fallbackBrand = brandForProject(project);
+  if (stored?.sceneOverlays?.length) {
+    return {
+      ...stored,
+      brand: stored.brand ?? fallbackBrand,
+    };
+  }
   return {
     state: "draft",
-    sceneOverlays: defaultsForProject(project),
+    brand: fallbackBrand,
+    sceneOverlays: defaultsForProject(project, fallbackBrand),
     transition: "fade",
     approvedAt: null,
     updatedAt: new Date().toISOString(),
   };
 }
 
-export async function saveStudioComposition(projectId: string, input: { sceneOverlays: StudioSceneOverlay[]; transition: "cut" | "fade"; approve?: boolean }) {
+export async function saveStudioComposition(projectId: string, input: { brand?: StudioBrandConfig; sceneOverlays: StudioSceneOverlay[]; transition: "cut" | "fade"; approve?: boolean }) {
   const project = await getStudioProject(projectId);
   if (!project) throw new Error("studio_project_not_found");
   const storyboardIndices = new Set((Array.isArray(project.storyboard) ? project.storyboard : []).map((scene: any) => Number(scene.index)));
+  const brandFallback = brandForProject(project);
+  const brandInput = input.brand ?? brandFallback;
+  const brand: StudioBrandConfig = {
+    mode: brandInput.mode === "algenri" || brandInput.mode === "text" ? brandInput.mode : "none",
+    name: String(brandInput.name ?? "").trim().slice(0, 80),
+  };
+  if (brand.mode === "algenri" && !brand.name) brand.name = "ALGENRI";
+  if (brand.mode === "text" && !brand.name) brand.mode = "none";
+
   const overlays: StudioSceneOverlay[] = input.sceneOverlays
     .filter((item) => storyboardIndices.has(Number(item.sceneIndex)))
     .map((item): StudioSceneOverlay => ({
@@ -68,11 +102,12 @@ export async function saveStudioComposition(projectId: string, input: { sceneOve
       cta: String(item.cta ?? "").slice(0, 100),
       align: item.align === "center" || item.align === "right" ? item.align : "left",
       position: item.position === "top" || item.position === "bottom" ? item.position : "center",
-      showBrand: Boolean(item.showBrand),
+      showBrand: brand.mode !== "none" && Boolean(item.showBrand),
     }));
   const now = new Date().toISOString();
   const composition: StudioComposition = {
     state: input.approve ? "approved" : "draft",
+    brand,
     sceneOverlays: overlays,
     transition: input.transition === "cut" ? "cut" : "fade",
     approvedAt: input.approve ? now : null,

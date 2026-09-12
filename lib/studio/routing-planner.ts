@@ -5,9 +5,10 @@ import { dryRunRunwayVideoRouter, extractRunwayRoutingCost } from "@/lib/studio/
 import { canKieKling26RenderScene, getKieCreditBalance, getKieIntegrationStatus, KIE_STUDIO_VIDEO_MODEL, normalizeKieKling26Duration } from "@/lib/studio/kie";
 import { studioProviders } from "@/lib/studio/providers";
 import { getStudioProject, saveStudioRoutingPlan, type StudioStoryboardScene } from "@/lib/studio/project-store";
+import { STUDIO_ROUTING_POLICY_VERSION } from "@/lib/studio/governance";
 
 type RouteCandidate = { providerId: string; providerName: string; score: number; executable: boolean; reason: string };
-export type StudioSceneRouting = { sceneIndex: number; sceneTitle: string; selectedProviderId: string; selectedProviderName: string; selectedModel: string | null; estimatedCredits: number | null; executable: boolean; reason: string; candidates: RouteCandidate[] };
+export type StudioSceneRouting = { sceneIndex: number; sceneTitle: string; selectedProviderId: string; selectedProviderName: string; selectedModel: string | null; estimatedCredits: number | null; executable: boolean; reason: string; selectionMode: "automatic" | "manual"; winnerScore: number; runnerUpScore: number | null; scoreMargin: number | null; candidates: RouteCandidate[] };
 
 function scoreProvider(providerId: string, scene: StudioStoryboardScene, project: any, kieCredits: number | null) {
   const briefing = project.briefing ?? {};
@@ -91,6 +92,7 @@ export async function buildStudioRoutingPlan(projectId: string) {
     const requested = manualProviderId ? candidates.find(item => item.providerId === manualProviderId) : null;
     let selected = requested ?? candidates.find(item => item.executable) ?? candidates[0];
     if (!selected) throw new Error("studio_no_provider_candidate");
+    const runnerUp = candidates.find(item => item.providerId !== selected.providerId) ?? null;
     let selectedModel: string | null = selected.providerId === "kie-ai" ? KIE_STUDIO_VIDEO_MODEL : null;
     let estimatedCredits: number | null = null;
     let reason = selected.reason;
@@ -113,14 +115,37 @@ export async function buildStudioRoutingPlan(projectId: string) {
       reason = `Kie.ai selecionado com ${kieCredits ?? 0} créditos disponíveis. Kling 2.6 gerará ${renderDuration}s; continuidade será orientada por prompt, sem imagem de referência neste adapter.`;
     }
 
-    routes.push({ sceneIndex: scene.index, sceneTitle: scene.title, selectedProviderId: selected.providerId, selectedProviderName: selected.providerName, selectedModel, estimatedCredits, executable: selected.executable, reason, candidates: topCandidatesWithActiveProviders(candidates) });
+    routes.push({
+      sceneIndex: scene.index,
+      sceneTitle: scene.title,
+      selectedProviderId: selected.providerId,
+      selectedProviderName: selected.providerName,
+      selectedModel,
+      estimatedCredits,
+      executable: selected.executable,
+      reason,
+      selectionMode: requested ? "manual" : "automatic",
+      winnerScore: selected.score,
+      runnerUpScore: runnerUp?.score ?? null,
+      scoreMargin: runnerUp ? selected.score - runnerUp.score : null,
+      candidates: topCandidatesWithActiveProviders(candidates),
+    });
   }
 
   const knownCredits = routes.map(item => item.estimatedCredits).filter((value): value is number => typeof value === "number");
   const totalEstimatedCredits = knownCredits.length === routes.length ? knownCredits.reduce((sum, value) => sum + value, 0) : null;
   const plan = {
     state: "estimated",
+    policyVersion: STUDIO_ROUTING_POLICY_VERSION,
     generatedAt: new Date().toISOString(),
+    decisionInputs: {
+      priority: project.briefing?.priority ?? "balanced",
+      engineMode: project.briefing?.engineMode ?? "automatic",
+      manualProviderId: manualProviderId ?? null,
+      continuityMode: project.continuity?.mode ?? "coherent",
+      useAvatar: Boolean(project.briefing?.useAvatar),
+      aspectRatio: project.briefing?.aspectRatio ?? null,
+    },
     routes,
     totalEstimatedCredits,
     fullyExecutable: routes.every(item => item.executable),

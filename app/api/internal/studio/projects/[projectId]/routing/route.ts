@@ -1,15 +1,14 @@
-import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
-import { getStudioProject } from "@/lib/studio/project-store";
+import { internalAuthResponse } from "@/lib/briefing/internal-auth";
+import { requireStudioProjectOwner } from "@/lib/studio/project-auth";
 import { buildStudioRoutingPlan } from "@/lib/studio/routing-planner";
 import { recordStudioGovernanceEvent } from "@/lib/studio/governance";
 
 export async function POST(request: Request, context: { params: Promise<{ projectId: string }> }) {
   try {
-    const user = await requireAlgenriInternalUser(request);
     const { projectId } = await context.params;
-    const project = await getStudioProject(projectId);
-    if (!project) return Response.json({ ok: false, error: "not_found" }, { status: 404 });
-    if (project.ownerUid && project.ownerUid !== user.uid) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+    const authz = await requireStudioProjectOwner(request, projectId);
+    if (!authz.ok) return authz.response;
+    const { user, project } = authz;
 
     const routing = await buildStudioRoutingPlan(projectId);
     const storyboard = Array.isArray(project.storyboard) ? project.storyboard : [];

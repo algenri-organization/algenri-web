@@ -23,6 +23,7 @@ const groups: Group[] = [
   ]},
   { label: "Operação", module:"operation", icon: Gauge, items: [
     { label: "Criar / enviar briefing", href: "/interno/briefings/instancias", icon: FileText },
+    { label: "Modelos de briefing", href: "/interno/briefings/modelos", icon: FileText },
     { label: "Briefings recebidos", href: "/interno/briefings/recebidos", icon: Inbox },
     { label: "Dossiês de projeto", href: "/interno/dossies", icon: MessageSquareText },
   ]},

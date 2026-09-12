@@ -1,9 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
-import { internalAuthResponse, requireAlgenriInternalUser } from "@/lib/briefing/internal-auth";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { getStudioProject } from "@/lib/studio/project-store";
+import { requireStudioProjectOwner, studioApiError } from "@/lib/studio/project-auth";
 
 const saveSchema = z.object({
   action: z.enum(["save", "enable_portal", "disable_portal"]),
@@ -30,28 +29,19 @@ function summarizeCosts(project: Record<string, any>) {
   };
 }
 
-async function authorize(request: Request, projectId: string) {
-  const user = await requireAlgenriInternalUser(request);
-  const project = await getStudioProject(projectId);
-  if (!project) return { ok:false as const, response:Response.json({ok:false,error:"not_found"},{status:404}) };
-  if (project.ownerUid && project.ownerUid !== user.uid) return { ok:false as const, response:Response.json({ok:false,error:"forbidden"},{status:403}) };
-  return { ok:true as const, user, project };
-}
-
 export async function GET(request: Request, context:{params:Promise<{projectId:string}>}) {
   try {
-    const {projectId}=await context.params; const auth=await authorize(request,projectId); if(!auth.ok)return auth.response;
+    const {projectId}=await context.params; const auth=await requireStudioProjectOwner(request,projectId); if(!auth.ok)return auth.response;
     const ops=auth.project.operations||{};
     return Response.json({ok:true,operations:ops,costs:summarizeCosts(auth.project)});
   } catch(error) {
-    const auth=internalAuthResponse(error); if(auth)return auth;
-    console.error("studio_operations_load_failed",error); return Response.json({ok:false,error:"studio_operations_load_failed"},{status:500});
+    return studioApiError(error,"studio_operations_load_failed");
   }
 }
 
 export async function POST(request: Request, context:{params:Promise<{projectId:string}>}) {
   try {
-    const {projectId}=await context.params; const auth=await authorize(request,projectId); if(!auth.ok)return auth.response;
+    const {projectId}=await context.params; const auth=await requireStudioProjectOwner(request,projectId); if(!auth.ok)return auth.response;
     const parsed=saveSchema.safeParse(await request.json().catch(()=>({}))); if(!parsed.success)return Response.json({ok:false,error:"invalid_request",issues:parsed.error.issues},{status:400});
     const db=await getAdminDb(); const current=auth.project.operations||{}; const action=parsed.data.action;
     let portal=current.portal||{enabled:false,token:null,enabledAt:null};
@@ -69,7 +59,6 @@ export async function POST(request: Request, context:{params:Promise<{projectId:
     await db.collection("studioProjects").doc(projectId).set({operations:next,updatedAt:FieldValue.serverTimestamp()},{merge:true});
     return Response.json({ok:true,operations:next,costs:summarizeCosts(auth.project)});
   } catch(error) {
-    const auth=internalAuthResponse(error); if(auth)return auth;
-    console.error("studio_operations_save_failed",error); return Response.json({ok:false,error:"studio_operations_save_failed"},{status:500});
+    return studioApiError(error,"studio_operations_save_failed");
   }
 }

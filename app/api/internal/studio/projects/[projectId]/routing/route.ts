@@ -12,6 +12,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     if (project.ownerUid && project.ownerUid !== user.uid) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
 
     const routing = await buildStudioRoutingPlan(projectId);
+    const storyboard = Array.isArray(project.storyboard) ? project.storyboard : [];
     await recordStudioGovernanceEvent(projectId, {
       type: "routing.calculated",
       actorUid: user.uid,
@@ -23,18 +24,22 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         totalEstimatedCredits: routing.totalEstimatedCredits,
         fullyExecutable: routing.fullyExecutable,
         decisionInputs: routing.decisionInputs,
-        routes: routing.routes.map(route => ({
-          sceneIndex: route.sceneIndex,
-          provider: route.selectedProviderId,
-          model: route.selectedModel,
-          estimatedCredits: route.estimatedCredits,
-          executable: route.executable,
-          selectionMode: route.selectionMode,
-          winnerScore: route.winnerScore,
-          runnerUpScore: route.runnerUpScore,
-          scoreMargin: route.scoreMargin,
-          reason: route.reason,
-        })),
+        routes: routing.routes.map(route => {
+          const scene = storyboard.find((item: any) => Number(item.index) === route.sceneIndex);
+          return {
+            sceneIndex: route.sceneIndex,
+            provider: route.selectedProviderId,
+            model: route.selectedModel,
+            estimatedCredits: route.estimatedCredits,
+            executable: route.executable,
+            selectionMode: route.selectionMode,
+            winnerScore: route.winnerScore,
+            runnerUpScore: route.runnerUpScore,
+            scoreMargin: route.scoreMargin,
+            reason: route.reason,
+            technicalPrompt: typeof scene?.technicalPrompt === "string" ? scene.technicalPrompt.slice(0, 5000) : null,
+          };
+        }),
       },
     });
     return Response.json({ ok: true, routing });

@@ -40,7 +40,7 @@ export function SiteHeader() {
   const [productsOpen, setProductsOpen] = useState(false);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[200] overflow-visible border-b border-white/[0.08] bg-[#06111f]/88 backdrop-blur-2xl">
+    <header className="fixed inset-x-0 top-0 z-[500] overflow-visible border-b border-white/[0.08] bg-[#06111f]/95 backdrop-blur-2xl">
       <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-6 lg:px-8">
         <a href="/" className="group flex items-center" aria-label="ALGENRI - página inicial">
           <BrandLogo className="h-auto w-[188px] sm:w-[204px]" priority />
@@ -49,11 +49,12 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-7 overflow-visible text-sm text-white/64 md:flex" aria-label="Navegação principal">
           <a href="/solucoes" className="transition hover:text-white">Soluções</a>
 
-          <div className="group relative z-[220]">
+          <div className="group relative z-[520]">
             <button type="button" className="inline-flex items-center gap-1.5 py-7 transition hover:text-white" aria-haspopup="true">
               Produtos <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" />
             </button>
-            <div className="invisible absolute left-1/2 top-[66px] z-[240] w-[420px] -translate-x-1/2 translate-y-2 rounded-[26px] border border-white/10 bg-[#071522]/[.99] p-3 opacity-0 shadow-[0_30px_100px_rgba(0,0,0,.65)] backdrop-blur-2xl transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <div className="invisible absolute left-1/2 top-[66px] z-[600] w-[420px] -translate-x-1/2 translate-y-2 isolate overflow-hidden rounded-[26px] border border-cyan-300/18 bg-[#06111f] p-3 opacity-0 shadow-[0_30px_100px_rgba(0,0,0,.82)] transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              <div className="pointer-events-none absolute inset-0 -z-10 bg-[#06111f]" />
               <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-[.16em] text-cyan-200/65">Produtos ALGENRI</div>
               {products.map(({ href, label, description, status, icon: Icon }) => {
                 const disabled = href === "#";
@@ -103,7 +104,7 @@ export function SiteHeader() {
       </div>
 
       {open && (
-        <div className="relative z-[230] border-t border-white/10 bg-[#06111f]/98 px-6 py-5 backdrop-blur-2xl md:hidden">
+        <div className="relative z-[550] border-t border-white/10 bg-[#06111f] px-6 py-5 md:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1" aria-label="Navegação móvel">
             <a href="/solucoes" onClick={() => setOpen(false)} className="rounded-2xl px-4 py-3 text-white/72 transition hover:bg-white/6 hover:text-white">Soluções</a>
 

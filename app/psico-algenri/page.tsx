@@ -29,7 +29,7 @@ export default function PsicoAlgenriPage() {
         <div className="pointer-events-none absolute -right-24 top-8 h-[460px] w-[460px] rounded-full bg-cyan-400/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-32 top-36 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-[1380px] px-6 pb-10 pt-[82px] lg:px-8 lg:pb-10 lg:pt-[82px]">
+        <div className="relative mx-auto max-w-[1380px] px-6 pb-8 pt-5 lg:px-8 lg:pb-8 lg:pt-5">
           <div className="grid gap-5 lg:grid-cols-[.78fr_1.22fr] lg:items-start">
             <div className="lg:pt-0">
               <span className="eyebrow"><Sparkles className="h-4 w-4" /> Produto ALGENRI</span>

@@ -30,7 +30,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-body > *:not(.neural-identity-field) { position: relative; z-index: 1; }
+body > *:not(.neural-identity-field):not(header) { position: relative; z-index: 1; }
 
 a { color: inherit; text-decoration: none; }
 button, input, textarea, select { font: inherit; }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ArrowRight, CalendarDays, Check, ClipboardList, CreditCard, HeartPulse, LockKeyhole, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ClipboardList, HeartPulse, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Psico ALGENRI | Gestão clínica simples para psicólogos",
@@ -19,6 +19,13 @@ export default function PsicoAlgenriPage() {
   return (
     <main className="page-shell min-h-screen overflow-hidden">
       <section className="relative overflow-hidden border-b border-white/[0.06] bg-[#03101d]">
+        <img
+          src="/psico-algenri/hero-background.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 hidden h-full w-[58%] object-cover object-center opacity-55 lg:block"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,16,29,.24)_0%,rgba(3,16,29,.58)_34%,#03101d_66%,#03101d_100%)]" />
         <div className="pointer-events-none absolute -right-24 top-16 h-[520px] w-[520px] rounded-full bg-cyan-400/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-32 top-56 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
 

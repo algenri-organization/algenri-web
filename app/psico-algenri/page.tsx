@@ -23,54 +23,54 @@ export default function PsicoAlgenriPage() {
           src="/psico-algenri/hero-background.png"
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 hidden h-full w-[58%] object-cover object-center opacity-55 lg:block"
+          className="pointer-events-none absolute inset-y-0 left-0 hidden h-full w-[56%] object-cover object-center opacity-50 lg:block"
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,16,29,.24)_0%,rgba(3,16,29,.58)_34%,#03101d_66%,#03101d_100%)]" />
-        <div className="pointer-events-none absolute -right-24 top-16 h-[520px] w-[520px] rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-32 top-56 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,16,29,.30)_0%,rgba(3,16,29,.60)_34%,#03101d_65%,#03101d_100%)]" />
+        <div className="pointer-events-none absolute -right-24 top-12 h-[480px] w-[480px] rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-32 top-44 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-28 lg:px-8 lg:pb-24 lg:pt-36">
-          <div className="grid gap-14 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
-            <div>
+        <div className="relative mx-auto max-w-7xl px-6 pb-14 pt-24 lg:px-8 lg:pb-16 lg:pt-24">
+          <div className="grid gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-start">
+            <div className="lg:pt-8">
               <span className="eyebrow"><Sparkles className="h-4 w-4" /> Produto ALGENRI</span>
-              <h1 className="mt-5 max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
+              <h1 className="mt-4 max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-0.055em] sm:text-6xl lg:text-[68px]">
                 Psico <span className="gradient-text">ALGENRI</span>
               </h1>
-              <h2 className="mt-6 max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-4xl">
+              <h2 className="mt-5 max-w-xl text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-4xl">
                 Tecnologia que acolhe, <span className="text-cyan-300">relações que transformam.</span>
               </h2>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/62">
+              <p className="mt-5 max-w-xl text-base leading-7 text-white/62 sm:text-lg sm:leading-8">
                 Um app criado para psicólogos organizarem pacientes, agenda, sessões, tarefas e financeiro sem transformar a rotina clínica em uma sequência de ferramentas soltas.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <a href="#recursos" className="button-primary">Conheça o app <ArrowRight className="h-4 w-4" /></a>
                 <a href="#planos" className="button-secondary">Ativar Essencial <ArrowRight className="h-4 w-4" /></a>
               </div>
 
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/48">
+              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2.5 text-sm text-white/48">
                 <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-cyan-300" /> Dados protegidos</span>
                 <span className="inline-flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-cyan-300" /> Acesso individual</span>
                 <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-cyan-300" /> Versão gratuita</span>
               </div>
             </div>
 
-            <div className="relative mx-auto min-h-[590px] w-full max-w-[680px]">
-              <div className="absolute left-[5%] top-[7%] z-20 w-[46%] rotate-[-2deg] overflow-hidden rounded-[42px] border border-cyan-300/25 bg-[#06111f] p-2 shadow-[0_30px_100px_rgba(0,0,0,.5)]">
-                <img src="/psico-algenri/tela-entrada.png" alt="Tela inicial do Psico ALGENRI" className="block h-auto w-full rounded-[34px]" />
+            <div className="relative mx-auto min-h-[520px] w-full max-w-[720px] lg:-mt-2">
+              <div className="absolute left-[2%] top-[4%] z-20 w-[49%] rotate-[-2deg] overflow-hidden rounded-[40px] border border-cyan-300/20 bg-[#06111f] p-1.5 shadow-[0_28px_90px_rgba(0,0,0,.48)]">
+                <img src="/psico-algenri/tela-entrada.png" alt="Tela inicial do Psico ALGENRI" className="block h-auto w-full rounded-[33px]" />
               </div>
 
-              <div className="absolute right-[1%] top-[1%] z-10 w-[51%] rotate-[3deg] overflow-hidden rounded-[42px] border border-cyan-300/20 bg-[#06111f] p-2 shadow-[0_30px_100px_rgba(0,0,0,.5)]">
-                <img src="/psico-algenri/dashboard.png" alt="Dashboard do Psico ALGENRI" className="block h-auto w-full rounded-[34px]" />
+              <div className="absolute right-0 top-0 z-10 w-[54%] rotate-[2deg] overflow-hidden rounded-[40px] border border-cyan-300/18 bg-[#06111f] p-1.5 shadow-[0_28px_90px_rgba(0,0,0,.48)]">
+                <img src="/psico-algenri/dashboard.png" alt="Dashboard do Psico ALGENRI" className="block h-auto w-full rounded-[33px]" />
               </div>
 
-              <div className="pointer-events-none absolute bottom-8 left-1/2 h-28 w-[70%] -translate-x-1/2 rounded-full bg-cyan-300/12 blur-3xl" />
+              <div className="pointer-events-none absolute bottom-5 left-1/2 h-24 w-[72%] -translate-x-1/2 rounded-full bg-cyan-300/12 blur-3xl" />
             </div>
           </div>
         </div>
       </section>
 
-      <section id="recursos" className="mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-24">
+      <section id="recursos" className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {benefits.map(({ icon: Icon, title, text }) => (
             <article key={title} className="glass rounded-[28px] p-7">
@@ -82,7 +82,7 @@ export default function PsicoAlgenriPage() {
         </div>
       </section>
 
-      <section id="planos" className="mx-auto max-w-7xl px-6 pb-24 lg:px-8 lg:pb-28">
+      <section id="planos" className="mx-auto max-w-7xl px-6 pb-20 lg:px-8 lg:pb-24">
         <div className="relative overflow-hidden rounded-[36px] border border-cyan-300/20 bg-[#071f34] p-8 shadow-[0_28px_90px_rgba(0,190,255,.08)] sm:p-10 lg:p-12">
           <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-300/12 blur-3xl" />
           <div className="relative grid gap-10 lg:grid-cols-[1.08fr_.92fr] lg:items-center">
@@ -106,7 +106,7 @@ export default function PsicoAlgenriPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 pb-28 lg:px-8">
+      <section className="mx-auto max-w-7xl px-6 pb-24 lg:px-8">
         <div className="glass rounded-[34px] p-8 sm:p-10 lg:p-12">
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
             <div><span className="eyebrow">Privacidade desde o início</span><h2 className="mt-4 text-3xl font-semibold tracking-[-.03em] sm:text-4xl">Informações claras para profissionais e usuários.</h2><p className="mt-4 max-w-3xl leading-7 text-white/55">Consulte como o Psico ALGENRI trata dados, os termos de uso e o procedimento para solicitar exclusão da conta.</p></div>

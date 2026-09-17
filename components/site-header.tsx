@@ -6,6 +6,7 @@ import { BrandLogo } from "./brand-logo";
 
 const navigation = [
   { href: "/solucoes", label: "Soluções" },
+  { href: "/psico-algenri", label: "Psico ALGENRI" },
   { href: "/planos", label: "Evolução Digital" },
   { href: "/diagnostico", label: "Diagnóstico" },
   { href: "/contato", label: "Contato" },
@@ -21,7 +22,7 @@ export function SiteHeader() {
           <BrandLogo className="h-auto w-[188px] sm:w-[204px]" priority />
         </a>
 
-        <nav className="hidden items-center gap-8 text-sm text-white/64 md:flex" aria-label="Navegação principal">
+        <nav className="hidden items-center gap-7 text-sm text-white/64 md:flex" aria-label="Navegação principal">
           {navigation.map((item) => (
             <a key={item.href} href={item.href} className="transition hover:text-white">
               {item.label}

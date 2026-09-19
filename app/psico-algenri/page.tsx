@@ -1,9 +1,25 @@
 import type { Metadata } from "next";
-import { ArrowRight, CalendarDays, Check, ClipboardList, HeartPulse, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BadgePercent,
+  BrainCircuit,
+  CalendarDays,
+  Check,
+  CircleDollarSign,
+  ClipboardList,
+  HeartPulse,
+  LockKeyhole,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+  Workflow,
+} from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Psico ALGENRI | Gestão clínica simples para psicólogos",
-  description: "Conheça o Psico ALGENRI: pacientes, anamnese, agenda, prontuário, tarefas e financeiro em um único app para psicólogos.",
+  description:
+    "Conheça o Psico ALGENRI: pacientes, anamnese, agenda, prontuário, tarefas, financeiro e módulos ALGENRI+ em um único app para psicólogos.",
 };
 
 const benefits = [
@@ -13,7 +29,66 @@ const benefits = [
   { icon: ShieldCheck, title: "Segurança dos dados", text: "Acesso individual e estrutura preparada para proteger informações sensíveis." },
 ];
 
-const included = ["Até 20 pacientes", "+17 vagas em relação ao plano gratuito", "Pagamento único", "Sem mensalidade", "Capacidade vinculada à conta", "Programa de indicação para ampliar capacidade"];
+const essentialIncluded = [
+  "Até 20 pacientes",
+  "+17 vagas em relação ao plano gratuito",
+  "Pagamento único",
+  "Sem mensalidade",
+  "Capacidade vinculada à conta",
+  "Programa de indicação para ampliar capacidade",
+];
+
+const plusModules = [
+  {
+    icon: BrainCircuit,
+    title: "IA+",
+    price: "R$ 24,90/mês",
+    text: "IA clínica assistiva para apoiar atividades, plano terapêutico, relatórios e transcrição.",
+    bullets: ["75 operações de IA por mês", "300 minutos de transcrição por mês", "Uso controlado por cota mensal"],
+  },
+  {
+    icon: MessageCircle,
+    title: "WhatsApp+",
+    price: "R$ 19,90/mês",
+    text: "Comunicação integrada com lembretes, confirmações, cobranças e automações.",
+    bullets: ["200 mensagens por mês", "Lembretes e confirmações", "Preferências e automações de envio"],
+  },
+  {
+    icon: ClipboardList,
+    title: "Clínico+",
+    price: "R$ 14,90/mês",
+    text: "Recursos clínicos avançados para acompanhamento terapêutico estruturado e longitudinal.",
+    bullets: ["Plano terapêutico estruturado", "Objetivos e metas", "Escalas, medições e acompanhamento longitudinal"],
+  },
+  {
+    icon: CircleDollarSign,
+    title: "Financeiro+",
+    price: "R$ 12,90/mês",
+    text: "Uma camada adicional de inteligência para acompanhar a saúde financeira da prática.",
+    bullets: ["Indicadores financeiros", "Inadimplência e projeções", "Relatórios e automações financeiras"],
+  },
+  {
+    icon: Workflow,
+    title: "Gestão+",
+    price: "R$ 12,90/mês",
+    text: "Mais organização administrativa com recursos pensados para a rotina profissional.",
+    bullets: ["Documentos e modelos", "Integrações e relatórios administrativos", "Automações e armazenamento ampliado"],
+  },
+  {
+    icon: UsersRound,
+    title: "Pacientes+",
+    price: "R$ 9,90/mês",
+    text: "Capacidade ampliada para quem precisa crescer além dos limites tradicionais do app.",
+    bullets: ["Pacientes ilimitados enquanto a assinatura estiver ativa", "Integrado aos demais recursos do app", "Ideal para carteiras em expansão"],
+  },
+];
+
+const plusPricing = [
+  { label: "1 ou 2 módulos", detail: "Preço individual de cada módulo" },
+  { label: "3 módulos", detail: "10% de desconto sobre o subtotal" },
+  { label: "4 ou 5 módulos", detail: "20% de desconto sobre o subtotal" },
+  { label: "ALGENRI+ Completo", detail: "Todos os 6 módulos por R$ 59,90/mês" },
+];
 
 export default function PsicoAlgenriPage() {
   return (
@@ -45,7 +120,7 @@ export default function PsicoAlgenriPage() {
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <a href="#recursos" className="button-primary">Conheça o app <ArrowRight className="h-4 w-4" /></a>
-                <a href="#planos" className="button-secondary">Ativar Essencial <ArrowRight className="h-4 w-4" /></a>
+                <a href="#planos" className="button-secondary">Conheça os planos <ArrowRight className="h-4 w-4" /></a>
               </div>
 
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2.5 text-sm text-white/48">
@@ -82,16 +157,24 @@ export default function PsicoAlgenriPage() {
         </div>
       </section>
 
-      <section id="planos" className="mx-auto max-w-7xl px-6 pb-20 lg:px-8 lg:pb-24">
+      <section id="planos" className="mx-auto max-w-7xl px-6 pb-16 lg:px-8 lg:pb-20">
+        <div className="mb-8 max-w-4xl">
+          <span className="eyebrow"><BadgePercent className="h-4 w-4" /> Planos e expansão</span>
+          <h2 className="mt-4 text-4xl font-semibold tracking-[-.045em] sm:text-5xl">Comece simples e evolua quando precisar.</h2>
+          <p className="mt-5 max-w-3xl text-lg leading-8 text-white/55">
+            O Psico ALGENRI combina uma base acessível com opções de expansão. Você pode ampliar a capacidade com o Essencial ou montar sua experiência com os módulos ALGENRI+.
+          </p>
+        </div>
+
         <div className="relative overflow-hidden rounded-[36px] border border-cyan-300/20 bg-[#071f34] p-8 shadow-[0_28px_90px_rgba(0,190,255,.08)] sm:p-10 lg:p-12">
           <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-300/12 blur-3xl" />
           <div className="relative grid gap-10 lg:grid-cols-[1.08fr_.92fr] lg:items-center">
             <div>
               <span className="inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/[.05] px-3 py-1 text-xs font-medium uppercase tracking-[.16em] text-cyan-200">Psico ALGENRI Essencial</span>
-              <h2 className="mt-5 text-4xl font-semibold tracking-[-.04em] sm:text-5xl">De 3 para 20 pacientes.</h2>
+              <h3 className="mt-5 text-4xl font-semibold tracking-[-.04em] sm:text-5xl">De 3 para 20 pacientes.</h3>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-white/58">Amplie a capacidade do app quando sua carteira crescer, mantendo o mesmo fluxo clínico.</p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                {included.map((item) => <div key={item} className="flex items-start gap-2 text-sm text-white/68"><Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" /><span>{item}</span></div>)}
+                {essentialIncluded.map((item) => <div key={item} className="flex items-start gap-2 text-sm text-white/68"><Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" /><span>{item}</span></div>)}
               </div>
             </div>
 
@@ -101,6 +184,90 @@ export default function PsicoAlgenriPage() {
               <p className="mt-3 text-sm leading-6 text-white/50">Sem mensalidade. Capacidade vinculada à sua conta.</p>
               <a href="mailto:suporte@algenri.com.br?subject=Psico%20ALGENRI%20Essencial" className="button-primary mt-7 w-full justify-center">Ativar Essencial <ArrowRight className="h-4 w-4" /></a>
               <p className="mt-4 text-xs leading-5 text-white/32">A compra dentro do aplicativo será disponibilizada no lançamento nas lojas.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="algenri-plus" className="mx-auto max-w-7xl px-6 pb-20 lg:px-8 lg:pb-24">
+        <div className="relative overflow-hidden rounded-[40px] border border-violet-300/15 bg-[linear-gradient(145deg,rgba(12,30,54,.96),rgba(21,18,49,.92))] p-8 shadow-[0_32px_100px_rgba(76,29,149,.10)] sm:p-10 lg:p-12">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-violet-500/14 blur-3xl" />
+          <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-cyan-300/10 blur-3xl" />
+
+          <div className="relative">
+            <div className="max-w-4xl">
+              <span className="inline-flex rounded-full border border-violet-300/25 bg-violet-300/[.06] px-3 py-1 text-xs font-medium uppercase tracking-[.16em] text-violet-200">ALGENRI+</span>
+              <h2 className="mt-5 text-4xl font-semibold tracking-[-.045em] sm:text-5xl">
+                Monte o Psico ALGENRI do seu jeito.
+              </h2>
+              <p className="mt-5 max-w-3xl text-lg leading-8 text-white/58">
+                Escolha apenas os módulos que fazem sentido para sua rotina ou ative o pacote completo. Quanto mais módulos você combina, maior o benefício no preço.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {plusModules.map(({ icon: Icon, title, price, text, bullets }) => (
+                <article key={title} className="glass relative overflow-hidden rounded-[28px] p-7">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/[.04]">
+                      <Icon className="h-5 w-5 text-cyan-300" />
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-xs font-medium text-white/70">{price}</span>
+                  </div>
+                  <h3 className="mt-6 text-2xl font-semibold">{title}</h3>
+                  <p className="mt-3 min-h-[84px] leading-7 text-white/55">{text}</p>
+                  <div className="mt-5 space-y-3">
+                    {bullets.map((item) => (
+                      <div key={item} className="flex items-start gap-2 text-sm leading-6 text-white/68">
+                        <Check className="mt-1 h-4 w-4 shrink-0 text-cyan-300" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_.82fr]">
+              <div className="glass-soft rounded-[30px] p-7 sm:p-8">
+                <span className="eyebrow">Combinações inteligentes</span>
+                <h3 className="mt-4 text-3xl font-semibold tracking-[-.035em]">Mais módulos, mais vantagem.</h3>
+                <div className="mt-7 grid gap-4 sm:grid-cols-2">
+                  {plusPricing.map((item) => (
+                    <div key={item.label} className="rounded-[22px] border border-white/8 bg-black/10 p-5">
+                      <p className="font-semibold text-white">{item.label}</p>
+                      <p className="mt-2 text-sm leading-6 text-white/50">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-[30px] border border-cyan-300/20 bg-cyan-300/[.055] p-7 sm:p-8">
+                <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-300/12 blur-3xl" />
+                <div className="relative">
+                  <span className="text-xs font-medium uppercase tracking-[.18em] text-cyan-200">ALGENRI+ Completo</span>
+                  <div className="mt-4 text-5xl font-semibold">R$ 59,90<span className="text-lg font-normal text-white/45">/mês</span></div>
+                  <p className="mt-4 text-base leading-7 text-white/58">Todos os 6 módulos em uma única assinatura para quem quer a experiência mais completa.</p>
+                  <div className="mt-6 space-y-3">
+                    {["IA+", "WhatsApp+", "Clínico+", "Financeiro+", "Gestão+", "Pacientes+"].map((item) => (
+                      <div key={item} className="flex items-center gap-2 text-sm text-white/70">
+                        <Check className="h-4 w-4 text-cyan-300" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <a href="mailto:suporte@algenri.com.br?subject=Psico%20ALGENRI%20Plus" className="button-primary mt-7 w-full justify-center">
+                    Quero conhecer o ALGENRI+ <ArrowRight className="h-4 w-4" />
+                  </a>
+                  <p className="mt-4 text-xs leading-5 text-white/35">A contratação dos módulos ALGENRI+ será liberada no app conforme o lançamento comercial.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-[26px] border border-white/8 bg-black/10 p-6">
+              <p className="text-sm leading-7 text-white/48">
+                Os módulos IA+ e WhatsApp+ possuem franquias mensais incluídas. Atualmente, IA+ inclui 75 operações de IA e 300 minutos de transcrição por mês; WhatsApp+ inclui 200 mensagens por mês. Os limites e condições podem ser atualizados conforme a evolução comercial do produto.
+              </p>
             </div>
           </div>
         </div>

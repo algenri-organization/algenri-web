@@ -14,12 +14,12 @@ export default async function PsicoUpdateLinkPage({
 }) {
   const { id } = await params;
   const safeId = encodeURIComponent(id);
-  const deepLink = `psicoalgenri://patient-home?updateId=${safeId}`;
+  const deepLink = `psicoalgenri://patient-update/${safeId}`;
 
   return (
     <AppLinkRedirect
       title="Abrindo sua atualização"
-      description="Estamos direcionando você para o Psico ALGENRI para conferir os detalhes."
+      description="Estamos direcionando você para a atualização enviada pelo seu profissional no Psico ALGENRI."
       deepLink={deepLink}
     />
   );
